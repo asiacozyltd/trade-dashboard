@@ -250,7 +250,7 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 <div id="toast"></div>
 
 <script>
-var SCRIPT='https://script.google.com/macros/s/AKfycbzIvsU_cIVFXxL--cLtCiFtS-qoj9kMsn1RlD9qRw0Q0Um_M5hc1288HcekVYkKXHbL4w/exec';
+var SCRIPT='https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
 var CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?gid=357150087&single=true&output=csv';
 var RATE={USD:30.5,JPY:0.205,EUR:33.5,TWD:1};
 
@@ -352,25 +352,38 @@ function buildNav(){
 // 資料讀取
 function load(){
   document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
-  fetch(SCRIPT+'?action=getData&_='+Date.now())
-    .then(function(r){return r.json();})
+  var url=SCRIPT+'?action=getData&_='+Date.now();
+  fetch(url)
+    .then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json();
+    })
     .then(function(d){
-      if(d.status==='ok'&&d.rows&&d.rows.length>0){rows=d.rows;onLoad();}
-      else loadCSV();
-    }).catch(loadCSV);
-}
-function loadCSV(){
-  fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(CSV+'&_='+Date.now()))
-    .then(function(r){return r.text();})
-    .then(function(c){var p=parseCSV(c);if(p.length>0){rows=p;onLoad();}else showErr();})
-    .catch(function(){
-      fetch(CSV+'&_='+Date.now()).then(function(r){return r.text();})
-        .then(function(c){var p=parseCSV(c);if(p.length>0){rows=p;onLoad();}else showErr();})
-        .catch(showErr);
+      if(d.status==='ok'&&d.rows&&d.rows.length>0){
+        // 只取 FormResponses 的資料，排除沒有業務名稱的空列
+        rows=d.rows.filter(function(r){
+          return r['業務名稱']&&r['業務名稱'].trim()!=='';
+        });
+        onLoad();
+      } else {
+        showErr();
+      }
+    })
+    .catch(function(e){
+      console.error('讀取失敗:',e);
+      showErr();
     });
 }
 function onLoad(){
-  filtered=rows.slice().reverse();
+  // 去重：同一個表單編號只保留最新一筆
+  var seen={};
+  var deduped=[];
+  rows.slice().reverse().forEach(function(r){
+    var key=r['表單編號']||r['時間戳記']||r._row;
+    if(!seen[key]){seen[key]=true;deduped.push(r);}
+  });
+  rows=deduped; // 覆蓋為去重後的資料
+  filtered=rows.slice();
   buildStaffFilter();
   renderDash();
   renderTable(filtered);
@@ -572,6 +585,27 @@ function showD(rowNum){
       +'<button class="bok" id="bok-'+rowNum+'" onclick="doApp('+rowNum+',\'是\')">✅ 同意簽核</button>'
       +'</div></div>';
   }
+  // 編輯區（業務員）
+  if(curUser&&curUser.role==='staff'){
+    var ef=function(id,lbl,val){
+      return '<div><label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;">'+lbl+'</label>'
+        +'<input id="'+id+'" style="width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;outline:none;" value="'+(val||'')+'"></div>';
+    };
+    h+='<div style="background:#eff6ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin-top:14px;">'
+      +'<div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:12px;">✏️ 修改案件資料</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+      +ef('e-name-'+rowNum,   '案件名稱',   g(r,'name'))
+      +ef('e-buyer-'+rowNum,  '客戶（買方）', g(r,'buyer'))
+      +ef('e-buyamt-'+rowNum, '應付總金額',  g(r,'buyAmt'))
+      +ef('e-sellamt-'+rowNum,'應收總金額',  g(r,'sellAmt'))
+      +ef('e-etd-'+rowNum,    'ETD 出貨日',  g(r,'etd'))
+      +ef('e-profit-'+rowNum, '預估毛利潤',  g(r,'profit'))
+      +'</div>'
+      +'<div style="margin-bottom:10px;"><label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;">備註（採購）</label>'
+      +'<textarea id="e-buyrem-'+rowNum+'" style="width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;outline:none;height:60px;resize:none;font-family:inherit;">'+g(r,'buyRem')+'</textarea></div>'
+      +'<button id="ebtn-'+rowNum+'" onclick="doEdit('+rowNum+')" style="width:100%;padding:11px;border-radius:9px;background:linear-gradient(135deg,#0369a1,#0ea5e9);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;">💾 儲存修改至 Sheets</button>'
+      +'</div>';
+  }
   document.getElementById('mb').innerHTML=h;
   document.getElementById('DM').classList.add('open');
 }
@@ -601,6 +635,40 @@ function doApp(rowNum,status){
     closeD();
     onLoad();
     toast(status==='是'?'✅ 已簽核！財務收到通知':'❌ 已退回',status==='是'?'#16a34a':'#dc2626');
+  });
+}
+
+// 業務員修改案件
+function doEdit(rowNum){
+  var btn=document.getElementById('ebtn-'+rowNum);
+  if(btn){btn.disabled=true;btn.textContent='儲存中...';}
+  var fields={};
+  var nm=document.getElementById('e-name-'+rowNum);
+  var by=document.getElementById('e-buyer-'+rowNum);
+  var ba=document.getElementById('e-buyamt-'+rowNum);
+  var sa=document.getElementById('e-sellamt-'+rowNum);
+  var etd=document.getElementById('e-etd-'+rowNum);
+  var pr=document.getElementById('e-profit-'+rowNum);
+  var br=document.getElementById('e-buyrem-'+rowNum);
+  if(nm)fields['案件名稱']=nm.value;
+  if(by)fields['客戶名稱（買方）']=by.value;
+  if(ba)fields['應付總金額']=ba.value;
+  if(sa)fields['應收總金額']=sa.value;
+  if(etd)fields['ETD/卸魚日']=etd.value;
+  if(pr)fields['預估毛利潤']=pr.value;
+  if(br)fields['備註（採購）']=br.value;
+  var r=rows.find(function(x){return x._row===rowNum;});
+  fetch(SCRIPT,{
+    method:'POST',
+    body:JSON.stringify({action:'update',row:rowNum,fields:fields,editor:curUser.name}),
+    mode:'no-cors'
+  }).finally(function(){
+    if(r){Object.keys(fields).forEach(function(k){r[k]=fields[k];});}
+    addLog('修改案件',curUser.name,r?g(r,'name'):'Row'+rowNum,'');
+    closeD();
+    onLoad();
+    toast('💾 修改已儲存','#0369a1');
+    if(btn){btn.disabled=false;btn.textContent='💾 儲存修改';}
   });
 }
 
