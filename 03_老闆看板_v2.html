@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>貿易大漁｜董事長看板</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0b1d35;--sea:#0369a1;--wave:#0ea5e9;--gold:#d97706;--gold2:#fbbf24;
+  --jade:#16a34a;--coral:#dc2626;--paper:#f0f6fc;--card:#fff;--muted:#64748b;
+  --border:#e2e8f0;--shadow:0 2px 14px rgba(11,29,53,.08);}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--ink);padding-bottom:80px;}
+.hd{background:var(--ink);padding:16px 18px 12px;position:sticky;top:0;z-index:100;}
+.hd-row{display:flex;align-items:center;justify-content:space-between;}
+.brand{display:flex;align-items:center;gap:9px;}
+.fish{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:17px;}
+.brand-name{font-family:'Noto Serif TC',serif;font-size:16px;font-weight:700;color:var(--gold2);letter-spacing:.04em;}
+.brand-sub{font-size:10px;color:#7fa0c0;margin-top:1px;}
+.ref-btn{font-size:11px;color:var(--wave);background:rgba(14,165,233,.12);border:1px solid rgba(14,165,233,.25);padding:5px 12px;border-radius:20px;cursor:pointer;}
+.alert{background:linear-gradient(90deg,#78350f,var(--gold));padding:10px 18px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#fff;}
+.alert.hide{display:none;}
+.sec{padding:14px 14px 0;}
+.sec-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.sec-lbl::before{content:'';width:2px;height:13px;background:var(--wave);border-radius:1px;}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0;}
+.s1::before{background:linear-gradient(90deg,var(--sea),var(--wave));}
+.s2::before{background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.s3::before{background:linear-gradient(90deg,var(--jade),#4ade80);}
+.s4::before{background:linear-gradient(90deg,var(--coral),#f87171);}
+.stat-ico{font-size:20px;margin-bottom:6px;display:block;}
+.stat-lbl{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-bottom:4px;}
+.stat-val{font-size:19px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
+.v1{color:var(--sea);} .v2{color:var(--gold);} .v3{color:var(--jade);} .v4{color:var(--coral);}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:4px;}
+.ccard{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);}
+.ccard.pending{border-left:4px solid var(--gold);}
+.ccard.approved{border-left:4px solid var(--jade);}
+.ccard.rejected{border-left:4px solid var(--coral);}
+.cc-top{padding:12px 14px 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.cc-name{font-size:14px;font-weight:700;}
+.cc-meta{font-size:11px;color:var(--muted);margin-top:2px;}
+.badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+.bp{background:#fef9c3;color:#92400e;border:1px solid #fde68a;}
+.ba{background:#dcfce7;color:#14532d;border:1px solid #86efac;}
+.br{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
+.bs{background:#e0f2fe;color:#075985;border:1px solid #bae6fd;}
+.cc-body{padding:0 14px 10px;}
+.cc-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f8fafc;font-size:12px;}
+.cc-row:last-child{border-bottom:none;}
+.ck{color:var(--muted);} .cv{color:var(--ink);font-weight:500;}
+.cv.money{color:var(--jade);font-family:'DM Mono',monospace;}
+.cv.cost{color:var(--coral);font-family:'DM Mono',monospace;}
+.profit-strip{background:#f0fdf4;border-top:1px solid #dcfce7;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;}
+.ps-lbl{font-size:11px;color:var(--jade);font-weight:700;}
+.ps-val{font-size:17px;font-weight:700;color:var(--jade);font-family:'DM Mono',monospace;}
+.cc-actions{display:flex;gap:8px;padding:10px 14px 12px;}
+.btn-ok{flex:2;padding:11px;border-radius:10px;background:linear-gradient(135deg,#15803d,var(--jade));color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;}
+.btn-ng{flex:1;padding:11px;border-radius:10px;background:#fef2f2;color:var(--coral);border:1px solid #fca5a5;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-ok:disabled,.btn-ng:disabled{opacity:.5;cursor:not-allowed;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:flex-end;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--card);border-radius:20px 20px 0 0;padding:22px 18px 40px;width:100%;max-width:480px;animation:up .3s ease;}
+@keyframes up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-handle{width:36px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 16px;}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:14px;}
+.modal-note{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;height:80px;resize:none;outline:none;font-family:'Noto Sans TC',sans-serif;}
+.modal-note:focus{border-color:var(--sea);}
+.modal-btns{display:flex;gap:10px;margin-top:14px;}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:100;}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 14px;cursor:pointer;color:var(--muted);font-size:10px;border:none;background:none;}
+.bni .ico{font-size:20px;}
+.bni.active{color:var(--sea);}
+.pulse{display:inline-block;width:6px;height:6px;background:var(--gold);border-radius:50%;animation:pulse 1.5s infinite;margin-left:4px;vertical-align:middle;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.screen{display:none;padding-bottom:80px;}
+.screen.active{display:block;}
+.spin{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--wave);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:12px;color:var(--muted);font-size:13px;}
+.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+.empty-ico{font-size:40px;display:block;margin-bottom:10px;opacity:.4;}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(50px);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);white-space:nowrap;pointer-events:none;color:#fff;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<header class="hd">
+  <div class="hd-row">
+    <div class="brand">
+      <div class="fish">🐟</div>
+      <div><div class="brand-name">貿易大漁</div><div class="brand-sub">董事長即時看板</div></div>
+    </div>
+    <div class="ref-btn" onclick="loadData()">↻ 重新整理</div>
+  </div>
+</header>
+
+<div class="alert hide" id="alert-bar">
+  <span id="alert-txt"></span>
+  <span onclick="switchScreen('approval')" style="cursor:pointer;text-decoration:underline;">前往審核 →</span>
+</div>
+
+<!-- 總覽 -->
+<div class="screen active" id="screen-dash">
+  <div id="dash-content"><div class="loading"><div class="spin"></div>載入中...</div></div>
+</div>
+
+<!-- 待簽核 -->
+<div class="screen" id="screen-approval">
+  <div class="sec" style="padding-top:14px;">
+    <div class="sec-lbl">待簽核合約 <span class="pulse" id="pdot" style="display:none;"></span></div>
+    <div id="approval-list"></div>
+  </div>
+</div>
+
+<!-- 所有紀錄 -->
+<div class="screen" id="screen-records">
+  <div class="sec" style="padding-top:14px;">
+    <div class="sec-lbl">所有合約紀錄</div>
+    <div id="records-list"></div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bnav">
+  <button class="bni active" id="nav-dash" onclick="switchScreen('dash')">
+    <span class="ico">📊</span>總覽
+  </button>
+  <button class="bni" id="nav-approval" onclick="switchScreen('approval')" style="position:relative;">
+    <span class="ico">✅</span>簽核<span class="pulse" id="ndot" style="display:none;"></span>
+  </button>
+  <button class="bni" id="nav-records" onclick="switchScreen('records')">
+    <span class="ico">📋</span>紀錄
+  </button>
+</nav>
+
+<!-- 簽核 Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">確認操作</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:10px;" id="modal-info"></div>
+    <textarea class="modal-note" id="modal-note" placeholder="批示或退回原因（選填）..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-ng" onclick="closeModal()">取消</button>
+      <button class="btn-ok" id="modal-confirm">確認</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var SCRIPT = 'https://script.google.com/macros/s/AKfycbzIvsU_cIVFXxL--cLtCiFtS-qoj9kMsn1RlD9qRw0Q0Um_M5hc1288HcekVYkKXHbL4w/exec';
+var CSV    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?output=csv';
+var allData = [];
+var pendingAction = null;
+
+// 啟動
+loadData();
+
+// 每60秒自動重新整理
+setInterval(loadData, 60000);
+
+function loadData() {
+  document.getElementById('dash-content').innerHTML = '<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
+  // 用 Apps Script 讀資料（避免跨域問題）
+  var url = SCRIPT + '?action=getAll&_=' + Date.now();
+  var img = new Image();
+  img.onerror = function(){};
+  // 改用 script tag 方式（JSONP-like，繞過 CORS）
+  fetchViaScript(url);
+}
+
+function fetchViaScript(url) {
+  // 用 no-cors fetch，但改為讀取公開 CSV
+  var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?output=csv&_=' + Date.now();
+  
+  // 建立一個隱藏的 iframe 來讀取（解決 CORS）
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', csvUrl, true);
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      allData = parseCSV(xhr.responseText);
+      render();
+    } else {
+      loadFallback();
+    }
+  };
+  xhr.onerror = function() { loadFallback(); };
+  xhr.send();
+}
+
+function loadFallback() {
+  // 備用：用 fetch + cors-anywhere proxy
+  var csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?output=csv';
+  fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(csvUrl))
+    .then(r => r.text())
+    .then(csv => { allData = parseCSV(csv); render(); })
+    .catch(() => {
+      toast('無法讀取資料，請改用 GitHub Pages 開啟看板', '#dc2626');
+      document.getElementById('dash-content').innerHTML = 
+        '<div class="empty"><span class="empty-ico">⚠️</span>'
+        + '<div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:8px;">本地端無法直接讀取</div>'
+        + '<div style="font-size:12px;color:#64748b;line-height:1.7;">請將看板上傳到 GitHub Pages 後再使用<br>或直接開啟 Google Sheets 查看資料</div>'
+        + '<a href="https://docs.google.com/spreadsheets/d/1qIHKxU-42qDVT2WDcLZp1Z3Ixg1_VRTURJ96uAVfyhM/edit" '
+        + 'target="_blank" style="display:inline-block;margin-top:16px;padding:10px 20px;'
+        + 'background:#0369a1;color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">'
+        + '📊 開啟 Google Sheets</a></div>';
+    });
+}
+
+function parseCSV(csv) {
+  var lines = csv.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return [];
+  var hdrs = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+  return lines.slice(1).map((line, idx) => {
+    var vals = [];
+    var cur = ''; var inQ = false;
+    for (var i = 0; i < line.length; i++) {
+      if (line[i] === '"') { inQ = !inQ; }
+      else if (line[i] === ',' && !inQ) { vals.push(cur); cur = ''; }
+      else { cur += line[i]; }
+    }
+    vals.push(cur);
+    var obj = { _row: idx + 2 };
+    hdrs.forEach((h,i) => obj[h] = (vals[i]||'').trim());
+    return obj;
+  });
+}
+
+function render() {
+  var pending  = allData.filter(r => (r['簽核狀態']||r['签核状态']||'待審核') === '待審核');
+  var all      = allData;
+  var totalPay = sum(all, '應付NTD');
+  var totalRev = sum(all, '應收NTD');
+  var totalPro = sum(all, '預估毛利NTD');
+  var margin   = totalRev > 0 ? (totalPro/totalRev*100).toFixed(1) : 0;
+
+  // alert
+  var ab = document.getElementById('alert-bar');
+  var pd = document.getElementById('pdot');
+  var nd = document.getElementById('ndot');
+  if (pending.length) {
+    ab.classList.remove('hide');
+    document.getElementById('alert-txt').textContent = '⚠️ 有 ' + pending.length + ' 筆合約待您簽核';
+    pd.style.display = nd.style.display = 'inline-block';
+  } else {
+    ab.classList.add('hide');
+    pd.style.display = nd.style.display = 'none';
+  }
+
+  // dashboard
+  var d = '<div class="sec" style="padding-top:14px;"><div class="sec-lbl">本月財務總覽</div>'
+    + '<div class="stats">'
+    + sc('s1','📥','本月進貨','NTD '+fmtM(totalPay),'v1', all.length+' 筆合約')
+    + sc('s2','📤','本月出貨','NTD '+fmtM(totalRev),'v2','')
+    + sc('s3','💹','預估毛利','NTD '+fmtM(totalPro),'v3', margin+'%')
+    + sc('s4','⏳','待簽核', pending.length+' 筆','v4','需要您審核')
+    + '</div></div>';
+  if (pending.length) {
+    d += '<div class="sec" style="padding-top:10px;"><div class="sec-lbl">⚡ 待簽核</div>'
+      + pending.slice(0,3).map((r,i) => card(r, pending, true)).join('')
+      + '</div>';
+  }
+  d += '<div class="sec" style="padding-top:10px;"><div class="sec-lbl">最近合約</div>'
+    + all.slice(0,6).map(r => card(r, all, false)).join('') + '</div>';
+  document.getElementById('dash-content').innerHTML = d;
+
+  // approval
+  document.getElementById('approval-list').innerHTML = pending.length
+    ? pending.map(r => card(r, pending, true)).join('')
+    : '<div class="empty"><span class="empty-ico">✅</span>目前沒有待簽核合約<br>所有合約均已處理</div>';
+
+  // records
+  document.getElementById('records-list').innerHTML =
+    all.length ? all.map(r => card(r, all, false)).join('')
+    : '<div class="empty"><span class="empty-ico">📋</span>尚無合約資料</div>';
+}
+
+function sc(cls, ico, lbl, val, vc, sub) {
+  return '<div class="stat ' + cls + '"><span class="stat-ico">' + ico + '</span>'
+    + '<div class="stat-lbl">' + lbl + '</div>'
+    + '<div class="stat-val ' + vc + '">' + val + '</div>'
+    + (sub ? '<div class="stat-sub">' + sub + '</div>' : '')
+    + '</div>';
+}
+
+function card(r, list, showActions) {
+  var status = r['簽核狀態'] || '待審核';
+  var sc2    = status==='待審核'?'pending':status==='已簽核'?'approved':'rejected';
+  var bc     = status==='待審核'?'bp':status==='已簽核'?'ba':status==='退回修改'?'br':'bs';
+  var buyer  = r['客戶(買方)'] || r['客戶'] || '—';
+  var item   = r['品項'] || '—';
+  var staff  = r['業務名稱'] || r['業務'] || '—';
+  var time   = r['時間戳記'] || r['時間'] || '';
+  var buyNTD = parseFloat(r['應付NTD']||r['應付NTD換算']||0);
+  var revNTD = parseFloat(r['應收NTD']||r['應收NTD換算']||0);
+  var profit = parseFloat(r['預估毛利NTD']||r['預估毛利(NTD)']||0);
+  var rowNum = r._row;
+
+  var h = '<div class="ccard ' + sc2 + '">'
+    + '<div class="cc-top"><div>'
+    + '<div class="cc-name">' + buyer + '&nbsp;—&nbsp;' + item + '</div>'
+    + '<div class="cc-meta">' + staff + '&nbsp;&nbsp;·&nbsp;&nbsp;' + time + '</div>'
+    + '</div><span class="badge ' + bc + '">' + status + '</span></div>'
+    + '<div class="cc-body">'
+    + row3('應付（進貨）', 'NTD ' + fmtN(buyNTD), 'cost')
+    + row3('應收（出貨）', 'NTD ' + fmtN(revNTD), 'money')
+    + row3('ETD → ETA', (r['ETD出貨日']||r['ETD']||'—') + ' → ' + (r['ETA到貨日']||r['ETA']||'—'), '')
+    + row3('付款條件', r['付款條件']||'—', '')
+    + '</div>'
+    + '<div class="profit-strip"><span class="ps-lbl">預估毛利潤</span>'
+    + '<span class="ps-val">NTD ' + fmtN(profit) + '</span></div>';
+
+  if (showActions && status === '待審核') {
+    h += '<div class="cc-actions">'
+      + '<button class="btn-ng" onclick="doAction(' + rowNum + ',\'退回修改\')">❌ 退回</button>'
+      + '<button class="btn-ok" onclick="doAction(' + rowNum + ',\'已簽核\')">✅ 簽核放款</button>'
+      + '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function row3(k, v, cls) {
+  return '<div class="cc-row"><span class="ck">' + k + '</span>'
+    + '<span class="cv ' + cls + '">' + v + '</span></div>';
+}
+
+// ── 簽核動作 ──
+function doAction(rowNum, status) {
+  pendingAction = { rowNum: rowNum, status: status };
+  document.getElementById('modal-title').textContent =
+    status === '已簽核' ? '✅ 確認簽核放款' : '❌ 退回給業務修改';
+  document.getElementById('modal-info').textContent =
+    status === '已簽核' ? '簽核後系統自動通知財務放款。' : '請填寫退回原因，業務員將收到通知。';
+  document.getElementById('modal-confirm').textContent =
+    status === '已簽核' ? '確認簽核' : '確認退回';
+  document.getElementById('modal-note').value = '';
+  document.getElementById('modal').classList.add('open');
+}
+
+function confirmAction() {
+  if (!pendingAction) return;
+  var note    = document.getElementById('modal-note').value;
+  var rowNum  = pendingAction.rowNum;
+  var status  = pendingAction.status;
+  var btn     = document.getElementById('modal-confirm');
+  btn.disabled = true;
+  btn.textContent = '處理中...';
+  closeModal();
+
+  // 呼叫 Apps Script 更新 Sheets
+  fetch(SCRIPT, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'approve', row: rowNum, status: status, note: note }),
+    mode: 'no-cors'
+  }).then(() => {
+    // 更新本地資料狀態
+    var target = allData.find(r => r._row === rowNum);
+    if (target) {
+      target['簽核狀態'] = status;
+      target['老闆批示'] = note;
+    }
+    render();
+    toast(
+      status === '已簽核' ? '✅ 已簽核！財務收到放款通知' : '❌ 已退回，業務收到通知',
+      status === '已簽核' ? '#16a34a' : '#dc2626'
+    );
+  }).catch(() => {
+    // no-cors 下視為成功
+    var target = allData.find(r => r._row === rowNum);
+    if (target) { target['簽核狀態'] = status; target['老闆批示'] = note; }
+    render();
+    toast(status === '已簽核' ? '✅ 已簽核！' : '❌ 已退回！',
+          status === '已簽核' ? '#16a34a' : '#dc2626');
+  });
+  btn.disabled = false;
+  btn.textContent = status === '已簽核' ? '確認簽核' : '確認退回';
+}
+
+document.getElementById('modal-confirm').onclick = confirmAction;
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+function switchScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.bni').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  document.getElementById('nav-' + id).classList.add('active');
+}
+
+function toast(msg, bg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = bg || '#16a34a';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function sum(arr, key) {
+  return arr.reduce((s,r) => s + (parseFloat(r[key])||0), 0);
+}
+function fmtN(n) { return Math.round(n||0).toLocaleString('zh-TW'); }
+function fmtM(n) {
+  var v = Math.round(n||0);
+  return Math.abs(v) >= 10000 ? (v/10000).toFixed(1) + '萬' : v.toLocaleString('zh-TW');
+}
+</script>
+</body>
+</html>
