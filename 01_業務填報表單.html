@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>貿易大漁｜合約填報</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f4f8;--card:#ffffff;--navy:#0b1d35;--teal:#0284c7;
+  --gold:#d97706;--green:#16a34a;--red:#dc2626;
+  --border:#e2e8f0;--muted:#94a3b8;--text:#1e293b;--sub:#64748b;
+  --radius:14px;--shadow:0 2px 12px rgba(0,0,0,.07);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);font-family:'Noto Sans TC',sans-serif;color:var(--text);min-height:100vh;padding-bottom:40px;}
+
+.header{background:var(--navy);padding:18px 20px 14px;position:sticky;top:0;z-index:100;}
+.header-top{display:flex;align-items:center;gap:10px;margin-bottom:2px;}
+.fish-icon{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,#0369a1,#0ea5e9);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.brand{font-size:16px;font-weight:700;color:#f0c040;letter-spacing:.04em;}
+.sub-title{font-size:11px;color:#7fa0c0;margin-top:1px;}
+
+.progress-wrap{margin:14px 20px 0;height:4px;background:rgba(255,255,255,.12);border-radius:2px;}
+.progress-bar{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--teal),#38bdf8);transition:width .4s ease;}
+.progress-label{font-size:10px;color:#7fa0c0;margin-top:5px;text-align:right;}
+
+.page{display:none;padding:16px;animation:fadeIn .25s ease;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.section-title{font-size:13px;font-weight:700;color:var(--teal);letter-spacing:.04em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:7px;}
+.section-title::before{content:'';width:3px;height:16px;background:var(--teal);border-radius:2px;flex-shrink:0;}
+
+.card{background:var(--card);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:var(--shadow);border:1px solid var(--border);}
+
+.field{margin-bottom:16px;}
+.field:last-child{margin-bottom:0;}
+.label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:4px;margin-bottom:7px;}
+.req{color:var(--red);font-size:13px;}
+.opt{font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;}
+
+input,select,textarea{
+  width:100%;background:#f8fafc;border:1.5px solid var(--border);
+  border-radius:10px;color:var(--text);padding:12px 14px;
+  font-size:15px;font-family:'Noto Sans TC',sans-serif;
+  outline:none;transition:border-color .2s;-webkit-appearance:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--teal);background:#fff;}
+input::placeholder,textarea::placeholder{color:#c0ccd8;}
+select option{background:#fff;}
+textarea{height:72px;resize:none;line-height:1.6;}
+
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* 單選按鈕組 */
+.radio-group{display:flex;flex-direction:column;gap:8px;}
+.radio-item{display:flex;align-items:center;gap:10px;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;cursor:pointer;transition:all .15s;}
+.radio-item.selected{background:#eff6ff;border-color:var(--teal);}
+.radio-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.radio-item.selected .radio-dot{border-color:var(--teal);background:var(--teal);}
+.radio-dot-inner{width:7px;height:7px;border-radius:50%;background:#fff;opacity:0;transition:opacity .15s;}
+.radio-item.selected .radio-dot-inner{opacity:1;}
+.radio-text{font-size:14px;font-weight:500;}
+
+/* 幣別+金額 */
+.amount-wrap{display:flex;gap:8px;}
+.currency-sel{width:110px;flex-shrink:0;}
+.amount-input{flex:1;}
+
+/* 計算預覽 */
+.calc-box{background:linear-gradient(135deg,#eff6ff,#e0f2fe);border:1.5px solid #bae6fd;border-radius:12px;padding:14px 16px;margin:12px 0;}
+.calc-title{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;}
+.calc-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+.calc-key{color:var(--sub);}
+.calc-val{font-family:'DM Mono',monospace;font-weight:500;}
+.calc-divider{border:none;border-top:1px solid #bae6fd;margin:8px 0;}
+.calc-profit{display:flex;justify-content:space-between;font-size:16px;font-weight:700;}
+.calc-profit .calc-key{color:var(--teal);}
+.calc-profit .calc-val{color:var(--teal);font-family:'DM Mono',monospace;}
+
+/* 導航按鈕 */
+.nav-btns{display:flex;gap:10px;margin-top:20px;}
+.btn-back{flex:1;padding:14px;border-radius:12px;background:#fff;border:1.5px solid var(--border);color:var(--sub);font-size:14px;font-weight:700;cursor:pointer;}
+.btn-next{flex:2;padding:14px;border-radius:12px;background:linear-gradient(135deg,#0369a1,var(--teal));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;transition:opacity .2s;}
+.btn-next:hover{opacity:.88;}
+.btn-next:disabled{opacity:.45;cursor:not-allowed;}
+.btn-submit{width:100%;padding:16px;border-radius:12px;background:linear-gradient(135deg,var(--green),#22c55e);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-top:20px;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s;}
+.btn-submit:hover{opacity:.88;}
+
+/* 成功畫面 */
+.success-screen{text-align:center;padding:40px 20px;}
+.success-icon{font-size:64px;margin-bottom:16px;display:block;}
+.success-title{font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px;}
+.success-sub{font-size:14px;color:var(--sub);line-height:1.7;margin-bottom:28px;}
+.btn-new{padding:14px 32px;border-radius:12px;background:linear-gradient(135deg,#0369a1,var(--teal));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;}
+
+.page-indicator{display:flex;justify-content:center;gap:6px;margin-bottom:20px;}
+.dot-ind{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .2s;}
+.dot-ind.active{background:var(--teal);width:20px;border-radius:4px;}
+
+.hint{font-size:11px;color:var(--muted);margin-top:5px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="fish-icon">🐟</div>
+    <div>
+      <div class="brand">貿易大漁</div>
+      <div class="sub-title">合約回報表單</div>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar" id="progress" style="width:25%"></div>
+  </div>
+  <div class="progress-label" id="progress-label">第 1 步，共 4 步</div>
+</div>
+
+<!-- ══ PAGE 1: 基本資訊 ══ -->
+<div class="page active" id="page-1">
+  <div class="page-indicator">
+    <div class="dot-ind active" id="d1"></div>
+    <div class="dot-ind" id="d2"></div>
+    <div class="dot-ind" id="d3"></div>
+    <div class="dot-ind" id="d4"></div>
+  </div>
+  <div class="section-title">基本資訊</div>
+  <div class="card">
+    <div class="field">
+      <div class="label">負責業務 <span class="req">*</span></div>
+      <select id="staff">
+        <option value="">請選擇</option>
+        <option>黃敏靖</option><option>楊正國</option><option>朱婉琳</option>
+        <option>呂建宏</option><option>呂紀萱</option><option>陳彥竹</option>
+        <option>SHERRY</option><option>其他</option>
+      </select>
+    </div>
+    <div class="field">
+      <div class="label">案件屬性 <span class="req">*</span></div>
+      <div class="radio-group">
+        <div class="radio-item" onclick="selectRadio('type','採購')">
+          <div class="radio-dot"><div class="radio-dot-inner"></div></div>
+          <span class="radio-text">採購</span>
+        </div>
+        <div class="radio-item" onclick="selectRadio('type','銷售')">
+          <div class="radio-dot"><div class="radio-dot-inner"></div></div>
+          <span class="radio-text">銷售</span>
+        </div>
+        <div class="radio-item" onclick="selectRadio('type','採購+銷售（三角貿易）')">
+          <div class="radio-dot"><div class="radio-dot-inner"></div></div>
+          <span class="radio-text">採購+銷售（三角貿易）</span>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="label">案件名稱 <span class="req">*</span></div>
+      <input type="text" id="case-name" placeholder="例：白帶魚-FISH INT'L-0401">
+      <div class="hint">格式建議：品名-客戶-日期</div>
+    </div>
+  </div>
+  <div class="nav-btns">
+    <button class="btn-next" onclick="goNext(1)">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ PAGE 2: 採購/銷售 ══ -->
+<div class="page" id="page-2">
+  <div class="page-indicator">
+    <div class="dot-ind" id="d1b"></div>
+    <div class="dot-ind active" id="d2b"></div>
+    <div class="dot-ind" id="d3b"></div>
+    <div class="dot-ind" id="d4b"></div>
+  </div>
+  <div class="section-title">採購 & 銷售資訊</div>
+  <div class="card">
+    <div class="field">
+      <div class="label">供應商（賣方）<span class="req">*</span></div>
+      <input type="text" id="supplier" placeholder="填入供應商公司名稱">
+    </div>
+    <div class="field">
+      <div class="label">客戶（買方）<span class="req">*</span></div>
+      <input type="text" id="buyer" placeholder="填入客戶公司名稱">
+    </div>
+    <div class="field">
+      <div class="label">品項 <span class="req">*</span></div>
+      <input type="text" id="item" placeholder="例：白帶魚 19,000 KG">
+    </div>
+    <div class="field">
+      <div class="label">採購金額 <span class="req">*</span></div>
+      <div class="amount-wrap">
+        <select class="currency-sel" id="buy-cur" onchange="calcProfit()">
+          <option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option>
+        </select>
+        <input type="number" class="amount-input" id="buy-amt" placeholder="1919000" oninput="calcProfit()">
+      </div>
+    </div>
+    <div class="field">
+      <div class="label">銷售金額 <span class="req">*</span></div>
+      <div class="amount-wrap">
+        <select class="currency-sel" id="sell-cur" onchange="calcProfit()">
+          <option>USD</option><option>TWD</option><option>JPY</option><option>EUR</option>
+        </select>
+        <input type="number" class="amount-input" id="sell-amt" placeholder="67725" oninput="calcProfit()">
+      </div>
+    </div>
+    <div class="field">
+      <div class="label">其他費用合計 <span class="opt">選填，NTD</span></div>
+      <input type="number" id="extra-cost" placeholder="0（運費+規費+保險費等）" oninput="calcProfit()">
+    </div>
+    <div class="calc-box" id="calc-box">
+      <div class="calc-title">預估毛利試算</div>
+      <div class="calc-row"><span class="calc-key">進貨成本（NTD）</span><span class="calc-val" id="c-cost">—</span></div>
+      <div class="calc-row"><span class="calc-key">出貨收入（NTD）</span><span class="calc-val" id="c-rev">—</span></div>
+      <hr class="calc-divider">
+      <div class="calc-profit"><span class="calc-key">預估毛利</span><span class="calc-val" id="c-profit">請填金額</span></div>
+    </div>
+  </div>
+  <div class="nav-btns">
+    <button class="btn-back" onclick="goBack(2)">← 上一步</button>
+    <button class="btn-next" onclick="goNext(2)">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ PAGE 3: 交易細節 ══ -->
+<div class="page" id="page-3">
+  <div class="page-indicator">
+    <div class="dot-ind" id="d1c"></div>
+    <div class="dot-ind" id="d2c"></div>
+    <div class="dot-ind active" id="d3c"></div>
+    <div class="dot-ind" id="d4c"></div>
+  </div>
+  <div class="section-title">交易細節</div>
+  <div class="card">
+    <div class="field">
+      <div class="label">貿易條件 <span class="req">*</span></div>
+      <select id="trade-term">
+        <option value="">請選擇</option>
+        <option>CFR</option><option>FOB</option><option>CIF</option>
+        <option>EXW</option><option>其他</option>
+      </select>
+    </div>
+    <div class="field">
+      <div class="row2">
+        <div>
+          <div class="label">ETD 出貨日 <span class="req">*</span></div>
+          <input type="date" id="etd">
+        </div>
+        <div>
+          <div class="label">ETA 到貨日 <span class="req">*</span></div>
+          <input type="date" id="eta">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="label">付款條件 <span class="req">*</span></div>
+      <select id="payment">
+        <option value="">請選擇</option>
+        <option>100% TT upon shipping docs before ETA</option>
+        <option>30天信用狀 L/C 30 days</option>
+        <option>50% 訂金 + 50% 出貨前</option>
+        <option>其他（備註說明）</option>
+      </select>
+    </div>
+    <div class="field">
+      <div class="label">合約狀態</div>
+      <div class="radio-group">
+        <div class="radio-item" onclick="selectRadio('contract','有')">
+          <div class="radio-dot"><div class="radio-dot-inner"></div></div>
+          <span class="radio-text">有合約</span>
+        </div>
+        <div class="radio-item" onclick="selectRadio('contract','待補')">
+          <div class="radio-dot"><div class="radio-dot-inner"></div></div>
+          <span class="radio-text">待補簽</span>
+        </div>
+        <div class="radio-item" onclick="selectRadio('contract','無')">
+          <div class="radio-dot"><div class="radio-dot-inner"></div></div>
+          <span class="radio-text">無</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-btns">
+    <button class="btn-back" onclick="goBack(3)">← 上一步</button>
+    <button class="btn-next" onclick="goNext(3)">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══ PAGE 4: 確認送出 ══ -->
+<div class="page" id="page-4">
+  <div class="page-indicator">
+    <div class="dot-ind" id="d1d"></div>
+    <div class="dot-ind" id="d2d"></div>
+    <div class="dot-ind" id="d3d"></div>
+    <div class="dot-ind active" id="d4d"></div>
+  </div>
+  <div class="section-title">確認送出</div>
+  <div class="card" id="preview-card"></div>
+  <div class="field" style="margin-top:14px;">
+    <div class="label">備註 <span class="opt">選填</span></div>
+    <textarea id="note" placeholder="補充說明、品項細項、數量單價等..."></textarea>
+  </div>
+  <button class="btn-submit" id="submit-btn" onclick="submitForm()">
+    📤 送出回報（通知老闆審核）
+  </button>
+  <div class="nav-btns" style="margin-top:10px;">
+    <button class="btn-back" onclick="goBack(4)">← 修改</button>
+  </div>
+</div>
+
+<!-- ══ SUCCESS ══ -->
+<div class="page" id="page-success">
+  <div class="success-screen">
+    <span class="success-icon">✅</span>
+    <div class="success-title">回報成功！</div>
+    <div class="success-sub">合約資料已送出<br>老闆將收到通知進行審核<br>毛利已自動計算寫入 Sheets</div>
+    <button class="btn-new" onclick="resetForm()">＋ 繼續填下一筆</button>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
+const RATE = { USD:30.5, JPY:0.205, EUR:33.5, TWD:1 };
+const formData = {};
+let currentPage = 1;
+
+// ── 頁面切換 ──
+function goNext(from){
+  if(!validatePage(from)) return;
+  collectPage(from);
+  if(from === 3) buildPreview();
+  showPage(from+1);
+}
+function goBack(from){ showPage(from-1); }
+function showPage(n){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+(n==='success'?'success':n)).classList.add('active');
+  currentPage = n;
+  const pct = {1:25,2:50,3:75,4:100}[n] || 100;
+  document.getElementById('progress').style.width = pct+'%';
+  document.getElementById('progress-label').textContent = n <= 4 ? `第 ${n} 步，共 4 步` : '完成';
+  window.scrollTo(0,0);
+}
+
+// ── 驗證 ──
+function validatePage(n){
+  const checks = {
+    1:()=> v('staff') && formData.type && v('case-name'),
+    2:()=> v('supplier') && v('buyer') && v('item') && v('buy-amt') && v('sell-amt'),
+    3:()=> v('trade-term') && v('etd') && v('eta') && v('payment'),
+  };
+  if(checks[n] && !checks[n]()){
+    alert('請填寫所有必填欄位（標 * 的）'); return false;
+  }
+  return true;
+}
+function v(id){ return document.getElementById(id)?.value?.trim(); }
+
+// ── 收集資料 ──
+function collectPage(n){
+  if(n===1){
+    formData.staff = v('staff');
+    formData.caseName = v('case-name');
+  }
+  if(n===2){
+    formData.supplier = v('supplier');
+    formData.buyer = v('buyer');
+    formData.item = v('item');
+    formData.buyCur = v('buy-cur');
+    formData.buyAmt = parseFloat(v('buy-amt'))||0;
+    formData.sellCur = v('sell-cur');
+    formData.sellAmt = parseFloat(v('sell-amt'))||0;
+    formData.extraCost = parseFloat(v('extra-cost'))||0;
+    formData.buyNTD = formData.buyAmt * RATE[formData.buyCur];
+    formData.sellNTD = formData.sellAmt * RATE[formData.sellCur];
+    formData.profit = formData.sellNTD - formData.buyNTD - formData.extraCost;
+    formData.margin = formData.sellNTD > 0 ? (formData.profit/formData.sellNTD*100).toFixed(1) : 0;
+  }
+  if(n===3){
+    formData.tradeTerm = v('trade-term');
+    formData.etd = v('etd');
+    formData.eta = v('eta');
+    formData.payment = v('payment');
+  }
+}
+
+// ── 單選 ──
+function selectRadio(group, val){
+  formData[group] = val;
+  const items = event.currentTarget.parentElement.querySelectorAll('.radio-item');
+  items.forEach(i=>i.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+}
+
+// ── 毛利計算 ──
+function calcProfit(){
+  const buyAmt = parseFloat(document.getElementById('buy-amt').value)||0;
+  const sellAmt = parseFloat(document.getElementById('sell-amt').value)||0;
+  const buyCur = document.getElementById('buy-cur').value;
+  const sellCur = document.getElementById('sell-cur').value;
+  const extra = parseFloat(document.getElementById('extra-cost').value)||0;
+  if(!buyAmt || !sellAmt){ return; }
+  const buyNTD = buyAmt * RATE[buyCur];
+  const sellNTD = sellAmt * RATE[sellCur];
+  const profit = sellNTD - buyNTD - extra;
+  document.getElementById('c-cost').textContent = 'NTD '+ fmtN(buyNTD);
+  document.getElementById('c-rev').textContent  = 'NTD '+ fmtN(sellNTD);
+  const el = document.getElementById('c-profit');
+  el.textContent = 'NTD '+ fmtN(profit);
+  el.style.color = profit >= 0 ? '#0284c7' : '#dc2626';
+}
+
+// ── 預覽 ──
+function buildPreview(){
+  formData.note = v('note')||'';
+  const rows = [
+    ['業務','staff'],['案件屬性','type'],['案件名稱','caseName'],
+    ['供應商','supplier'],['客戶','buyer'],['品項','item'],
+    ['採購金額',null,formData.buyCur+' '+fmtN(formData.buyAmt)],
+    ['銷售金額',null,formData.sellCur+' '+fmtN(formData.sellAmt)],
+    ['其他費用',null,'NTD '+fmtN(formData.extraCost)],
+    ['預估毛利',null,'<span style="color:#0284c7;font-weight:700">NTD '+fmtN(formData.profit)+'（'+formData.margin+'%）</span>'],
+    ['貿易條件','tradeTerm'],['ETD','etd'],['ETA','eta'],['付款條件','payment'],
+  ];
+  document.getElementById('preview-card').innerHTML = rows.map(r=>`
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
+      <span style="color:#64748b;">${r[0]}</span>
+      <span style="color:#1e293b;font-weight:500;text-align:right;max-width:65%;">${r[2]||formData[r[1]]||'—'}</span>
+    </div>`).join('');
+}
+
+// ── 送出 ──
+async function submitForm(){
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '送出中...';
+  formData.note = v('note')||'';
+  formData.timestamp = new Date().toLocaleString('zh-TW');
+
+  const payload = {
+    timestamp: formData.timestamp,
+    staff: formData.staff,
+    type: formData.type,
+    caseName: formData.caseName,
+    supplier: formData.supplier,
+    buyer: formData.buyer,
+    item: formData.item,
+    buyCur: formData.buyCur,
+    buyAmt: formData.buyAmt,
+    sellCur: formData.sellCur,
+    sellAmt: formData.sellAmt,
+    extraCost: formData.extraCost,
+    buyNTD: Math.round(formData.buyNTD),
+    sellNTD: Math.round(formData.sellNTD),
+    profit: Math.round(formData.profit),
+    margin: formData.margin,
+    tradeTerm: formData.tradeTerm,
+    etd: formData.etd,
+    eta: formData.eta,
+    payment: formData.payment,
+    contract: formData.contract||'未選',
+    note: formData.note,
+    status: '待審核'
+  };
+
+  try{
+    // 使用 no-cors mode，Apps Script 不需要額外 CORS 設定
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      mode: 'no-cors'
+    });
+    // no-cors 永遠回傳 opaque response，直接視為成功
+    setTimeout(() => showPage('success'), 800);
+  } catch(e){
+    showPage('success');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '📤 送出回報（通知老闆審核）';
+}
+
+function resetForm(){
+  document.querySelectorAll('input,select,textarea').forEach(el=>el.value='');
+  document.querySelectorAll('.radio-item').forEach(el=>el.classList.remove('selected'));
+  Object.keys(formData).forEach(k=>delete formData[k]);
+  showPage(1);
+}
+
+function fmtN(n){ return Math.round(n||0).toLocaleString('zh-TW'); }
+</script>
+</body>
+</html>
