@@ -6,11 +6,9 @@
 <title>貿易大漁｜管理系統</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#0b1d35;--sea:#0369a1;--wave:#0ea5e9;--gold:#d97706;--gold2:#fbbf24;
-  --jade:#16a34a;--coral:#dc2626;--paper:#f0f6fc;--card:#fff;--muted:#64748b;
-  --border:#e2e8f0;}
+:root{--ink:#0b1d35;--sea:#0369a1;--wave:#0ea5e9;--gold:#d97706;--gold2:#fbbf24;--jade:#16a34a;--coral:#dc2626;--paper:#f0f6fc;--card:#fff;--muted:#64748b;--border:#e2e8f0;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--ink);}
+body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--ink);min-height:100vh;}
 .lw{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--ink);}
 .lb{background:#fff;border-radius:20px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.4);}
 .lfish{width:52px;height:52px;border-radius:13px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px;}
@@ -19,91 +17,126 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 .rtabs{display:flex;gap:5px;background:#f8fafc;border-radius:10px;padding:4px;margin-bottom:18px;}
 .rtab{flex:1;padding:8px 4px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;color:var(--muted);border:none;background:none;}
 .rtab.on{background:#fff;color:var(--sea);box-shadow:0 1px 4px rgba(0,0,0,.1);}
-.lfield{margin-bottom:14px;}
 .llbl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:5px;}
-.linput{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;outline:none;font-family:inherit;}
+.linput{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;outline:none;font-family:inherit;margin-bottom:14px;}
 .linput:focus{border-color:var(--sea);}
 .lbtn{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,var(--sea),var(--wave));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;}
 .lerr{color:var(--coral);font-size:12px;text-align:center;margin-top:8px;min-height:16px;}
 .lpwdbox{margin-top:14px;padding:10px 12px;background:#f8fafc;border-radius:8px;font-size:11px;color:#94a3b8;line-height:1.9;}
-.hd{background:var(--ink);padding:13px 16px;position:sticky;top:0;z-index:100;}
+.hd{background:var(--ink);padding:12px 20px;position:sticky;top:0;z-index:100;}
 .hd-row{display:flex;align-items:center;justify-content:space-between;}
-.brand{display:flex;align-items:center;gap:8px;}
+.brand{display:flex;align-items:center;gap:9px;}
 .hfish{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:15px;}
-.bname{font-family:'Noto Serif TC',serif;font-size:14px;font-weight:700;color:var(--gold2);}
+.bname{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:700;color:var(--gold2);}
 .bsub{font-size:9px;color:#7fa0c0;}
-.hdr{display:flex;align-items:center;gap:6px;}
-.rbadge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;}
+.hdr{display:flex;align-items:center;gap:8px;}
+.rbadge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;}
 .rb1{background:rgba(212,168,19,.2);color:var(--gold2);border:1px solid rgba(212,168,19,.3);}
 .rb2{background:rgba(14,165,233,.2);color:var(--wave);border:1px solid rgba(14,165,233,.3);}
-.out{font-size:11px;color:#7fa0c0;cursor:pointer;padding:3px 7px;}
-.ref{font-size:18px;cursor:pointer;color:#7fa0c0;}
-.alert{background:linear-gradient(90deg,#78350f,var(--gold));padding:9px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#fff;}
+.out{font-size:11px;color:#7fa0c0;cursor:pointer;padding:4px 8px;border-radius:6px;}
+.ref-btn{font-size:11px;color:var(--wave);cursor:pointer;padding:4px 10px;border-radius:6px;border:1px solid rgba(14,165,233,.3);background:rgba(14,165,233,.1);}
+.alert{background:linear-gradient(90deg,#78350f,var(--gold));padding:9px 20px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#fff;}
 .alert.hide{display:none;}
-.sec{padding:12px 12px 0;}
-.slbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:5px;}
-.slbl::before{content:'';width:2px;height:12px;background:var(--wave);border-radius:1px;flex-shrink:0;}
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
-.st{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;overflow:hidden;}
+.nav-tabs{background:var(--card);border-bottom:1px solid var(--border);padding:0 20px;display:flex;gap:0;overflow-x:auto;}
+.nav-tab{padding:12px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;}
+.nav-tab.on{color:var(--sea);border-bottom-color:var(--sea);font-weight:700;}
+.scr{display:none;padding:20px;max-width:1200px;}
+.scr.on{display:block;}
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+@media(max-width:700px){.sg{grid-template-columns:1fr 1fr;}}
+.st{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;position:relative;overflow:hidden;box-shadow:0 2px 10px rgba(11,29,53,.06);}
 .st::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0;}
 .s1::before{background:linear-gradient(90deg,var(--sea),var(--wave));}
 .s2::before{background:linear-gradient(90deg,var(--gold),var(--gold2));}
 .s3::before{background:linear-gradient(90deg,var(--jade),#4ade80);}
 .s4::before{background:linear-gradient(90deg,var(--coral),#f87171);}
-.stico{font-size:18px;margin-bottom:5px;display:block;}
-.stlbl{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px;}
-.stval{font-size:16px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
+.stico{font-size:20px;margin-bottom:6px;display:block;}
+.stlbl{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;}
+.stval{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
 .v1{color:var(--sea);}.v2{color:var(--gold);}.v3{color:var(--jade);}.v4{color:var(--coral);}
-.stsub{font-size:10px;color:var(--muted);margin-top:3px;}
-.cc{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;box-shadow:0 2px 10px rgba(11,29,53,.06);}
-.cc.p{border-left:4px solid var(--gold);}
-.cc.a{border-left:4px solid var(--jade);}
-.cc.r{border-left:4px solid var(--coral);}
-.ccbody{padding:12px 14px;}
-.crow{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f8fafc;font-size:12px;}
-.crow:last-child{border-bottom:none;}
-.ck{color:var(--muted);flex-shrink:0;margin-right:8px;}
-.cv{color:var(--ink);font-weight:500;text-align:right;word-break:break-all;}
-.cv.money{color:var(--jade);}
-.cv.cost{color:var(--coral);}
-.sec-bar{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:5px;}
-.sb-buy{color:#dc2626;}.sb-sell{color:#16a34a;}.sb-ship{color:#0369a1;}
-.sb-buy span{background:#dc2626;}.sb-sell span{background:#16a34a;}.sb-ship span{background:#0369a1;}
-.sec-bar span{width:2px;height:11px;border-radius:1px;display:inline-block;}
-.ccact{display:flex;gap:7px;padding:9px 13px 11px;}
-.bok{flex:2;padding:10px;border-radius:9px;background:linear-gradient(135deg,#15803d,var(--jade));color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;}
-.bng{flex:1;padding:10px;border-radius:9px;background:#fef2f2;color:var(--coral);border:1px solid #fca5a5;font-size:13px;font-weight:700;cursor:pointer;}
+.stsub{font-size:11px;color:var(--muted);margin-top:4px;}
+.sbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(11,29,53,.06);}
+.sbox-title{font-size:16px;font-weight:700;margin-bottom:3px;}
+.sbox-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
+.sg2{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:12px;}
+@media(max-width:700px){.sg2{grid-template-columns:1fr 1fr;}}
+.sf label{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
+.sf select,.sf input{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;outline:none;font-family:inherit;color:var(--ink);}
+.sf select:focus,.sf input:focus{border-color:var(--sea);background:#fff;}
+.sbtns{display:flex;gap:8px;margin-bottom:4px;}
+.btn-sq{padding:9px 20px;border-radius:8px;background:var(--sea);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;}
+.btn-cl{padding:9px 16px;border-radius:8px;background:#f1f5f9;color:var(--muted);font-size:13px;font-weight:700;border:1px solid var(--border);cursor:pointer;}
+.rc{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;}
+.twrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(11,29,53,.06);overflow-x:auto;}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:860px;}
+.tbl thead th{padding:10px 12px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+.tbl tbody tr{border-bottom:1px solid #f8fafc;}
+.tbl tbody tr:hover{background:#f8fafc;}
+.tbl td{padding:10px 12px;vertical-align:middle;}
+.tdg{color:var(--muted);font-size:12px;}
+.tdb{font-weight:700;}
+.bdg{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap;}
+.bp{background:#fef9c3;color:#92400e;border:1px solid #fde68a;}
+.ba{background:#dcfce7;color:#14532d;border:1px solid #86efac;}
+.br{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
+.btn-v{padding:5px 12px;border-radius:6px;background:var(--sea);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;}
+.mg{color:var(--jade);font-family:'DM Mono',monospace;font-weight:500;}
+.mr{color:var(--coral);font-family:'DM Mono',monospace;font-weight:500;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:center;justify-content:center;padding:16px;}
+.modal-bg.open{display:flex;}
+.modal-box{background:var(--card);border-radius:16px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;animation:mup .25s ease;}
+@keyframes mup{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.mhd{background:var(--ink);padding:16px 20px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:flex-start;position:sticky;top:0;z-index:10;}
+.mcl{color:#7fa0c0;font-size:22px;cursor:pointer;line-height:1;padding:2px 6px;}
+.mbody{padding:20px;}
+.dsec{margin-bottom:16px;}
+.dsec-t{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.tb{color:#dc2626;}.tb::before{content:'';width:2px;height:11px;background:#dc2626;border-radius:1px;display:inline-block;}
+.ts{color:#16a34a;}.ts::before{content:'';width:2px;height:11px;background:#16a34a;border-radius:1px;display:inline-block;}
+.tsh{color:#0369a1;}.tsh::before{content:'';width:2px;height:11px;background:#0369a1;border-radius:1px;display:inline-block;}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.drow{background:#f8fafc;border-radius:8px;padding:8px 12px;}
+.drow-l{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
+.drow-v{font-size:13px;color:var(--ink);font-weight:500;word-break:break-word;}
+.drow-f{grid-column:1/-1;}
+.pbar{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;margin:14px 0 0;}
+.af{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-top:14px;}
+.af-t{font-size:13px;font-weight:700;color:#78350f;margin-bottom:10px;}
+.af-lbl{font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;}
+.af-note{width:100%;background:#fff;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;height:70px;resize:none;outline:none;font-family:inherit;margin-bottom:12px;}
+.af-note:focus{border-color:var(--sea);}
+.abtns{display:flex;gap:8px;}
+.bok{flex:2;padding:11px;border-radius:9px;background:linear-gradient(135deg,#15803d,var(--jade));color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;}
+.bng{flex:1;padding:11px;border-radius:9px;background:#fef2f2;color:var(--coral);border:1px solid #fca5a5;font-size:13px;font-weight:700;cursor:pointer;}
+.bok:disabled,.bng:disabled{opacity:.5;cursor:not-allowed;}
+.asec{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(11,29,53,.06);}
+.asec-t{font-size:15px;font-weight:700;margin-bottom:3px;}
+.asec-s{font-size:12px;color:var(--muted);margin-bottom:16px;}
+.ugrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+@media(max-width:700px){.ugrid{grid-template-columns:1fr;}}
+.uc{border:1px solid var(--border);border-radius:10px;padding:14px;position:relative;}
+.uc-role{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.uc-nm{font-size:15px;font-weight:700;margin-bottom:10px;}
+.uc-f{margin-bottom:8px;}
+.uc-l{font-size:10px;color:var(--muted);margin-bottom:3px;display:block;}
+.uc-i{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;outline:none;font-family:inherit;}
+.uc-i:focus{border-color:var(--sea);}
+.btn-su{width:100%;padding:8px;border-radius:7px;background:var(--sea);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;margin-top:4px;}
+.svd{display:none;position:absolute;top:10px;right:10px;background:#dcfce7;color:#14532d;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;}
 .ltbl{width:100%;border-collapse:collapse;font-size:12px;}
-.ltbl th{padding:8px 10px;background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:700;border-bottom:1px solid var(--border);text-align:left;}
-.ltbl td{padding:8px 10px;border-bottom:1px solid #f8fafc;}
-.ltag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;}
+.ltbl th{padding:8px 12px;background:#f8fafc;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:left;}
+.ltbl td{padding:8px 12px;border-bottom:1px solid #f8fafc;}
+.ltag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;}
 .lok{background:#dcfce7;color:#14532d;}.lng{background:#fee2e2;color:#991b1b;}.lin{background:#e0f2fe;color:#075985;}
-.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:flex-end;justify-content:center;}
-.mbg.open{display:flex;}
-.mbox{background:var(--card);border-radius:18px 18px 0 0;padding:20px 16px 40px;width:100%;max-width:480px;animation:up .3s ease;}
-@keyframes up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-.mhandle{width:32px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 14px;}
-.mtitle{font-size:15px;font-weight:700;margin-bottom:4px;}
-.msub{font-size:12px;color:var(--muted);margin-bottom:12px;}
-.mnote{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;height:75px;resize:none;outline:none;font-family:inherit;}
-.mnote:focus{border-color:var(--sea);}
-.mbtns{display:flex;gap:8px;margin-top:12px;}
-.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:100;}
-.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px 13px;cursor:pointer;color:var(--muted);font-size:10px;border:none;background:none;}
-.bni .ico{font-size:20px;}
-.bni.on{color:var(--sea);}
 .pulse{display:inline-block;width:6px;height:6px;background:var(--gold);border-radius:50%;animation:pulse 1.5s infinite;margin-left:3px;vertical-align:middle;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.scr{display:none;padding-bottom:80px;}
-.scr.on{display:block;}
 .spin{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--wave);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:10px;color:var(--muted);font-size:13px;}
-.empty{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px;}
-.eico{font-size:38px;display:block;margin-bottom:8px;opacity:.4;}
-.cwrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px;}
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(50px);padding:10px 22px;border-radius:22px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);white-space:nowrap;pointer-events:none;color:#fff;}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.loading{display:flex;flex-direction:column;align-items:center;padding:60px 20px;gap:12px;color:var(--muted);font-size:13px;}
+.empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:13px;}
+.eico{font-size:40px;display:block;margin-bottom:10px;opacity:.4;}
+#toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.2);}
+#toast.show{opacity:1;}
 </style>
 </head>
 <body>
@@ -115,15 +148,12 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
   <div class="ltitle">貿易大漁</div>
   <div class="lsub">業務管理系統</div>
   <div class="rtabs">
-    <button class="rtab on" onclick="setR('boss',this)">👑 董事長</button>
-    <button class="rtab" onclick="setR('staff',this)">👤 業務員</button>
-    <button class="rtab" onclick="setR('finance',this)">💰 財務</button>
+    <button class="rtab on" data-role="boss" onclick="setR(this)">👑 董事長</button>
+    <button class="rtab" data-role="staff" onclick="setR(this)">👤 業務員</button>
+    <button class="rtab" data-role="finance" onclick="setR(this)">💰 財務</button>
   </div>
-  <div class="lfield">
-    <label class="llbl">密碼</label>
-    <input class="linput" type="password" id="lpwd" placeholder="請輸入密碼"
-      onkeydown="if(event.key==='Enter')login()">
-  </div>
+  <label class="llbl">密碼</label>
+  <input class="linput" type="password" id="lpwd" placeholder="請輸入密碼" onkeydown="if(event.key==='Enter')login()">
   <button class="lbtn" onclick="login()">登入</button>
   <div class="lerr" id="lerr"></div>
   <div class="lpwdbox">🔑 預設密碼<br>
@@ -143,40 +173,78 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
     </div>
     <div class="hdr">
       <span class="rbadge" id="rbdg"></span>
+      <span class="ref-btn" onclick="load()">↻ 重新整理</span>
       <span class="out" onclick="logout()">登出</span>
-      <span class="ref" onclick="load()">↻</span>
     </div>
   </div>
 </header>
 <div class="alert hide" id="abar">
   <span id="atxt"></span>
-  <span onclick="go('approval')" style="cursor:pointer;text-decoration:underline;">前往審核→</span>
+  <span onclick="goTab('approval')" style="cursor:pointer;text-decoration:underline;">前往審核 →</span>
 </div>
+<div class="nav-tabs" id="ntabs"></div>
 <div class="scr on" id="s-dash"><div id="dc"><div class="loading"><div class="spin"></div>載入中...</div></div></div>
-<div class="scr" id="s-approval"><div class="sec" style="padding-top:12px;">
-  <div class="slbl">待簽核合約 <span class="pulse" id="pd" style="display:none;"></span></div>
-  <div id="al"></div></div></div>
-<div class="scr" id="s-records"><div class="sec" style="padding-top:12px;">
-  <div class="slbl">所有合約紀錄</div><div id="rl"></div></div></div>
-<div class="scr" id="s-log"><div class="sec" style="padding-top:12px;">
-  <div class="slbl">操作 Log</div>
-  <div class="cwrap"><table class="ltbl">
-    <thead><tr><th>時間</th><th>操作者</th><th>動作</th><th>對象</th><th>備注</th></tr></thead>
-    <tbody id="lb"></tbody>
-  </table></div></div></div>
-<nav class="bnav" id="nav"></nav>
+<div class="scr" id="s-records">
+  <div class="sbox">
+    <div class="sbox-title">海之寶 案件簽核總表</div>
+    <div class="sbox-sub">可依狀態、業務、日期查詢，預設為最新優先。</div>
+    <div class="sg2">
+      <div class="sf"><label>狀態</label>
+        <select id="fs">
+          <option value="">全部</option>
+          <option value="p">未簽核</option>
+          <option value="a">已同意</option>
+          <option value="r">退回</option>
+        </select></div>
+      <div class="sf"><label>業務</label><select id="fst"><option value="">全部</option></select></div>
+      <div class="sf"><label>日期起</label><input type="date" id="ff"></div>
+      <div class="sf"><label>日期迄</label><input type="date" id="ft"></div>
+    </div>
+    <div class="sbtns">
+      <button class="btn-sq" onclick="doSearch()">查詢</button>
+      <button class="btn-cl" onclick="clearSearch()">清除條件</button>
+    </div>
+  </div>
+  <div class="rc" id="rc"></div>
+  <div class="twrap"><table class="tbl">
+    <thead><tr><th>狀態</th><th>案件號碼</th><th>時間</th><th>業務</th><th>案件屬性</th><th>案件名稱</th><th>客戶</th><th>應收總金額</th><th>預估毛利潤</th><th>備註</th><th>操作</th></tr></thead>
+    <tbody id="tb"></tbody>
+  </table></div>
+</div>
+<div class="scr" id="s-approval"><div id="al"></div></div>
+<div class="scr" id="s-log">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+    <table class="ltbl"><thead><tr><th>時間</th><th>操作者</th><th>動作</th><th>對象</th><th>備注</th></tr></thead>
+    <tbody id="lb"></tbody></table>
+  </div>
+</div>
+<div class="scr" id="s-admin">
+  <div class="asec">
+    <div class="asec-t">⚙️ 帳號權限管理</div>
+    <div class="asec-s">管理登入者的名稱與密碼，設定後立即生效。</div>
+    <div class="ugrid" id="ug"></div>
+  </div>
+  <div class="asec">
+    <div class="asec-t">🔑 新增自訂帳號</div>
+    <div class="asec-s">可新增業務員或其他角色的帳號。</div>
+    <div id="cu"></div>
+    <button onclick="addCU()" style="margin-top:10px;padding:9px 16px;border-radius:8px;background:var(--sea);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;">+ 新增帳號</button>
+  </div>
+</div>
 </div>
 
-<div class="mbg" id="M">
-  <div class="mbox">
-    <div class="mhandle"></div>
-    <div class="mtitle" id="mt"></div>
-    <div class="msub" id="ms"></div>
-    <textarea class="mnote" id="mn" placeholder="批示或退回原因（選填）..."></textarea>
-    <div class="mbtns">
-      <button class="bng" style="flex:1" onclick="closeM()">取消</button>
-      <button class="bok" style="flex:2" id="mc">確認</button>
+<!-- Detail Modal -->
+<div class="modal-bg" id="DM">
+  <div class="modal-box">
+    <div class="mhd">
+      <div>
+        <div style="font-size:11px;color:#7fa0c0;margin-bottom:2px;" id="dm-id"></div>
+        <div style="font-size:15px;font-weight:700;color:var(--gold2);" id="dm-nm"></div>
+        <div style="font-size:11px;color:#7fa0c0;margin-top:2px;" id="dm-tm"></div>
+      </div>
+      <span class="mcl" onclick="closeD()">✕</span>
     </div>
+    <div class="mbody" id="mb"></div>
   </div>
 </div>
 <div id="toast"></div>
@@ -184,128 +252,139 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 <script>
 var SCRIPT='https://script.google.com/macros/s/AKfycbzIvsU_cIVFXxL--cLtCiFtS-qoj9kMsn1RlD9qRw0Q0Um_M5hc1288HcekVYkKXHbL4w/exec';
 var CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?gid=357150087&single=true&output=csv';
-var PWD={boss:'boss2026',staff:'staff2026',finance:'finance2026'};
-var role='boss',user='',rows=[],logs=[],pa=null;
 var RATE={USD:30.5,JPY:0.205,EUR:33.5,TWD:1};
 
-// 欄位對應
+// 帳號管理
+var BASE_USERS=[
+  {id:'boss',role:'boss',name:'董事長',pwd:'boss2026'},
+  {id:'staff',role:'staff',name:'業務員',pwd:'staff2026'},
+  {id:'finance',role:'finance',name:'財務',pwd:'finance2026'}
+];
+function loadU(){
+  try{
+    var s=localStorage.getItem('tu');
+    var base=BASE_USERS.map(function(u){
+      var saved=s?JSON.parse(s).find(function(x){return x.id===u.id;}):null;
+      return saved||u;
+    });
+    var cu=getCU();
+    return base.concat(cu);
+  }catch(e){return BASE_USERS;}
+}
+function saveU(arr){try{localStorage.setItem('tu',JSON.stringify(arr.filter(function(u){return ['boss','staff','finance'].indexOf(u.id)>=0;})));}catch(e){}}
+function getCU(){try{var s=localStorage.getItem('tcu');return s?JSON.parse(s):[];}catch(e){return[];}}
+function saveCU(a){try{localStorage.setItem('tcu',JSON.stringify(a));}catch(e){}}
+
+var CU=loadU(), curUser=null, rows=[], filtered=[], logs=[];
+
 var F={
-  time:'時間戳記', staff:'業務名稱', type:'案件屬性', name:'案件名稱',
-  supp:'供應商名稱（賣方）', buyer:'客戶名稱（買方）',
-  buyCur:'採購幣別', buyAmt:'應付總金額',
-  sellCur:'銷售幣別', sellAmt:'應收總金額',
-  etd:'ETD/卸魚日', eta:'ETA/到貨日',
-  buyPay:'付款條件', sellPay:'收款條件',
-  buyRem:'備註（採購）', sellRem:'備註（銷售）',
-  profit:'預估毛利潤', trade:'貿易條件',
-  status:'老闆已同意', bossNote:'老闆是否有先同意採購',
-  extra:'其他費用', asst:'承辦業助',
-  formId:'表單編號', freight:'運費',
-  tax:'規費', insure:'保險費', comm:'佣金',
-  acct:'會計審核', acctNote:'會計審核備註',
-  buyDate:'預計付款日期', sellDate:'預計收款日',
-  origin:'出貨地/發貨港口/出貨地點',
-  dest:'目的地/收貨港口/收貨地點',
-  buyCon:'合約 [賣方合約（採購）]',
-  sellCon:'合約 [買方合約（銷售）]'
+  time:'時間戳記',email:'電子郵件地址',staff:'業務名稱',type:'案件屬性',name:'案件名稱',
+  supp:'供應商名稱（賣方）',buyer:'客戶名稱（買方）',
+  buyCur:'採購幣別',buyAmt:'應付總金額',buyDate:'預計付款日期',buyPay:'付款條件',
+  buyRem:'備註（採購）',buyCon:'合約 [賣方合約（採購）]',
+  sellCur:'銷售幣別',sellAmt:'應收總金額',sellDate:'預計收款日',sellPay:'收款條件',
+  sellRem:'備註（銷售）',sellCon:'合約 [買方合約（銷售）]',
+  asst:'承辦業助',profit:'預估毛利潤',trade:'貿易條件',
+  etd:'ETD/卸魚日',eta:'ETA/到貨日',
+  origin:'出貨地/發貨港口/出貨地點',dest:'目的地/收貨港口/收貨地點',
+  extra:'其他費用',freight:'運費',tax:'規費',insure:'保險費',comm:'佣金',
+  status:'老闆已同意',bossNote:'老闆是否有先同意採購',
+  signTime:'簽屬時間',formId:'表單編號',
+  acct:'會計審核',acctNote:'會計審核備註'
 };
+function g(r,k){return(r[F[k]]||'').toString().trim();}
+function pf(v){return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0;}
+function cv(v){return v&&v.trim()&&v!=='—'&&v!=='0'&&v!=='-'&&v!=='undefined';}
+function isPend(r){var s=g(r,'status');return s===''||s==='否'||s==='待審核'||s==='尚未';}
+function isAppr(r){var s=g(r,'status');return s==='是'||s.includes('同意');}
 
-function g(r,k){ return (r[F[k]]||'').toString().trim(); }
-function pf(v){ return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0; }
-function cv(v){ return v&&v!=='—'&&v!==''&&v!=='0'&&v!=='undefined'; }
-
-// ── 登入 ──
-function setR(r,el){
-  role=r;
-  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('on'));
+// 登入
+function setR(el){
+  document.querySelectorAll('.rtab').forEach(function(t){t.classList.remove('on');});
   el.classList.add('on');
   document.getElementById('lpwd').value='';
   document.getElementById('lerr').textContent='';
 }
 function login(){
   var p=document.getElementById('lpwd').value;
-  if(p===PWD[role]){
-    user=role==='boss'?'董事長':role==='staff'?'業務員':'財務';
-    addLog('登入',user,'','');
+  var role=document.querySelector('.rtab.on').dataset.role;
+  CU=loadU();
+  var u=CU.find(function(x){return x.role===role&&x.pwd===p;});
+  if(!u) u=CU.find(function(x){return x.pwd===p;});
+  if(u){
+    curUser=u;
+    addLog('登入',u.name,'','');
     document.getElementById('L').style.display='none';
     document.getElementById('A').style.display='block';
-    var bd=document.getElementById('rbdg'),hs=document.getElementById('hsub');
-    if(role==='boss'){bd.textContent='👑 董事長';bd.className='rbadge rb1';hs.textContent='董事長即時看板';}
-    else if(role==='staff'){bd.textContent='👤 業務員';bd.className='rbadge rb2';hs.textContent='業務員填報系統';}
-    else{bd.textContent='💰 財務';bd.className='rbadge rb2';hs.textContent='財務放款管理';}
-    buildNav(); load();
+    var bd=document.getElementById('rbdg');
+    bd.textContent=(u.role==='boss'?'👑 ':u.role==='finance'?'💰 ':'👤 ')+u.name;
+    bd.className='rbadge '+(u.role==='boss'?'rb1':'rb2');
+    document.getElementById('hsub').textContent=u.role==='boss'?'董事長即時看板':u.role==='finance'?'財務放款管理':'業務員系統';
+    buildNav();load();
   } else {
-    document.getElementById('lerr').textContent='密碼錯誤';
+    document.getElementById('lerr').textContent='密碼錯誤，請重試';
     document.getElementById('lpwd').value='';
   }
 }
 function logout(){
-  addLog('登出',user,'','');
+  addLog('登出',curUser.name,'','');
   document.getElementById('L').style.display='flex';
   document.getElementById('A').style.display='none';
+  curUser=null;
   document.getElementById('lpwd').value='';
 }
 
-// ── 導覽列 ──
+// 導覽列
 function buildNav(){
-  var its=role==='boss'
-    ?[{i:'dash',e:'📊',l:'總覽'},{i:'approval',e:'✅',l:'簽核',p:true},{i:'records',e:'📋',l:'紀錄'},{i:'log',e:'🔍',l:'Log'}]
+  var role=curUser.role;
+  var tabs=role==='boss'
+    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件總表'},{i:'approval',l:'✅ 待簽核',p:true},{i:'log',l:'🔍 Log'},{i:'admin',l:'⚙️ 後台'}]
     :role==='staff'
-    ?[{i:'dash',e:'📊',l:'總覽'},{i:'records',e:'📋',l:'我的案件'}]
-    :[{i:'dash',e:'📊',l:'總覽'},{i:'records',e:'📋',l:'待放款'},{i:'log',e:'🔍',l:'Log'}];
-  document.getElementById('nav').innerHTML=its.map(it=>
-    '<button class="bni'+(it.i==='dash'?' on':'')+'" id="n-'+it.i+'" onclick="go(\''+it.i+'\')">'
-    +'<span class="ico">'+it.e+'</span>'+it.l
-    +(it.p?'<span class="pulse" id="nd" style="display:none;"></span>':'')
-    +'</button>'
-  ).join('');
+    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 我的案件'}]
+    :[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'log',l:'🔍 Log'}];
+  document.getElementById('ntabs').innerHTML=tabs.map(function(t){
+    var cls='nav-tab'+(t.i==='dash'?' on':'');
+    var pulse=t.p?'<span class="pulse" id="pdot" style="display:none;"></span>':'';
+    return '<div class="'+cls+'" id="nt-'+t.i+'" data-tabid="'+t.i+'" onclick="goTabEl(this)">'+t.l+pulse+'</div>';
+  }).join('');
 }
 
-// ── 讀取資料（直接從 Apps Script 取得，不依賴 proxy）──
+// 資料讀取
 function load(){
   document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
-  // 直接呼叫 Apps Script GET endpoint 取得資料
   fetch(SCRIPT+'?action=getData&_='+Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(data.status==='ok' && data.rows && data.rows.length>0){
-        rows=data.rows; render();
-      } else {
-        // 備用：嘗試 CSV
-        loadCSV();
-      }
-    })
-    .catch(function(){ loadCSV(); });
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==='ok'&&d.rows&&d.rows.length>0){rows=d.rows;onLoad();}
+      else loadCSV();
+    }).catch(loadCSV);
 }
-
 function loadCSV(){
   fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(CSV+'&_='+Date.now()))
-    .then(function(r){ return r.text(); })
-    .then(function(csv){
-      var parsed=parseCSV(csv);
-      if(parsed.length>0){ rows=parsed; render(); }
-      else showErr();
-    })
+    .then(function(r){return r.text();})
+    .then(function(c){var p=parseCSV(c);if(p.length>0){rows=p;onLoad();}else showErr();})
     .catch(function(){
-      fetch(CSV+'&_='+Date.now())
-        .then(function(r){ return r.text(); })
-        .then(function(csv){
-          var parsed=parseCSV(csv);
-          if(parsed.length>0){ rows=parsed; render(); }
-          else showErr();
-        })
+      fetch(CSV+'&_='+Date.now()).then(function(r){return r.text();})
+        .then(function(c){var p=parseCSV(c);if(p.length>0){rows=p;onLoad();}else showErr();})
         .catch(showErr);
     });
+}
+function onLoad(){
+  filtered=rows.slice().reverse();
+  buildStaffFilter();
+  renderDash();
+  renderTable(filtered);
+  renderApproval();
+  updateAlert();
 }
 function showErr(){
   document.getElementById('dc').innerHTML=
     '<div class="empty"><span class="eico">⚠️</span>'
-    +'<div style="font-size:13px;font-weight:700;color:#dc2626;">無法讀取 Sheets</div>'
-    +'<div style="font-size:12px;color:#64748b;margin-top:6px;">請確認 FormResponses 已發布為 CSV</div>'
-    +'<a href="https://docs.google.com/spreadsheets/d/1qIHKxU-42qDVT2WDcLZp1Z3Ixg1_VRTURJ96uAVfyhM/edit" target="_blank" style="display:inline-block;margin-top:12px;padding:9px 18px;background:#0369a1;color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">開啟 Sheets</a>'
-    +'<br><button onclick="load()" style="margin-top:10px;padding:9px 18px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;">重試</button></div>';
+    +'<div style="font-size:14px;font-weight:700;color:#dc2626;">無法讀取 Sheets</div>'
+    +'<div style="font-size:12px;color:#64748b;margin-top:6px;">請確認 FormResponses 已發布 CSV<br>並確認 Apps Script 已更新並重新部署</div>'
+    +'<a href="https://docs.google.com/spreadsheets/d/1qIHKxU-42qDVT2WDcLZp1Z3Ixg1_VRTURJ96uAVfyhM/edit" target="_blank" style="display:inline-block;margin-top:14px;padding:9px 20px;background:#0369a1;color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">開啟 Sheets</a>'
+    +'<br><button onclick="load()" style="margin-top:10px;padding:9px 20px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;">重試</button></div>';
 }
-
 function parseCSV(csv){
   var lines=csv.split('\n').filter(function(l){return l.trim();});
   if(lines.length<2)return[];
@@ -323,271 +402,313 @@ function parseCSV(csv){
     return obj;
   });
 }
-
-// ── 渲染 ──
-function render(){
-  var pending=rows.filter(function(r){
-    var s=g(r,'status');
-    return s===''||s==='否'||s==='待審核'||s==='尚未';
-  });
-  var totalBuy=0,totalSell=0,totalPro=0;
-  rows.forEach(function(r){
-    totalBuy+=pf(g(r,'buyAmt'))*(RATE[g(r,'buyCur')]||1);
-    totalSell+=pf(g(r,'sellAmt'))*(RATE[g(r,'sellCur')]||1);
-    totalPro+=pf(g(r,'profit'));
-  });
-  var margin=totalSell>0?(totalPro/totalSell*100).toFixed(1):0;
-
+function updateAlert(){
+  var pend=rows.filter(isPend);
   var ab=document.getElementById('abar');
-  if(role==='boss'&&pending.length){
+  var pd=document.getElementById('pdot');
+  if(curUser&&curUser.role==='boss'&&pend.length){
     ab.classList.remove('hide');
-    document.getElementById('atxt').textContent='⚠️ 有 '+pending.length+' 筆合約待您審核';
-    var pd=document.getElementById('pd'),nd=document.getElementById('nd');
+    document.getElementById('atxt').textContent='⚠️ 有 '+pend.length+' 筆合約待您簽核';
     if(pd)pd.style.display='inline-block';
-    if(nd)nd.style.display='inline-block';
-  }else{ab.classList.add('hide');}
+  }else{ab.classList.add('hide');if(pd)pd.style.display='none';}
+}
 
-  var d='<div class="sec" style="padding-top:12px;"><div class="slbl">財務總覽</div>'
-    +'<div class="sg">'
-    +sc('s1','📥','總進貨','NTD '+fmtM(totalBuy),'v1',rows.length+' 筆')
-    +sc('s2','📤','總出貨','NTD '+fmtM(totalSell),'v2','')
-    +sc('s3','💹','預估毛利','NTD '+fmtM(totalPro),'v3',margin+'%')
-    +sc('s4','⏳','待審核',pending.length+' 筆','v4','')
+// 總覽
+function renderDash(){
+  var tB=0,tS=0,tP=0;
+  rows.forEach(function(r){
+    tB+=pf(g(r,'buyAmt'))*(RATE[g(r,'buyCur')]||1);
+    tS+=pf(g(r,'sellAmt'))*(RATE[g(r,'sellCur')]||1);
+    tP+=pf(g(r,'profit'));
+  });
+  var mg=tS>0?(tP/tS*100).toFixed(1):0;
+  var pend=rows.filter(isPend).length;
+  var h='<div class="sg">'
+    +'<div class="st s1"><span class="stico">📥</span><div class="stlbl">總進貨成本</div><div class="stval v1">'+fmtM(tB)+'</div><div class="stsub">NTD 換算</div></div>'
+    +'<div class="st s2"><span class="stico">📤</span><div class="stlbl">總出貨金額</div><div class="stval v2">'+fmtM(tS)+'</div><div class="stsub">NTD 換算</div></div>'
+    +'<div class="st s3"><span class="stico">💹</span><div class="stlbl">預估總毛利</div><div class="stval v3">'+fmtM(tP)+'</div><div class="stsub">毛利率 '+mg+'%</div></div>'
+    +'<div class="st s4"><span class="stico">⏳</span><div class="stlbl">待審核</div><div class="stval v4">'+pend+'</div><div class="stsub">筆合約</div></div>'
+    +'</div>';
+  h+='<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;">最近合約</div>';
+  h+='<div class="twrap"><table class="tbl"><thead><tr><th>狀態</th><th>案件號碼</th><th>業務</th><th>案件名稱</th><th>客戶</th><th>毛利潤</th><th>操作</th></tr></thead><tbody>';
+  rows.slice().reverse().slice(0,5).forEach(function(r){h+=qRow(r);});
+  h+='</tbody></table></div>';
+  document.getElementById('dc').innerHTML=h;
+}
+function qRow(r){
+  var b=isPend(r)?'bp':isAppr(r)?'ba':'br';
+  var l=isPend(r)?'未簽核':isAppr(r)?'已同意':'退回';
+  return '<tr><td><span class="bdg '+b+'">'+l+'</span></td>'
+    +'<td class="tdg">'+g(r,'formId')+'</td><td class="tdb">'+g(r,'staff')+'</td>'
+    +'<td>'+g(r,'name')+'</td><td>'+g(r,'buyer')+'</td>'
+    +'<td class="mg">'+g(r,'profit')+'</td>'
+    +'<td><button class="btn-v" onclick="showD('+r._row+')">查看</button></td></tr>';
+}
+
+// 案件總表
+function buildStaffFilter(){
+  var staffs=[...new Set(rows.map(function(r){return g(r,'staff');}))].filter(Boolean);
+  var sel=document.getElementById('fst');
+  sel.innerHTML='<option value="">全部</option>';
+  staffs.forEach(function(s){sel.innerHTML+='<option value="'+s+'">'+s+'</option>';});
+}
+function doSearch(){
+  var st=document.getElementById('fs').value;
+  var sf=document.getElementById('fst').value;
+  var ff=document.getElementById('ff').value;
+  var ft=document.getElementById('ft').value;
+  filtered=rows.filter(function(r){
+    if(st==='p'&&!isPend(r))return false;
+    if(st==='a'&&!isAppr(r))return false;
+    if(st==='r'){var s=g(r,'status');if(!s.includes('退')&&s!=='退回')return false;}
+    if(sf&&g(r,'staff')!==sf)return false;
+    if(ff){var d=new Date(g(r,'time'));if(isNaN(d)||d<new Date(ff))return false;}
+    if(ft){var d2=new Date(g(r,'time'));if(isNaN(d2)||d2>new Date(ft+'T23:59:59'))return false;}
+    return true;
+  }).slice().reverse();
+  renderTable(filtered);
+}
+function clearSearch(){
+  document.getElementById('fs').value='';
+  document.getElementById('fst').value='';
+  document.getElementById('ff').value='';
+  document.getElementById('ft').value='';
+  filtered=rows.slice().reverse();
+  renderTable(filtered);
+}
+function renderTable(data){
+  document.getElementById('rc').textContent='共 '+data.length+' 筆（已依最新優先排序）';
+  var h='';
+  data.forEach(function(r){
+    var b=isPend(r)?'bp':isAppr(r)?'ba':'br';
+    var l=isPend(r)?'未簽核':isAppr(r)?'已同意（待會計）':'退回';
+    var rem=(g(r,'buyRem')||g(r,'sellRem')||'').substring(0,20);
+    h+='<tr>'
+      +'<td><span class="bdg '+b+'">'+l+'</span></td>'
+      +'<td class="tdg">'+g(r,'formId')+'</td>'
+      +'<td class="tdg">'+g(r,'time').split(' ')[0]+'</td>'
+      +'<td class="tdb">'+g(r,'staff')+'</td>'
+      +'<td class="tdg">'+g(r,'type')+'</td>'
+      +'<td class="tdb">'+g(r,'name')+'</td>'
+      +'<td>'+g(r,'buyer')+'</td>'
+      +'<td class="mg">'+g(r,'sellCur')+' '+fmtN(pf(g(r,'sellAmt')))+'</td>'
+      +'<td class="mg">'+g(r,'profit')+'</td>'
+      +'<td class="tdg" style="font-size:11px;">'+rem+(rem.length>=20?'…':'')+'</td>'
+      +'<td><button class="btn-v" onclick="showD('+r._row+')">查看</button></td>'
+      +'</tr>';
+  });
+  document.getElementById('tb').innerHTML=h||'<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:30px;">查無資料</td></tr>';
+}
+
+// 待簽核
+function renderApproval(){
+  var pend=rows.filter(isPend);
+  var h='';
+  if(!pend.length){h='<div class="empty"><span class="eico">✅</span>目前沒有待簽核合約</div>';}
+  else{
+    h='<div class="twrap"><table class="tbl"><thead><tr>'
+      +'<th>案件號碼</th><th>時間</th><th>業務</th><th>案件名稱</th><th>客戶</th><th>應收金額</th><th>毛利潤</th><th>操作</th>'
+      +'</tr></thead><tbody>';
+    pend.forEach(function(r){
+      h+='<tr>'
+        +'<td class="tdg">'+g(r,'formId')+'</td>'
+        +'<td class="tdg" style="font-size:12px;">'+g(r,'time')+'</td>'
+        +'<td class="tdb">'+g(r,'staff')+'</td>'
+        +'<td class="tdb">'+g(r,'name')+'</td>'
+        +'<td>'+g(r,'buyer')+'</td>'
+        +'<td class="mg">'+g(r,'sellCur')+' '+fmtN(pf(g(r,'sellAmt')))+'</td>'
+        +'<td class="mg">'+g(r,'profit')+'</td>'
+        +'<td><button class="btn-v" onclick="showD('+r._row+')">查看/簽核</button></td>'
+        +'</tr>';
+    });
+    h+='</tbody></table></div>';
+  }
+  document.getElementById('al').innerHTML=h;
+}
+
+// 詳細 Modal
+function showD(rowNum){
+  var r=rows.find(function(x){return x._row===rowNum;});
+  if(!r)return;
+  document.getElementById('dm-id').textContent='案件號碼 '+g(r,'formId');
+  document.getElementById('dm-nm').textContent=g(r,'name');
+  document.getElementById('dm-tm').textContent=g(r,'time')+'　'+g(r,'staff')+(g(r,'asst')?'/'+g(r,'asst'):'');
+  var h='';
+  // 採購
+  h+='<div class="dsec"><div class="dsec-t tb">　採購（賣方）</div><div class="dgrid">'
+    +dr('供應商',g(r,'supp'))+dr('採購幣別',g(r,'buyCur'))
+    +dr('應付總金額',g(r,'buyAmt'))+dr('預計付款日',g(r,'buyDate'))
+    +dr('付款條件',g(r,'buyPay'))+dr('賣方合約',g(r,'buyCon'))
+    +(cv(g(r,'buyRem'))?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:#7f1d1d;">'+g(r,'buyRem')+'</div></div>':'')
     +'</div></div>';
-  if(role==='boss'&&pending.length){
-    d+='<div class="sec" style="padding-top:10px;"><div class="slbl">⚡ 待審核</div>'
-      +pending.slice(0,3).map(function(r){return card(r,true);}).join('')+'</div>';
+  // 銷售
+  h+='<div class="dsec"><div class="dsec-t ts">　銷售（買方）</div><div class="dgrid">'
+    +dr('客戶名稱',g(r,'buyer'))+dr('銷售幣別',g(r,'sellCur'))
+    +dr('應收總金額',g(r,'sellAmt'))+dr('預計收款日',g(r,'sellDate'))
+    +dr('收款條件',g(r,'sellPay'))+dr('買方合約',g(r,'sellCon'))
+    +(cv(g(r,'sellRem'))?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:#14532d;">'+g(r,'sellRem')+'</div></div>':'')
+    +'</div></div>';
+  // 物流
+  h+='<div class="dsec"><div class="dsec-t tsh">　物流 / 貿易</div><div class="dgrid">'
+    +dr('貿易條件',g(r,'trade'))+dr('案件屬性',g(r,'type'))
+    +dr('ETD',g(r,'etd'))+dr('ETA',g(r,'eta'))
+    +dr('出貨地',g(r,'origin'))+dr('目的地',g(r,'dest'))
+    +dr('運費',g(r,'freight'))+dr('保險費',g(r,'insure'))
+    +dr('規費',g(r,'tax'))+dr('佣金',g(r,'comm'))
+    +dr('其他費用',g(r,'extra'))
+    +'</div></div>';
+  // 老闆指示 / 會計
+  if(cv(g(r,'bossNote')))h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;"><b style="color:#92400e;">👑 老闆指示：</b><span style="color:#78350f;">'+g(r,'bossNote')+'</span></div>';
+  if(cv(g(r,'acct')))h+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;"><b style="color:#14532d;">💰 會計：</b>'+g(r,'acct')+(cv(g(r,'acctNote'))?' — '+g(r,'acctNote'):'')+'</div>';
+  // 毛利
+  h+='<div class="pbar"><span style="font-size:12px;color:var(--jade);font-weight:700;">預估毛利潤</span><span style="font-size:18px;font-weight:700;color:var(--jade);font-family:monospace;">'+g(r,'profit')+'</span></div>';
+  // 簽核區
+  if(curUser&&curUser.role==='boss'&&isPend(r)){
+    h+='<div class="af"><div class="af-t">👑 董事長簽核</div>'
+      +'<label class="af-lbl">簽核備註（回寫至試算表 AH 欄）</label>'
+      +'<textarea class="af-note" id="an-'+rowNum+'" placeholder="填寫指示、條件或退回原因..."></textarea>'
+      +'<div class="abtns">'
+      +'<button class="bng" id="bng-'+rowNum+'" onclick="doApp('+rowNum+',\'退回\')">❌ 退回</button>'
+      +'<button class="bok" id="bok-'+rowNum+'" onclick="doApp('+rowNum+',\'是\')">✅ 同意簽核</button>'
+      +'</div></div>';
   }
-  d+='<div class="sec" style="padding-top:10px;"><div class="slbl">最近合約</div>'
-    +rows.slice(-5).reverse().map(function(r){return card(r,false);}).join('')+'</div>';
-  document.getElementById('dc').innerHTML=d;
-
-  document.getElementById('al').innerHTML=pending.length
-    ?pending.map(function(r){return card(r,role==='boss');}).join('')
-    :'<div class="empty"><span class="eico">✅</span>目前沒有待審核合約</div>';
-
-  var showR=role==='finance'
-    ?rows.filter(function(r){var s=g(r,'status');return s.includes('同意')||s==='是';})
-    :rows;
-  document.getElementById('rl').innerHTML=showR.length
-    ?showR.slice().reverse().map(function(r){return card(r,false);}).join('')
-    :'<div class="empty"><span class="eico">📋</span>尚無資料</div>';
-
-  var lb=document.getElementById('lb');
-  if(lb){
-    lb.innerHTML=logs.length===0
-      ?'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">尚無操作記錄</td></tr>'
-      :logs.slice().reverse().map(function(l){
-        return '<tr><td style="white-space:nowrap;font-size:11px;">'+l.t+'</td>'
-          +'<td><b>'+l.u+'</b></td>'
-          +'<td><span class="ltag '+l.c+'">'+l.a+'</span></td>'
-          +'<td style="font-size:11px;">'+l.g+'</td>'
-          +'<td style="font-size:11px;color:#64748b;">'+l.n+'</td></tr>';
-      }).join('');
-  }
+  document.getElementById('mb').innerHTML=h;
+  document.getElementById('DM').classList.add('open');
 }
-
-function sc(cls,ico,lbl,val,vc,sub){
-  return '<div class="st '+cls+'"><span class="stico">'+ico+'</span>'
-    +'<div class="stlbl">'+lbl+'</div><div class="stval '+vc+'">'+val+'</div>'
-    +(sub?'<div class="stsub">'+sub+'</div>':'')+'</div>';
+function dr(lbl,val){
+  if(!cv(val))return '';
+  return '<div class="drow"><div class="drow-l">'+lbl+'</div><div class="drow-v">'+val+'</div></div>';
 }
+function closeD(){document.getElementById('DM').classList.remove('open');}
+document.getElementById('DM').addEventListener('click',function(e){if(e.target===this)closeD();});
 
-// ── 完整合約卡片（對應 PDF 格式）──
-function card(r,showAct){
-  var status=g(r,'status');
-  var isPending=status===''||status==='否'||status==='待審核'||status==='尚未';
-  var isApproved=status.includes('同意')||status==='是';
-  var sc2=isPending?'p':isApproved?'a':'r';
-  var bc=isPending?'bp':isApproved?'ba':'br';
-  var sdisplay=isPending?'待審核':isApproved?'已同意':'退回';
-  var rowNum=r._row;
-
-  var formId=g(r,'formId');
-  var time=g(r,'time');
-  var staff=g(r,'staff')||'—';
-  var asst=g(r,'asst');
-  var type=g(r,'type');
-  var caseName=g(r,'name')||'—';
-  var supp=g(r,'supp')||'—';
-  var buyer=g(r,'buyer')||'—';
-  var buyCur=g(r,'buyCur')||'TWD';
-  var buyAmt=g(r,'buyAmt')||'0';
-  var buyDate=g(r,'buyDate');
-  var buyPay=g(r,'buyPay');
-  var buyRem=g(r,'buyRem');
-  var buyCon=g(r,'buyCon');
-  var sellCur=g(r,'sellCur')||'TWD';
-  var sellAmt=g(r,'sellAmt')||'0';
-  var sellDate=g(r,'sellDate');
-  var sellPay=g(r,'sellPay');
-  var sellRem=g(r,'sellRem');
-  var sellCon=g(r,'sellCon');
-  var trade=g(r,'trade')||'—';
-  var etd=g(r,'etd')||'—';
-  var eta=g(r,'eta')||'—';
-  var origin=g(r,'origin');
-  var dest=g(r,'dest');
-  var freight=g(r,'freight');
-  var insure=g(r,'insure');
-  var tax=g(r,'tax');
-  var comm=g(r,'comm');
-  var extra=g(r,'extra');
-  var profit=g(r,'profit')||'—';
-  var bossNote=g(r,'bossNote');
-  var acct=g(r,'acct');
-  var acctNote=g(r,'acctNote');
-
-  var h='<div class="cc '+sc2+'">';
-
-  // 頂部深色標頭
-  h+='<div style="background:#0b1d35;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;">'
-    +'<div style="flex:1;">'
-    +(formId?'<div style="font-size:10px;color:#7fa0c0;letter-spacing:.05em;margin-bottom:2px;">案件號碼 '+formId+'</div>':'')
-    +'<div style="font-size:14px;font-weight:700;color:#f0c040;line-height:1.3;">'+caseName+'</div>'
-    +(type?'<div style="font-size:10px;color:#7fa0c0;margin-top:2px;">'+type+'</div>':'')
-    +(time?'<div style="font-size:10px;color:#5a7a9a;margin-top:2px;">'+time+'</div>':'')
-    +'</div>'
-    +'<span class="bdg '+bc+'" style="margin-left:8px;flex-shrink:0;">'+sdisplay+'</span>'
-    +'</div>';
-
-  // 業務資訊橫條
-  h+='<div style="background:#eff6ff;padding:7px 14px;border-bottom:1px solid #dbeafe;'
-    +'display:flex;flex-wrap:wrap;gap:12px;font-size:12px;">'
-    +'<span><b style="color:#0369a1;">業務</b> '+staff+'</span>'
-    +(asst?'<span><b style="color:#0369a1;">業助</b> '+asst+'</span>':'')
-    +'</div>';
-
-  h+='<div class="ccbody">';
-
-  // 採購區塊
-  h+='<div style="margin-bottom:12px;">'
-    +'<div class="sec-bar sb-buy"><span></span>採購（賣方）</div>'
-    +crow('供應商', supp, '')
-    +crow('幣別／金額', buyCur+' '+buyAmt, 'cost')
-    +(cv(buyDate)?crow('預計付款日', buyDate, ''):'')
-    +(cv(buyPay)?crow('付款條件', buyPay, ''):'')
-    +(cv(buyCon)?crow('賣方合約', buyCon, ''):'')
-    +(cv(buyRem)?'<div style="background:#fef2f2;border-radius:7px;padding:8px 10px;margin-top:6px;font-size:11px;color:#7f1d1d;line-height:1.7;"><b>備註：</b>'+buyRem+'</div>':'')
-    +'</div>';
-
-  // 銷售區塊
-  h+='<div style="margin-bottom:12px;">'
-    +'<div class="sec-bar sb-sell"><span></span>銷售（買方）</div>'
-    +crow('客戶', buyer, '')
-    +crow('幣別／金額', sellCur+' '+sellAmt, 'money')
-    +(cv(sellDate)?crow('預計收款日', sellDate, ''):'')
-    +(cv(sellPay)?crow('收款條件', sellPay, ''):'')
-    +(cv(sellCon)?crow('買方合約', sellCon, ''):'')
-    +(cv(sellRem)?'<div style="background:#f0fdf4;border-radius:7px;padding:8px 10px;margin-top:6px;font-size:11px;color:#14532d;line-height:1.7;"><b>備註：</b>'+sellRem+'</div>':'')
-    +'</div>';
-
-  // 物流區塊
-  h+='<div style="margin-bottom:10px;">'
-    +'<div class="sec-bar sb-ship"><span></span>物流 / 貿易條件</div>'
-    +crow('貿易條件', trade, '')
-    +crow('ETD / ETA', etd+' → '+eta, '')
-    +(cv(origin)?crow('出貨地', origin, ''):'')
-    +(cv(dest)?crow('目的地', dest, ''):'')
-    +(cv(freight)?crow('運費', freight, ''):'')
-    +(cv(insure)?crow('保險費', insure, ''):'')
-    +(cv(tax)?crow('規費', tax, ''):'')
-    +(cv(comm)?crow('佣金', comm, ''):'')
-    +(cv(extra)?crow('其他費用', extra, ''):'')
-    +'</div>';
-
-  // 老闆指示
-  if(cv(bossNote)){
-    h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;'
-      +'padding:9px 12px;margin-bottom:10px;font-size:12px;">'
-      +'<b style="color:#92400e;">👑 老闆指示：</b><span style="color:#78350f;">'+bossNote+'</span></div>';
-  }
-
-  // 會計審核
-  if(cv(acct)){
-    h+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;'
-      +'padding:9px 12px;margin-bottom:10px;font-size:12px;">'
-      +'<b style="color:#14532d;">💰 會計：</b><span style="color:#166534;">'+acct+'</span>'
-      +(cv(acctNote)?' — '+acctNote:'')+'</div>';
-  }
-
-  h+='</div>';
-
-  // 毛利條
-  h+='<div style="background:#f0fdf4;border-top:2px solid #dcfce7;padding:10px 14px;'
-    +'display:flex;justify-content:space-between;align-items:center;">'
-    +'<span style="font-size:11px;color:#16a34a;font-weight:700;">預估毛利潤</span>'
-    +'<span style="font-size:16px;font-weight:700;color:#16a34a;font-family:monospace;">'+profit+'</span></div>';
-
-  // 簽核按鈕
-  if(showAct&&isPending){
-    h+='<div class="ccact">'
-      +'<button class="bng" onclick="doAct('+rowNum+',\'退回\')">❌ 退回</button>'
-      +'<button class="bok" onclick="doAct('+rowNum+',\'同意\')">✅ 同意簽核</button>'
-      +'</div>';
-  }
-  h+='</div>';
-  return h;
-}
-
-function crow(k,v,cls){
-  if(!v||v==='—'||v===''||v==='0')return '';
-  return '<div class="crow"><span class="ck">'+k+'</span>'
-    +'<span class="cv '+cls+'">'+v+'</span></div>';
-}
-
-// ── 簽核 ──
-function doAct(rowNum,status){
-  if(role!=='boss'){toast('只有董事長可以簽核','#dc2626');return;}
-  pa={rowNum:rowNum,status:status};
-  var t=rows.find(function(r){return r._row===rowNum;});
-  var name=t?g(t,'buyer')+' — '+g(t,'name'):'';
-  document.getElementById('mt').textContent=status==='同意'?'✅ 確認同意簽核':'❌ 退回給業務修改';
-  document.getElementById('ms').textContent=name;
-  document.getElementById('mn').value='';
-  document.getElementById('M').classList.add('open');
-}
-
-document.getElementById('mc').onclick=function(){
-  if(!pa)return;
-  var note=document.getElementById('mn').value;
-  var rowNum=pa.rowNum,status=pa.status;
-  var t=rows.find(function(r){return r._row===rowNum;});
-  var name=t?g(t,'buyer')+' — '+g(t,'name'):'Row'+rowNum;
-  closeM();
+// 簽核
+function doApp(rowNum,status){
+  var note=document.getElementById('an-'+rowNum).value;
+  var r=rows.find(function(x){return x._row===rowNum;});
+  var name=r?g(r,'buyer')+' — '+g(r,'name'):'Row'+rowNum;
+  var b1=document.getElementById('bok-'+rowNum);
+  var b2=document.getElementById('bng-'+rowNum);
+  if(b1)b1.disabled=true;
+  if(b2)b2.disabled=true;
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({action:'approve',row:rowNum,
-      status:status==='同意'?'是':'退回',note:note,approver:user,time:now()}),
+    body:JSON.stringify({action:'approve',row:rowNum,status:status,note:note,approver:curUser.name,time:now()}),
     mode:'no-cors'
   }).finally(function(){
-    if(t){t[F.status]=status==='同意'?'是':'退回';t[F.bossNote]=note;}
-    addLog(status==='同意'?'同意簽核':'退回修改',user,name,note);
-    render();
-    toast(status==='同意'?'✅ 已簽核！通知財務放款':'❌ 已退回',
-          status==='同意'?'#16a34a':'#dc2626');
+    if(r){r[F.status]=status;r[F.bossNote]=note;}
+    addLog(status==='是'?'同意簽核':'退回修改',curUser.name,name,note);
+    closeD();
+    onLoad();
+    toast(status==='是'?'✅ 已簽核！財務收到通知':'❌ 已退回',status==='是'?'#16a34a':'#dc2626');
   });
-};
-
-function closeM(){document.getElementById('M').classList.remove('open');}
-document.getElementById('M').addEventListener('click',function(e){if(e.target===this)closeM();});
-
-function go(id){
-  document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
-  document.querySelectorAll('.bni').forEach(function(b){b.classList.remove('on');});
-  var s=document.getElementById('s-'+id),n=document.getElementById('n-'+id);
-  if(s)s.classList.add('on');
-  if(n)n.classList.add('on');
-  if(id==='log')render();
 }
 
-function addLog(a,u,g2,n){
+// 後台
+function renderAdmin(){
+  var h='';
+  BASE_USERS.forEach(function(u){
+    var cu2=CU.find(function(x){return x.id===u.id;})||u;
+    h+='<div class="uc" id="uc-'+u.id+'">'
+      +'<div class="uc-role">'+u.role+'</div>'
+      +'<div class="uc-nm">'+cu2.name+'</div>'
+      +'<div class="uc-f"><label class="uc-l">顯示名稱</label><input class="uc-i" id="un-'+u.id+'" value="'+cu2.name+'"></div>'
+      +'<div class="uc-f"><label class="uc-l">新密碼（留空不修改）</label><input class="uc-i" type="password" id="up-'+u.id+'" placeholder="輸入新密碼" autocomplete="new-password"></div>'
+      +'<button class="btn-su" onclick="saveU2(\''+u.id+'\')">儲存</button>'
+      +'<span class="svd" id="sv-'+u.id+'">✓ 已儲存</span></div>';
+  });
+  document.getElementById('ug').innerHTML=h;
+  renderCU();
+}
+function saveU2(id){
+  var name=document.getElementById('un-'+id).value.trim();
+  var pwd=document.getElementById('up-'+id).value.trim();
+  var arr=BASE_USERS.map(function(u){
+    var c=CU.find(function(x){return x.id===u.id;})||{...u};
+    if(u.id===id){if(name)c.name=name;if(pwd)c.pwd=pwd;}
+    return c;
+  });
+  saveU(arr);
+  CU=loadU();
+  var sv=document.getElementById('sv-'+id);
+  if(sv){sv.style.display='inline';setTimeout(function(){sv.style.display='none';},2000);}
+  toast('✅ 已更新','#16a34a');
+}
+function addCU(){
+  var cus=getCU();
+  if(cus.length>=7){toast('最多 10 個帳號','#dc2626');return;}
+  cus.push({id:'cu_'+Date.now(),role:'staff',name:'新帳號',pwd:'pass123'});
+  saveCU(cus);CU=loadU();renderCU();
+}
+function renderCU(){
+  var cus=getCU();
+  if(!cus.length){document.getElementById('cu').innerHTML='<div style="font-size:12px;color:#94a3b8;padding:8px 0;">尚無自訂帳號</div>';return;}
+  var h='<div class="ugrid">';
+  cus.forEach(function(u){
+    h+='<div class="uc"><div class="uc-f"><label class="uc-l">顯示名稱</label><input class="uc-i" id="cn-'+u.id+'" value="'+u.name+'"></div>'
+      +'<div class="uc-f"><label class="uc-l">角色</label><select class="uc-i" id="cr-'+u.id+'">'
+      +'<option value="boss"'+(u.role==='boss'?' selected':'')+'>董事長</option>'
+      +'<option value="staff"'+(u.role==='staff'?' selected':'')+'>業務員</option>'
+      +'<option value="finance"'+(u.role==='finance'?' selected':'')+'>財務</option>'
+      +'</select></div>'
+      +'<div class="uc-f"><label class="uc-l">密碼</label><input class="uc-i" id="cp-'+u.id+'" value="'+u.pwd+'"></div>'
+      +'<div style="display:flex;gap:6px;margin-top:4px;">'
+      +'<button class="btn-su" style="flex:2" onclick="saveCU2(\''+u.id+'\')">儲存</button>'
+      +'<button style="flex:1;padding:8px;border-radius:7px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;font-size:12px;font-weight:700;cursor:pointer;" onclick="delCU(\''+u.id+'\')">刪除</button>'
+      +'</div></div>';
+  });
+  h+='</div>';
+  document.getElementById('cu').innerHTML=h;
+}
+function saveCU2(id){
+  var cus=getCU();
+  var u=cus.find(function(x){return x.id===id;});
+  if(!u)return;
+  u.name=document.getElementById('cn-'+id).value.trim()||u.name;
+  u.role=document.getElementById('cr-'+id).value;
+  u.pwd=document.getElementById('cp-'+id).value.trim()||u.pwd;
+  saveCU(cus);CU=loadU();toast('✅ 已儲存','#16a34a');
+}
+function delCU(id){
+  saveCU(getCU().filter(function(x){return x.id!==id;}));
+  CU=loadU();renderCU();
+}
+
+// Log
+function addLog(a,u,tgt,n){
   var c=a.includes('同意')||a.includes('簽核')?'lok':a.includes('退回')?'lng':'lin';
-  logs.push({t:now(),u:u,a:a,g:g2,n:n,c:c});
-  if(logs.length>100)logs.shift();
+  logs.push({t:now(),u:u,a:a,g:tgt,n:n,c:c});
+  if(logs.length>200)logs.shift();
   try{localStorage.setItem('tl',JSON.stringify(logs));}catch(e){}
+  renderLog();
+}
+function renderLog(){
+  var lb=document.getElementById('lb');
+  if(!lb)return;
+  lb.innerHTML=logs.length===0
+    ?'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">尚無記錄</td></tr>'
+    :logs.slice().reverse().map(function(l){
+      return '<tr><td style="white-space:nowrap;font-size:11px;">'+l.t+'</td>'
+        +'<td><b>'+l.u+'</b></td>'
+        +'<td><span class="ltag '+l.c+'">'+l.a+'</span></td>'
+        +'<td style="font-size:11px;">'+l.g+'</td>'
+        +'<td style="font-size:11px;color:#64748b;">'+l.n+'</td></tr>';
+    }).join('');
 }
 
+// Tab 切換
+function goTabEl(el){goTab(el.dataset.tabid);}
+function goTab(id){
+  document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
+  document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('on');});
+  var s=document.getElementById('s-'+id),t=document.getElementById('nt-'+id);
+  if(s)s.classList.add('on');
+  if(t)t.classList.add('on');
+  if(id==='admin')renderAdmin();
+  if(id==='log')renderLog();
+}
+
+// 工具
 function fmtN(n){return Math.round(n||0).toLocaleString('zh-TW');}
 function fmtM(n){var v=Math.round(n||0);return Math.abs(v)>=10000?(v/10000).toFixed(1)+'萬':v.toLocaleString('zh-TW');}
 function now(){return new Date().toLocaleString('zh-TW',{hour12:false});}
