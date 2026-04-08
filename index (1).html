@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>貿易大漁｜管理系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0b1d35;--sea:#0369a1;--wave:#0ea5e9;--gold:#d97706;--gold2:#fbbf24;
+  --jade:#16a34a;--coral:#dc2626;--paper:#f0f6fc;--card:#fff;--muted:#64748b;
+  --border:#e2e8f0;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--ink);}
+.lw{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--ink);}
+.lb{background:#fff;border-radius:20px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.lfish{width:52px;height:52px;border-radius:13px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px;}
+.ltitle{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:700;text-align:center;}
+.lsub{font-size:11px;color:var(--muted);text-align:center;margin-top:3px;margin-bottom:20px;}
+.rtabs{display:flex;gap:5px;background:#f8fafc;border-radius:10px;padding:4px;margin-bottom:18px;}
+.rtab{flex:1;padding:8px 4px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;color:var(--muted);border:none;background:none;}
+.rtab.on{background:#fff;color:var(--sea);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.lfield{margin-bottom:14px;}
+.llbl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:5px;}
+.linput{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;outline:none;font-family:inherit;}
+.linput:focus{border-color:var(--sea);}
+.lbtn{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,var(--sea),var(--wave));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;}
+.lerr{color:var(--coral);font-size:12px;text-align:center;margin-top:8px;min-height:16px;}
+.lpwdbox{margin-top:14px;padding:10px 12px;background:#f8fafc;border-radius:8px;font-size:11px;color:#94a3b8;line-height:1.9;}
+.hd{background:var(--ink);padding:13px 16px;position:sticky;top:0;z-index:100;}
+.hd-row{display:flex;align-items:center;justify-content:space-between;}
+.brand{display:flex;align-items:center;gap:8px;}
+.hfish{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:15px;}
+.bname{font-family:'Noto Serif TC',serif;font-size:14px;font-weight:700;color:var(--gold2);}
+.bsub{font-size:9px;color:#7fa0c0;}
+.hdr{display:flex;align-items:center;gap:6px;}
+.rbadge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;}
+.rb1{background:rgba(212,168,19,.2);color:var(--gold2);border:1px solid rgba(212,168,19,.3);}
+.rb2{background:rgba(14,165,233,.2);color:var(--wave);border:1px solid rgba(14,165,233,.3);}
+.out{font-size:11px;color:#7fa0c0;cursor:pointer;padding:3px 7px;}
+.ref{font-size:18px;cursor:pointer;color:#7fa0c0;}
+.alert{background:linear-gradient(90deg,#78350f,var(--gold));padding:9px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#fff;}
+.alert.hide{display:none;}
+.sec{padding:12px 12px 0;}
+.slbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.slbl::before{content:'';width:2px;height:12px;background:var(--wave);border-radius:1px;flex-shrink:0;}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
+.st{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;overflow:hidden;}
+.st::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0;}
+.s1::before{background:linear-gradient(90deg,var(--sea),var(--wave));}
+.s2::before{background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.s3::before{background:linear-gradient(90deg,var(--jade),#4ade80);}
+.s4::before{background:linear-gradient(90deg,var(--coral),#f87171);}
+.stico{font-size:18px;margin-bottom:5px;display:block;}
+.stlbl{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px;}
+.stval{font-size:16px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
+.v1{color:var(--sea);}.v2{color:var(--gold);}.v3{color:var(--jade);}.v4{color:var(--coral);}
+.stsub{font-size:10px;color:var(--muted);margin-top:3px;}
+.cc{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;box-shadow:0 2px 10px rgba(11,29,53,.06);}
+.cc.p{border-left:4px solid var(--gold);}
+.cc.a{border-left:4px solid var(--jade);}
+.cc.r{border-left:4px solid var(--coral);}
+.ccbody{padding:12px 14px;}
+.crow{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f8fafc;font-size:12px;}
+.crow:last-child{border-bottom:none;}
+.ck{color:var(--muted);flex-shrink:0;margin-right:8px;}
+.cv{color:var(--ink);font-weight:500;text-align:right;word-break:break-all;}
+.cv.money{color:var(--jade);}
+.cv.cost{color:var(--coral);}
+.sec-bar{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;display:flex;align-items:center;gap:5px;}
+.sb-buy{color:#dc2626;}.sb-sell{color:#16a34a;}.sb-ship{color:#0369a1;}
+.sb-buy span{background:#dc2626;}.sb-sell span{background:#16a34a;}.sb-ship span{background:#0369a1;}
+.sec-bar span{width:2px;height:11px;border-radius:1px;display:inline-block;}
+.ccact{display:flex;gap:7px;padding:9px 13px 11px;}
+.bok{flex:2;padding:10px;border-radius:9px;background:linear-gradient(135deg,#15803d,var(--jade));color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;}
+.bng{flex:1;padding:10px;border-radius:9px;background:#fef2f2;color:var(--coral);border:1px solid #fca5a5;font-size:13px;font-weight:700;cursor:pointer;}
+.ltbl{width:100%;border-collapse:collapse;font-size:12px;}
+.ltbl th{padding:8px 10px;background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:700;border-bottom:1px solid var(--border);text-align:left;}
+.ltbl td{padding:8px 10px;border-bottom:1px solid #f8fafc;}
+.ltag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;}
+.lok{background:#dcfce7;color:#14532d;}.lng{background:#fee2e2;color:#991b1b;}.lin{background:#e0f2fe;color:#075985;}
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:flex-end;justify-content:center;}
+.mbg.open{display:flex;}
+.mbox{background:var(--card);border-radius:18px 18px 0 0;padding:20px 16px 40px;width:100%;max-width:480px;animation:up .3s ease;}
+@keyframes up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+.mhandle{width:32px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 14px;}
+.mtitle{font-size:15px;font-weight:700;margin-bottom:4px;}
+.msub{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.mnote{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;height:75px;resize:none;outline:none;font-family:inherit;}
+.mnote:focus{border-color:var(--sea);}
+.mbtns{display:flex;gap:8px;margin-top:12px;}
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:100;}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px 13px;cursor:pointer;color:var(--muted);font-size:10px;border:none;background:none;}
+.bni .ico{font-size:20px;}
+.bni.on{color:var(--sea);}
+.pulse{display:inline-block;width:6px;height:6px;background:var(--gold);border-radius:50%;animation:pulse 1.5s infinite;margin-left:3px;vertical-align:middle;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.scr{display:none;padding-bottom:80px;}
+.scr.on{display:block;}
+.spin{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--wave);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:10px;color:var(--muted);font-size:13px;}
+.empty{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px;}
+.eico{font-size:38px;display:block;margin-bottom:8px;opacity:.4;}
+.cwrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px;}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(50px);padding:10px 22px;border-radius:22px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);white-space:nowrap;pointer-events:none;color:#fff;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="L">
+<div class="lw"><div class="lb">
+  <div class="lfish">🐟</div>
+  <div class="ltitle">貿易大漁</div>
+  <div class="lsub">業務管理系統</div>
+  <div class="rtabs">
+    <button class="rtab on" onclick="setR('boss',this)">👑 董事長</button>
+    <button class="rtab" onclick="setR('staff',this)">👤 業務員</button>
+    <button class="rtab" onclick="setR('finance',this)">💰 財務</button>
+  </div>
+  <div class="lfield">
+    <label class="llbl">密碼</label>
+    <input class="linput" type="password" id="lpwd" placeholder="請輸入密碼"
+      onkeydown="if(event.key==='Enter')login()">
+  </div>
+  <button class="lbtn" onclick="login()">登入</button>
+  <div class="lerr" id="lerr"></div>
+  <div class="lpwdbox">🔑 預設密碼<br>
+    董事長：<b style="color:#d97706">boss2026</b><br>
+    業務員：<b style="color:#0ea5e9">staff2026</b><br>
+    財務：<b style="color:#16a34a">finance2026</b></div>
+</div></div>
+</div>
+
+<!-- APP -->
+<div id="A" style="display:none;">
+<header class="hd">
+  <div class="hd-row">
+    <div class="brand">
+      <div class="hfish">🐟</div>
+      <div><div class="bname">貿易大漁</div><div class="bsub" id="hsub">管理系統</div></div>
+    </div>
+    <div class="hdr">
+      <span class="rbadge" id="rbdg"></span>
+      <span class="out" onclick="logout()">登出</span>
+      <span class="ref" onclick="load()">↻</span>
+    </div>
+  </div>
+</header>
+<div class="alert hide" id="abar">
+  <span id="atxt"></span>
+  <span onclick="go('approval')" style="cursor:pointer;text-decoration:underline;">前往審核→</span>
+</div>
+<div class="scr on" id="s-dash"><div id="dc"><div class="loading"><div class="spin"></div>載入中...</div></div></div>
+<div class="scr" id="s-approval"><div class="sec" style="padding-top:12px;">
+  <div class="slbl">待簽核合約 <span class="pulse" id="pd" style="display:none;"></span></div>
+  <div id="al"></div></div></div>
+<div class="scr" id="s-records"><div class="sec" style="padding-top:12px;">
+  <div class="slbl">所有合約紀錄</div><div id="rl"></div></div></div>
+<div class="scr" id="s-log"><div class="sec" style="padding-top:12px;">
+  <div class="slbl">操作 Log</div>
+  <div class="cwrap"><table class="ltbl">
+    <thead><tr><th>時間</th><th>操作者</th><th>動作</th><th>對象</th><th>備注</th></tr></thead>
+    <tbody id="lb"></tbody>
+  </table></div></div></div>
+<nav class="bnav" id="nav"></nav>
+</div>
+
+<div class="mbg" id="M">
+  <div class="mbox">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="mt"></div>
+    <div class="msub" id="ms"></div>
+    <textarea class="mnote" id="mn" placeholder="批示或退回原因（選填）..."></textarea>
+    <div class="mbtns">
+      <button class="bng" style="flex:1" onclick="closeM()">取消</button>
+      <button class="bok" style="flex:2" id="mc">確認</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+var SCRIPT='https://script.google.com/macros/s/AKfycbzIvsU_cIVFXxL--cLtCiFtS-qoj9kMsn1RlD9qRw0Q0Um_M5hc1288HcekVYkKXHbL4w/exec';
+var CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?gid=357150087&single=true&output=csv';
+var PWD={boss:'boss2026',staff:'staff2026',finance:'finance2026'};
+var role='boss',user='',rows=[],logs=[],pa=null;
+var RATE={USD:30.5,JPY:0.205,EUR:33.5,TWD:1};
+
+// 欄位對應
+var F={
+  time:'時間戳記', staff:'業務名稱', type:'案件屬性', name:'案件名稱',
+  supp:'供應商名稱（賣方）', buyer:'客戶名稱（買方）',
+  buyCur:'採購幣別', buyAmt:'應付總金額',
+  sellCur:'銷售幣別', sellAmt:'應收總金額',
+  etd:'ETD/卸魚日', eta:'ETA/到貨日',
+  buyPay:'付款條件', sellPay:'收款條件',
+  buyRem:'備註（採購）', sellRem:'備註（銷售）',
+  profit:'預估毛利潤', trade:'貿易條件',
+  status:'老闆已同意', bossNote:'老闆是否有先同意採購',
+  extra:'其他費用', asst:'承辦業助',
+  formId:'表單編號', freight:'運費',
+  tax:'規費', insure:'保險費', comm:'佣金',
+  acct:'會計審核', acctNote:'會計審核備註',
+  buyDate:'預計付款日期', sellDate:'預計收款日',
+  origin:'出貨地/發貨港口/出貨地點',
+  dest:'目的地/收貨港口/收貨地點',
+  buyCon:'合約 [賣方合約（採購）]',
+  sellCon:'合約 [買方合約（銷售）]'
+};
+
+function g(r,k){ return (r[F[k]]||'').toString().trim(); }
+function pf(v){ return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0; }
+function cv(v){ return v&&v!=='—'&&v!==''&&v!=='0'&&v!=='undefined'; }
+
+// ── 登入 ──
+function setR(r,el){
+  role=r;
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('lpwd').value='';
+  document.getElementById('lerr').textContent='';
+}
+function login(){
+  var p=document.getElementById('lpwd').value;
+  if(p===PWD[role]){
+    user=role==='boss'?'董事長':role==='staff'?'業務員':'財務';
+    addLog('登入',user,'','');
+    document.getElementById('L').style.display='none';
+    document.getElementById('A').style.display='block';
+    var bd=document.getElementById('rbdg'),hs=document.getElementById('hsub');
+    if(role==='boss'){bd.textContent='👑 董事長';bd.className='rbadge rb1';hs.textContent='董事長即時看板';}
+    else if(role==='staff'){bd.textContent='👤 業務員';bd.className='rbadge rb2';hs.textContent='業務員填報系統';}
+    else{bd.textContent='💰 財務';bd.className='rbadge rb2';hs.textContent='財務放款管理';}
+    buildNav(); load();
+  } else {
+    document.getElementById('lerr').textContent='密碼錯誤';
+    document.getElementById('lpwd').value='';
+  }
+}
+function logout(){
+  addLog('登出',user,'','');
+  document.getElementById('L').style.display='flex';
+  document.getElementById('A').style.display='none';
+  document.getElementById('lpwd').value='';
+}
+
+// ── 導覽列 ──
+function buildNav(){
+  var its=role==='boss'
+    ?[{i:'dash',e:'📊',l:'總覽'},{i:'approval',e:'✅',l:'簽核',p:true},{i:'records',e:'📋',l:'紀錄'},{i:'log',e:'🔍',l:'Log'}]
+    :role==='staff'
+    ?[{i:'dash',e:'📊',l:'總覽'},{i:'records',e:'📋',l:'我的案件'}]
+    :[{i:'dash',e:'📊',l:'總覽'},{i:'records',e:'📋',l:'待放款'},{i:'log',e:'🔍',l:'Log'}];
+  document.getElementById('nav').innerHTML=its.map(it=>
+    '<button class="bni'+(it.i==='dash'?' on':'')+'" id="n-'+it.i+'" onclick="go(''+it.i+'')">'
+    +'<span class="ico">'+it.e+'</span>'+it.l
+    +(it.p?'<span class="pulse" id="nd" style="display:none;"></span>':'')
+    +'</button>'
+  ).join('');
+}
+
+// ── 多 proxy 讀取 ──
+var PROXIES=[
+  function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);},
+  function(u){return 'https://corsproxy.io/?'+encodeURIComponent(u);},
+  function(u){return u;}
+];
+function load(){
+  document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
+  tryP(0);
+}
+function tryP(i){
+  if(i>=PROXIES.length){showErr();return;}
+  fetch(PROXIES[i](CSV+'&t='+Date.now()),{cache:'no-cache'})
+    .then(function(r){if(!r.ok)throw new Error(r.status);return r.text();})
+    .then(function(csv){
+      if(!csv||csv.length<20)throw new Error('empty');
+      var parsed=parseCSV(csv);
+      if(parsed.length===0)throw new Error('no rows');
+      rows=parsed; render();
+    })
+    .catch(function(){tryP(i+1);});
+}
+function showErr(){
+  document.getElementById('dc').innerHTML=
+    '<div class="empty"><span class="eico">⚠️</span>'
+    +'<div style="font-size:13px;font-weight:700;color:#dc2626;">無法讀取 Sheets</div>'
+    +'<div style="font-size:12px;color:#64748b;margin-top:6px;">請確認 FormResponses 已發布為 CSV</div>'
+    +'<a href="https://docs.google.com/spreadsheets/d/1qIHKxU-42qDVT2WDcLZp1Z3Ixg1_VRTURJ96uAVfyhM/edit" target="_blank" style="display:inline-block;margin-top:12px;padding:9px 18px;background:#0369a1;color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">開啟 Sheets</a>'
+    +'<br><button onclick="load()" style="margin-top:10px;padding:9px 18px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer;">重試</button></div>';
+}
+
+function parseCSV(csv){
+  var lines=csv.split('\n').filter(function(l){return l.trim();});
+  if(lines.length<2)return[];
+  var hdrs=lines[0].split(',').map(function(h){return h.replace(/"/g,'').trim();});
+  return lines.slice(1).map(function(line,idx){
+    var vals=[],cur='',inQ=false;
+    for(var i=0;i<line.length;i++){
+      if(line[i]==='"')inQ=!inQ;
+      else if(line[i]===','&&!inQ){vals.push(cur);cur='';}
+      else cur+=line[i];
+    }
+    vals.push(cur);
+    var obj={_row:idx+2};
+    hdrs.forEach(function(h,i){obj[h]=(vals[i]||'').trim();});
+    return obj;
+  });
+}
+
+// ── 渲染 ──
+function render(){
+  var pending=rows.filter(function(r){
+    var s=g(r,'status');
+    return s===''||s==='否'||s==='待審核'||s==='尚未';
+  });
+  var totalBuy=0,totalSell=0,totalPro=0;
+  rows.forEach(function(r){
+    totalBuy+=pf(g(r,'buyAmt'))*(RATE[g(r,'buyCur')]||1);
+    totalSell+=pf(g(r,'sellAmt'))*(RATE[g(r,'sellCur')]||1);
+    totalPro+=pf(g(r,'profit'));
+  });
+  var margin=totalSell>0?(totalPro/totalSell*100).toFixed(1):0;
+
+  var ab=document.getElementById('abar');
+  if(role==='boss'&&pending.length){
+    ab.classList.remove('hide');
+    document.getElementById('atxt').textContent='⚠️ 有 '+pending.length+' 筆合約待您審核';
+    var pd=document.getElementById('pd'),nd=document.getElementById('nd');
+    if(pd)pd.style.display='inline-block';
+    if(nd)nd.style.display='inline-block';
+  }else{ab.classList.add('hide');}
+
+  var d='<div class="sec" style="padding-top:12px;"><div class="slbl">財務總覽</div>'
+    +'<div class="sg">'
+    +sc('s1','📥','總進貨','NTD '+fmtM(totalBuy),'v1',rows.length+' 筆')
+    +sc('s2','📤','總出貨','NTD '+fmtM(totalSell),'v2','')
+    +sc('s3','💹','預估毛利','NTD '+fmtM(totalPro),'v3',margin+'%')
+    +sc('s4','⏳','待審核',pending.length+' 筆','v4','')
+    +'</div></div>';
+  if(role==='boss'&&pending.length){
+    d+='<div class="sec" style="padding-top:10px;"><div class="slbl">⚡ 待審核</div>'
+      +pending.slice(0,3).map(function(r){return card(r,true);}).join('')+'</div>';
+  }
+  d+='<div class="sec" style="padding-top:10px;"><div class="slbl">最近合約</div>'
+    +rows.slice(-5).reverse().map(function(r){return card(r,false);}).join('')+'</div>';
+  document.getElementById('dc').innerHTML=d;
+
+  document.getElementById('al').innerHTML=pending.length
+    ?pending.map(function(r){return card(r,role==='boss');}).join('')
+    :'<div class="empty"><span class="eico">✅</span>目前沒有待審核合約</div>';
+
+  var showR=role==='finance'
+    ?rows.filter(function(r){var s=g(r,'status');return s.includes('同意')||s==='是';})
+    :rows;
+  document.getElementById('rl').innerHTML=showR.length
+    ?showR.slice().reverse().map(function(r){return card(r,false);}).join('')
+    :'<div class="empty"><span class="eico">📋</span>尚無資料</div>';
+
+  var lb=document.getElementById('lb');
+  if(lb){
+    lb.innerHTML=logs.length===0
+      ?'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">尚無操作記錄</td></tr>'
+      :logs.slice().reverse().map(function(l){
+        return '<tr><td style="white-space:nowrap;font-size:11px;">'+l.t+'</td>'
+          +'<td><b>'+l.u+'</b></td>'
+          +'<td><span class="ltag '+l.c+'">'+l.a+'</span></td>'
+          +'<td style="font-size:11px;">'+l.g+'</td>'
+          +'<td style="font-size:11px;color:#64748b;">'+l.n+'</td></tr>';
+      }).join('');
+  }
+}
+
+function sc(cls,ico,lbl,val,vc,sub){
+  return '<div class="st '+cls+'"><span class="stico">'+ico+'</span>'
+    +'<div class="stlbl">'+lbl+'</div><div class="stval '+vc+'">'+val+'</div>'
+    +(sub?'<div class="stsub">'+sub+'</div>':'')+'</div>';
+}
+
+// ── 完整合約卡片（對應 PDF 格式）──
+function card(r,showAct){
+  var status=g(r,'status');
+  var isPending=status===''||status==='否'||status==='待審核'||status==='尚未';
+  var isApproved=status.includes('同意')||status==='是';
+  var sc2=isPending?'p':isApproved?'a':'r';
+  var bc=isPending?'bp':isApproved?'ba':'br';
+  var sdisplay=isPending?'待審核':isApproved?'已同意':'退回';
+  var rowNum=r._row;
+
+  var formId=g(r,'formId');
+  var time=g(r,'time');
+  var staff=g(r,'staff')||'—';
+  var asst=g(r,'asst');
+  var type=g(r,'type');
+  var caseName=g(r,'name')||'—';
+  var supp=g(r,'supp')||'—';
+  var buyer=g(r,'buyer')||'—';
+  var buyCur=g(r,'buyCur')||'TWD';
+  var buyAmt=g(r,'buyAmt')||'0';
+  var buyDate=g(r,'buyDate');
+  var buyPay=g(r,'buyPay');
+  var buyRem=g(r,'buyRem');
+  var buyCon=g(r,'buyCon');
+  var sellCur=g(r,'sellCur')||'TWD';
+  var sellAmt=g(r,'sellAmt')||'0';
+  var sellDate=g(r,'sellDate');
+  var sellPay=g(r,'sellPay');
+  var sellRem=g(r,'sellRem');
+  var sellCon=g(r,'sellCon');
+  var trade=g(r,'trade')||'—';
+  var etd=g(r,'etd')||'—';
+  var eta=g(r,'eta')||'—';
+  var origin=g(r,'origin');
+  var dest=g(r,'dest');
+  var freight=g(r,'freight');
+  var insure=g(r,'insure');
+  var tax=g(r,'tax');
+  var comm=g(r,'comm');
+  var extra=g(r,'extra');
+  var profit=g(r,'profit')||'—';
+  var bossNote=g(r,'bossNote');
+  var acct=g(r,'acct');
+  var acctNote=g(r,'acctNote');
+
+  var h='<div class="cc '+sc2+'">';
+
+  // 頂部深色標頭
+  h+='<div style="background:#0b1d35;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;">'
+    +'<div style="flex:1;">'
+    +(formId?'<div style="font-size:10px;color:#7fa0c0;letter-spacing:.05em;margin-bottom:2px;">案件號碼 '+formId+'</div>':'')
+    +'<div style="font-size:14px;font-weight:700;color:#f0c040;line-height:1.3;">'+caseName+'</div>'
+    +(type?'<div style="font-size:10px;color:#7fa0c0;margin-top:2px;">'+type+'</div>':'')
+    +(time?'<div style="font-size:10px;color:#5a7a9a;margin-top:2px;">'+time+'</div>':'')
+    +'</div>'
+    +'<span class="bdg '+bc+'" style="margin-left:8px;flex-shrink:0;">'+sdisplay+'</span>'
+    +'</div>';
+
+  // 業務資訊橫條
+  h+='<div style="background:#eff6ff;padding:7px 14px;border-bottom:1px solid #dbeafe;'
+    +'display:flex;flex-wrap:wrap;gap:12px;font-size:12px;">'
+    +'<span><b style="color:#0369a1;">業務</b> '+staff+'</span>'
+    +(asst?'<span><b style="color:#0369a1;">業助</b> '+asst+'</span>':'')
+    +'</div>';
+
+  h+='<div class="ccbody">';
+
+  // 採購區塊
+  h+='<div style="margin-bottom:12px;">'
+    +'<div class="sec-bar sb-buy"><span></span>採購（賣方）</div>'
+    +crow('供應商', supp, '')
+    +crow('幣別／金額', buyCur+' '+buyAmt, 'cost')
+    +(cv(buyDate)?crow('預計付款日', buyDate, ''):'')
+    +(cv(buyPay)?crow('付款條件', buyPay, ''):'')
+    +(cv(buyCon)?crow('賣方合約', buyCon, ''):'')
+    +(cv(buyRem)?'<div style="background:#fef2f2;border-radius:7px;padding:8px 10px;margin-top:6px;font-size:11px;color:#7f1d1d;line-height:1.7;"><b>備註：</b>'+buyRem+'</div>':'')
+    +'</div>';
+
+  // 銷售區塊
+  h+='<div style="margin-bottom:12px;">'
+    +'<div class="sec-bar sb-sell"><span></span>銷售（買方）</div>'
+    +crow('客戶', buyer, '')
+    +crow('幣別／金額', sellCur+' '+sellAmt, 'money')
+    +(cv(sellDate)?crow('預計收款日', sellDate, ''):'')
+    +(cv(sellPay)?crow('收款條件', sellPay, ''):'')
+    +(cv(sellCon)?crow('買方合約', sellCon, ''):'')
+    +(cv(sellRem)?'<div style="background:#f0fdf4;border-radius:7px;padding:8px 10px;margin-top:6px;font-size:11px;color:#14532d;line-height:1.7;"><b>備註：</b>'+sellRem+'</div>':'')
+    +'</div>';
+
+  // 物流區塊
+  h+='<div style="margin-bottom:10px;">'
+    +'<div class="sec-bar sb-ship"><span></span>物流 / 貿易條件</div>'
+    +crow('貿易條件', trade, '')
+    +crow('ETD / ETA', etd+' → '+eta, '')
+    +(cv(origin)?crow('出貨地', origin, ''):'')
+    +(cv(dest)?crow('目的地', dest, ''):'')
+    +(cv(freight)?crow('運費', freight, ''):'')
+    +(cv(insure)?crow('保險費', insure, ''):'')
+    +(cv(tax)?crow('規費', tax, ''):'')
+    +(cv(comm)?crow('佣金', comm, ''):'')
+    +(cv(extra)?crow('其他費用', extra, ''):'')
+    +'</div>';
+
+  // 老闆指示
+  if(cv(bossNote)){
+    h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;'
+      +'padding:9px 12px;margin-bottom:10px;font-size:12px;">'
+      +'<b style="color:#92400e;">👑 老闆指示：</b><span style="color:#78350f;">'+bossNote+'</span></div>';
+  }
+
+  // 會計審核
+  if(cv(acct)){
+    h+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;'
+      +'padding:9px 12px;margin-bottom:10px;font-size:12px;">'
+      +'<b style="color:#14532d;">💰 會計：</b><span style="color:#166534;">'+acct+'</span>'
+      +(cv(acctNote)?' — '+acctNote:'')+'</div>';
+  }
+
+  h+='</div>';
+
+  // 毛利條
+  h+='<div style="background:#f0fdf4;border-top:2px solid #dcfce7;padding:10px 14px;'
+    +'display:flex;justify-content:space-between;align-items:center;">'
+    +'<span style="font-size:11px;color:#16a34a;font-weight:700;">預估毛利潤</span>'
+    +'<span style="font-size:16px;font-weight:700;color:#16a34a;font-family:monospace;">'+profit+'</span></div>';
+
+  // 簽核按鈕
+  if(showAct&&isPending){
+    h+='<div class="ccact">'
+      +'<button class="bng" onclick="doAct('+rowNum+','退回')">❌ 退回</button>'
+      +'<button class="bok" onclick="doAct('+rowNum+','同意')">✅ 同意簽核</button>'
+      +'</div>';
+  }
+  h+='</div>';
+  return h;
+}
+
+function crow(k,v,cls){
+  if(!v||v==='—'||v===''||v==='0')return '';
+  return '<div class="crow"><span class="ck">'+k+'</span>'
+    +'<span class="cv '+cls+'">'+v+'</span></div>';
+}
+
+// ── 簽核 ──
+function doAct(rowNum,status){
+  if(role!=='boss'){toast('只有董事長可以簽核','#dc2626');return;}
+  pa={rowNum:rowNum,status:status};
+  var t=rows.find(function(r){return r._row===rowNum;});
+  var name=t?g(t,'buyer')+' — '+g(t,'name'):'';
+  document.getElementById('mt').textContent=status==='同意'?'✅ 確認同意簽核':'❌ 退回給業務修改';
+  document.getElementById('ms').textContent=name;
+  document.getElementById('mn').value='';
+  document.getElementById('M').classList.add('open');
+}
+
+document.getElementById('mc').onclick=function(){
+  if(!pa)return;
+  var note=document.getElementById('mn').value;
+  var rowNum=pa.rowNum,status=pa.status;
+  var t=rows.find(function(r){return r._row===rowNum;});
+  var name=t?g(t,'buyer')+' — '+g(t,'name'):'Row'+rowNum;
+  closeM();
+  fetch(SCRIPT,{
+    method:'POST',
+    body:JSON.stringify({action:'approve',row:rowNum,
+      status:status==='同意'?'是':'退回',note:note,approver:user,time:now()}),
+    mode:'no-cors'
+  }).finally(function(){
+    if(t){t[F.status]=status==='同意'?'是':'退回';t[F.bossNote]=note;}
+    addLog(status==='同意'?'同意簽核':'退回修改',user,name,note);
+    render();
+    toast(status==='同意'?'✅ 已簽核！通知財務放款':'❌ 已退回',
+          status==='同意'?'#16a34a':'#dc2626');
+  });
+};
+
+function closeM(){document.getElementById('M').classList.remove('open');}
+document.getElementById('M').addEventListener('click',function(e){if(e.target===this)closeM();});
+
+function go(id){
+  document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
+  document.querySelectorAll('.bni').forEach(function(b){b.classList.remove('on');});
+  var s=document.getElementById('s-'+id),n=document.getElementById('n-'+id);
+  if(s)s.classList.add('on');
+  if(n)n.classList.add('on');
+  if(id==='log')render();
+}
+
+function addLog(a,u,g2,n){
+  var c=a.includes('同意')||a.includes('簽核')?'lok':a.includes('退回')?'lng':'lin';
+  logs.push({t:now(),u:u,a:a,g:g2,n:n,c:c});
+  if(logs.length>100)logs.shift();
+  try{localStorage.setItem('tl',JSON.stringify(logs));}catch(e){}
+}
+
+function fmtN(n){return Math.round(n||0).toLocaleString('zh-TW');}
+function fmtM(n){var v=Math.round(n||0);return Math.abs(v)>=10000?(v/10000).toFixed(1)+'萬':v.toLocaleString('zh-TW');}
+function now(){return new Date().toLocaleString('zh-TW',{hour12:false});}
+function toast(msg,bg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=bg||'#16a34a';
+  t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);
+}
+try{var sv=localStorage.getItem('tl');if(sv)logs=JSON.parse(sv);}catch(e){}
+setInterval(load,60000);
+</script>
+</body>
+</html>
