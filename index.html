@@ -10,589 +10,516 @@
   --jade:#16a34a;--coral:#dc2626;--paper:#f0f6fc;--card:#fff;--muted:#64748b;
   --border:#e2e8f0;--sh:0 2px 14px rgba(11,29,53,.08);}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--ink);padding-bottom:80px;}
+body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--ink);}
 
-/* ── LOGIN ── */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--ink);}
-.login-box{background:#fff;border-radius:20px;padding:36px 28px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-.login-logo{text-align:center;margin-bottom:24px;}
-.login-fish{width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 10px;}
-.login-title{font-family:'Noto Serif TC',serif;font-size:20px;font-weight:700;color:var(--ink);}
-.login-sub{font-size:12px;color:var(--muted);margin-top:4px;}
-.role-tabs{display:flex;gap:6px;margin-bottom:20px;background:#f8fafc;border-radius:10px;padding:4px;}
-.role-tab{flex:1;padding:8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;color:var(--muted);border:none;background:none;transition:all .2s;}
-.role-tab.active{background:#fff;color:var(--sea);box-shadow:0 1px 4px rgba(0,0,0,.1);}
-.login-field{margin-bottom:14px;}
-.login-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:6px;}
-.login-input{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;outline:none;transition:border-color .2s;font-family:'Noto Sans TC',sans-serif;}
-.login-input:focus{border-color:var(--sea);background:#fff;}
-.login-btn{width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,var(--sea),var(--wave));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;margin-top:4px;}
-.login-err{color:var(--coral);font-size:12px;text-align:center;margin-top:8px;height:16px;}
+/* LOGIN */
+.lw{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--ink);}
+.lb{background:#fff;border-radius:20px;padding:32px 24px;width:100%;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.lfish{width:52px;height:52px;border-radius:13px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px;}
+.ltitle{font-family:'Noto Serif TC',serif;font-size:19px;font-weight:700;text-align:center;color:var(--ink);}
+.lsub{font-size:11px;color:var(--muted);text-align:center;margin-top:3px;margin-bottom:20px;}
+.rtabs{display:flex;gap:5px;background:#f8fafc;border-radius:10px;padding:4px;margin-bottom:18px;}
+.rtab{flex:1;padding:8px 4px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;color:var(--muted);border:none;background:none;}
+.rtab.on{background:#fff;color:var(--sea);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.lfield{margin-bottom:14px;}
+.llbl{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:5px;}
+.linput{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:14px;outline:none;font-family:inherit;}
+.linput:focus{border-color:var(--sea);}
+.lbtn{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,var(--sea),var(--wave));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;}
+.lerr{color:var(--coral);font-size:12px;text-align:center;margin-top:8px;min-height:16px;}
+.lpwdbox{margin-top:14px;padding:10px 12px;background:#f8fafc;border-radius:8px;font-size:11px;color:#94a3b8;line-height:1.9;}
 
-/* ── HEADER ── */
-.hd{background:var(--ink);padding:14px 18px;position:sticky;top:0;z-index:100;}
+/* APP */
+.hd{background:var(--ink);padding:13px 16px;position:sticky;top:0;z-index:100;}
 .hd-row{display:flex;align-items:center;justify-content:space-between;}
-.brand{display:flex;align-items:center;gap:9px;}
-.fish{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:16px;}
-.brand-name{font-family:'Noto Serif TC',serif;font-size:15px;font-weight:700;color:var(--gold2);}
-.brand-sub{font-size:10px;color:#7fa0c0;}
-.hd-right{display:flex;align-items:center;gap:8px;}
-.role-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;}
-.rb-boss{background:rgba(212,168,19,.2);color:var(--gold2);border:1px solid rgba(212,168,19,.3);}
-.rb-staff{background:rgba(14,165,233,.2);color:var(--wave);border:1px solid rgba(14,165,233,.3);}
-.logout-btn{font-size:11px;color:#7fa0c0;cursor:pointer;padding:4px 8px;}
+.brand{display:flex;align-items:center;gap:8px;}
+.hfish{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:15px;}
+.bname{font-family:'Noto Serif TC',serif;font-size:14px;font-weight:700;color:var(--gold2);}
+.bsub{font-size:9px;color:#7fa0c0;}
+.hdr{display:flex;align-items:center;gap:6px;}
+.rbadge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;}
+.rb1{background:rgba(212,168,19,.2);color:var(--gold2);border:1px solid rgba(212,168,19,.3);}
+.rb2{background:rgba(14,165,233,.2);color:var(--wave);border:1px solid rgba(14,165,233,.3);}
+.out{font-size:11px;color:#7fa0c0;cursor:pointer;padding:3px 7px;}
+.ref{font-size:18px;cursor:pointer;color:#7fa0c0;}
 
-.alert{background:linear-gradient(90deg,#78350f,var(--gold));padding:10px 18px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#fff;}
+.alert{background:linear-gradient(90deg,#78350f,var(--gold));padding:9px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#fff;}
 .alert.hide{display:none;}
 
-/* ── SECTIONS ── */
-.sec{padding:14px 14px 0;}
-.sec-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
-.sec-lbl::before{content:'';width:2px;height:13px;background:var(--wave);border-radius:1px;}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px;}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;position:relative;overflow:hidden;box-shadow:var(--sh);}
-.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0;}
+.sec{padding:12px 12px 0;}
+.slbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.slbl::before{content:'';width:2px;height:12px;background:var(--wave);border-radius:1px;flex-shrink:0;}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;}
+.st{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;overflow:hidden;box-shadow:var(--sh);}
+.st::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0;}
 .s1::before{background:linear-gradient(90deg,var(--sea),var(--wave));}
 .s2::before{background:linear-gradient(90deg,var(--gold),var(--gold2));}
 .s3::before{background:linear-gradient(90deg,var(--jade),#4ade80);}
 .s4::before{background:linear-gradient(90deg,var(--coral),#f87171);}
-.stat-ico{font-size:20px;margin-bottom:6px;display:block;}
-.stat-lbl{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-bottom:4px;}
-.stat-val{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
+.stico{font-size:18px;margin-bottom:5px;display:block;}
+.stlbl{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px;}
+.stval{font-size:16px;font-weight:700;font-family:'DM Mono',monospace;line-height:1;}
 .v1{color:var(--sea);} .v2{color:var(--gold);} .v3{color:var(--jade);} .v4{color:var(--coral);}
-.stat-sub{font-size:10px;color:var(--muted);margin-top:4px;}
+.stsub{font-size:10px;color:var(--muted);margin-top:3px;}
 
-/* ── CARDS ── */
-.ccard{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--sh);}
-.ccard.pending{border-left:4px solid var(--gold);}
-.ccard.approved{border-left:4px solid var(--jade);}
-.ccard.rejected{border-left:4px solid var(--coral);}
-.cc-top{padding:12px 14px 8px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
-.cc-name{font-size:14px;font-weight:700;}
-.cc-meta{font-size:11px;color:var(--muted);margin-top:2px;}
-.badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;}
+/* CARD */
+.cc{background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:9px;overflow:hidden;box-shadow:var(--sh);}
+.cc.p{border-left:3px solid var(--gold);}
+.cc.a{border-left:3px solid var(--jade);}
+.cc.r{border-left:3px solid var(--coral);}
+.cctop{padding:11px 13px 7px;display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+.ccname{font-size:13px;font-weight:700;line-height:1.3;}
+.ccmeta{font-size:11px;color:var(--muted);margin-top:2px;}
+.bdg{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;}
 .bp{background:#fef9c3;color:#92400e;border:1px solid #fde68a;}
 .ba{background:#dcfce7;color:#14532d;border:1px solid #86efac;}
 .br{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;}
-.bs{background:#e0f2fe;color:#075985;border:1px solid #bae6fd;}
-.cc-body{padding:0 14px 10px;}
-.cc-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f8fafc;font-size:12px;}
-.cc-row:last-child{border-bottom:none;}
-.ck{color:var(--muted);} .cv{color:var(--ink);font-weight:500;}
+.ccbody{padding:0 13px 10px;}
+.crow{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f8fafc;font-size:12px;}
+.crow:last-child{border-bottom:none;}
+.ck{color:var(--muted);flex-shrink:0;margin-right:8px;}
+.cv{color:var(--ink);font-weight:500;text-align:right;}
 .cv.money{color:var(--jade);font-family:'DM Mono',monospace;}
 .cv.cost{color:var(--coral);font-family:'DM Mono',monospace;}
-.profit-strip{background:#f0fdf4;border-top:1px solid #dcfce7;padding:9px 14px;display:flex;justify-content:space-between;align-items:center;}
-.ps-lbl{font-size:11px;color:var(--jade);font-weight:700;}
-.ps-val{font-size:17px;font-weight:700;color:var(--jade);font-family:'DM Mono',monospace;}
-.cc-actions{display:flex;gap:8px;padding:10px 14px 12px;}
-.btn-ok{flex:2;padding:11px;border-radius:10px;background:linear-gradient(135deg,#15803d,var(--jade));color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;}
-.btn-ng{flex:1;padding:11px;border-radius:10px;background:#fef2f2;color:var(--coral);border:1px solid #fca5a5;font-size:13px;font-weight:700;cursor:pointer;}
+.pstrip{background:#f0fdf4;border-top:1px solid #dcfce7;padding:8px 13px;display:flex;justify-content:space-between;align-items:center;}
+.pslbl{font-size:11px;color:var(--jade);font-weight:700;}
+.psval{font-size:15px;font-weight:700;color:var(--jade);font-family:'DM Mono',monospace;}
+.ccact{display:flex;gap:7px;padding:9px 13px 11px;}
+.bok{flex:2;padding:10px;border-radius:9px;background:linear-gradient(135deg,#15803d,var(--jade));color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;}
+.bng{flex:1;padding:10px;border-radius:9px;background:#fef2f2;color:var(--coral);border:1px solid #fca5a5;font-size:13px;font-weight:700;cursor:pointer;}
 
-/* ── LOG TABLE ── */
-.log-table{width:100%;border-collapse:collapse;font-size:12px;}
-.log-table th{padding:8px 10px;background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:left;}
-.log-table td{padding:9px 10px;border-bottom:1px solid #f8fafc;color:var(--ink);vertical-align:middle;}
-.log-table tr:last-child td{border-bottom:none;}
-.log-tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;}
-.lt-ok{background:#dcfce7;color:#14532d;}
-.lt-ng{background:#fee2e2;color:#991b1b;}
-.lt-in{background:#e0f2fe;color:#075985;}
+/* LOG */
+.ltbl{width:100%;border-collapse:collapse;font-size:12px;}
+.ltbl th{padding:8px 10px;background:#f1f5f9;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);text-align:left;}
+.ltbl td{padding:8px 10px;border-bottom:1px solid #f8fafc;vertical-align:middle;}
+.ltbl tr:last-child td{border-bottom:none;}
+.ltag{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;font-weight:700;}
+.lok{background:#dcfce7;color:#14532d;}
+.lng{background:#fee2e2;color:#991b1b;}
+.lin{background:#e0f2fe;color:#075985;}
 
-/* ── MODAL ── */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:flex-end;justify-content:center;}
-.modal-bg.open{display:flex;}
-.modal{background:var(--card);border-radius:20px 20px 0 0;padding:22px 18px 40px;width:100%;max-width:480px;animation:up .3s ease;}
+/* MODAL */
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:flex-end;justify-content:center;}
+.mbg.open{display:flex;}
+.mbox{background:var(--card);border-radius:18px 18px 0 0;padding:20px 16px 40px;width:100%;max-width:480px;animation:up .3s ease;}
 @keyframes up{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
-.modal-handle{width:36px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 16px;}
-.modal-title{font-size:16px;font-weight:700;margin-bottom:6px;}
-.modal-sub{font-size:12px;color:var(--muted);margin-bottom:14px;}
-.modal-note{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;height:80px;resize:none;outline:none;font-family:'Noto Sans TC',sans-serif;}
-.modal-note:focus{border-color:var(--sea);}
-.modal-btns{display:flex;gap:10px;margin-top:14px;}
+.mhandle{width:32px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto 14px;}
+.mtitle{font-size:15px;font-weight:700;margin-bottom:4px;}
+.msub{font-size:12px;color:var(--muted);margin-bottom:12px;}
+.mnote{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;height:75px;resize:none;outline:none;font-family:inherit;}
+.mnote:focus{border-color:var(--sea);}
+.mbtns{display:flex;gap:8px;margin-top:12px;}
 
-/* ── BOTTOM NAV ── */
-.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:100;}
-.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 14px;cursor:pointer;color:var(--muted);font-size:10px;border:none;background:none;}
+/* NAV */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;z-index:100;}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 4px 13px;cursor:pointer;color:var(--muted);font-size:10px;border:none;background:none;}
 .bni .ico{font-size:20px;}
-.bni.active{color:var(--sea);}
-.pulse{display:inline-block;width:6px;height:6px;background:var(--gold);border-radius:50%;animation:pulse 1.5s infinite;margin-left:4px;vertical-align:middle;}
+.bni.on{color:var(--sea);}
+.pulse{display:inline-block;width:6px;height:6px;background:var(--gold);border-radius:50%;animation:pulse 1.5s infinite;margin-left:3px;vertical-align:middle;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.screen{display:none;padding-bottom:80px;}
-.screen.active{display:block;}
-.spin{width:30px;height:30px;border:3px solid var(--border);border-top-color:var(--wave);border-radius:50%;animation:spin .8s linear infinite;}
+.scr{display:none;padding-bottom:80px;}
+.scr.on{display:block;}
+.spin{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--wave);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-.loading{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:12px;color:var(--muted);font-size:13px;}
-.empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
-.empty-ico{font-size:40px;display:block;margin-bottom:10px;opacity:.4;}
-#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(50px);padding:10px 22px;border-radius:24px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);white-space:nowrap;pointer-events:none;color:#fff;}
+.loading{display:flex;flex-direction:column;align-items:center;padding:48px 20px;gap:10px;color:var(--muted);font-size:13px;}
+.empty{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px;}
+.eico{font-size:38px;display:block;margin-bottom:8px;opacity:.4;}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(50px);padding:10px 22px;border-radius:22px;font-size:13px;font-weight:700;z-index:999;opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);white-space:nowrap;pointer-events:none;color:#fff;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.card-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--sh);margin-bottom:10px;}
+.cwrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--sh);margin-bottom:10px;}
 </style>
 </head>
 <body>
 
-<!-- ══ LOGIN SCREEN ══ -->
-<div id="login-screen">
-  <div class="login-wrap">
-    <div class="login-box">
-      <div class="login-logo">
-        <div class="login-fish">🐟</div>
-        <div class="login-title">貿易大漁</div>
-        <div class="login-sub">業務管理系統</div>
-      </div>
-      <div class="role-tabs">
-        <button class="role-tab active" onclick="setRole('boss',this)">👑 董事長</button>
-        <button class="role-tab" onclick="setRole('staff',this)">👤 業務員</button>
-        <button class="role-tab" onclick="setRole('finance',this)">💰 財務</button>
-      </div>
-      <div class="login-field">
-        <label class="login-label">密碼</label>
-        <input class="login-input" type="password" id="login-pwd" placeholder="請輸入密碼"
-          onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <button class="login-btn" onclick="doLogin()">登入</button>
-      <div class="login-err" id="login-err"></div>
-      <div style="margin-top:16px;padding:10px 12px;background:#f8fafc;border-radius:8px;font-size:11px;color:#94a3b8;line-height:1.7;">
-        🔑 預設密碼：<br>
-        董事長：<b style="color:#d97706;">boss2026</b><br>
-        業務員：<b style="color:#0ea5e9;">staff2026</b><br>
-        財務：<b style="color:#16a34a;">finance2026</b>
-      </div>
-    </div>
+<!-- LOGIN -->
+<div id="L">
+<div class="lw"><div class="lb">
+  <div class="lfish">🐟</div>
+  <div class="ltitle">貿易大漁</div>
+  <div class="lsub">業務管理系統</div>
+  <div class="rtabs">
+    <button class="rtab on" onclick="setR('boss',this)">👑 董事長</button>
+    <button class="rtab" onclick="setR('staff',this)">👤 業務員</button>
+    <button class="rtab" onclick="setR('finance',this)">💰 財務</button>
   </div>
+  <div class="lfield">
+    <label class="llbl">密碼</label>
+    <input class="linput" type="password" id="lpwd" placeholder="請輸入密碼"
+      onkeydown="if(event.key==='Enter')login()">
+  </div>
+  <button class="lbtn" onclick="login()">登入</button>
+  <div class="lerr" id="lerr"></div>
+  <div class="lpwdbox">
+    🔑 預設密碼<br>
+    董事長：<b style="color:#d97706">boss2026</b><br>
+    業務員：<b style="color:#0ea5e9">staff2026</b><br>
+    財務：<b style="color:#16a34a">finance2026</b>
+  </div>
+</div></div>
 </div>
 
-<!-- ══ MAIN APP ══ -->
-<div id="main-app" style="display:none;">
-
+<!-- APP -->
+<div id="A" style="display:none;">
 <header class="hd">
   <div class="hd-row">
     <div class="brand">
-      <div class="fish">🐟</div>
-      <div><div class="brand-name">貿易大漁</div><div class="brand-sub" id="hd-sub">管理系統</div></div>
+      <div class="hfish">🐟</div>
+      <div><div class="bname">貿易大漁</div><div class="bsub" id="hsub">管理系統</div></div>
     </div>
-    <div class="hd-right">
-      <span class="role-badge" id="role-badge"></span>
-      <span class="logout-btn" onclick="doLogout()">登出</span>
-      <span style="font-size:18px;cursor:pointer;" onclick="loadData()">↻</span>
+    <div class="hdr">
+      <span class="rbadge" id="rbdg"></span>
+      <span class="out" onclick="logout()">登出</span>
+      <span class="ref" onclick="load()">↻</span>
     </div>
   </div>
 </header>
+<div class="alert hide" id="abar"><span id="atxt"></span>
+  <span onclick="go('approval')" style="cursor:pointer;text-decoration:underline;">前往審核→</span></div>
 
-<div class="alert hide" id="alert-bar">
-  <span id="alert-txt"></span>
-  <span onclick="switchScreen('approval')" style="cursor:pointer;text-decoration:underline;">前往審核 →</span>
+<div class="scr on" id="s-dash"><div id="dc"><div class="loading"><div class="spin"></div>載入中...</div></div></div>
+<div class="scr" id="s-approval"><div class="sec" style="padding-top:12px;">
+  <div class="slbl">待簽核合約 <span class="pulse" id="pd" style="display:none;"></span></div>
+  <div id="al"></div></div></div>
+<div class="scr" id="s-records"><div class="sec" style="padding-top:12px;">
+  <div class="slbl">合約紀錄</div><div id="rl"></div></div></div>
+<div class="scr" id="s-log"><div class="sec" style="padding-top:12px;">
+  <div class="slbl">操作 Log</div>
+  <div class="cwrap"><table class="ltbl">
+    <thead><tr><th>時間</th><th>操作者</th><th>動作</th><th>對象</th><th>備注</th></tr></thead>
+    <tbody id="lb"></tbody>
+  </table></div></div></div>
+
+<nav class="bnav" id="nav"></nav>
 </div>
 
-<!-- 總覽 -->
-<div class="screen active" id="screen-dash">
-  <div id="dash-content"><div class="loading"><div class="spin"></div>載入中...</div></div>
-</div>
-
-<!-- 簽核 -->
-<div class="screen" id="screen-approval">
-  <div class="sec" style="padding-top:14px;">
-    <div class="sec-lbl">待簽核合約 <span class="pulse" id="pdot" style="display:none;"></span></div>
-    <div id="approval-list"></div>
-  </div>
-</div>
-
-<!-- 紀錄 -->
-<div class="screen" id="screen-records">
-  <div class="sec" style="padding-top:14px;">
-    <div class="sec-lbl">所有合約紀錄</div>
-    <div id="records-list"></div>
-  </div>
-</div>
-
-<!-- Log 紀錄 -->
-<div class="screen" id="screen-log">
-  <div class="sec" style="padding-top:14px;">
-    <div class="sec-lbl">操作 Log 紀錄</div>
-    <div class="card-wrap">
-      <table class="log-table" id="log-table">
-        <thead><tr>
-          <th>時間</th><th>操作者</th><th>動作</th><th>對象</th><th>備注</th>
-        </tr></thead>
-        <tbody id="log-body"></tbody>
-      </table>
+<!-- MODAL -->
+<div class="mbg" id="M">
+  <div class="mbox">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="mt"></div>
+    <div class="msub" id="ms"></div>
+    <textarea class="mnote" id="mn" placeholder="批示或退回原因（選填）..."></textarea>
+    <div class="mbtns">
+      <button class="bng" style="flex:1" onclick="closeM()">取消</button>
+      <button class="bok" style="flex:2" id="mc">確認</button>
     </div>
   </div>
 </div>
-
-<!-- Bottom Nav (動態產生) -->
-<nav class="bnav" id="bnav"></nav>
-
-</div><!-- end main-app -->
-
-<!-- Modal -->
-<div class="modal-bg" id="modal">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="modal-title">確認操作</div>
-    <div class="modal-sub" id="modal-sub"></div>
-    <textarea class="modal-note" id="modal-note" placeholder="批示或退回原因（選填）..."></textarea>
-    <div class="modal-btns">
-      <button class="btn-ng" style="flex:1;" onclick="closeModal()">取消</button>
-      <button class="btn-ok" style="flex:2;" id="modal-confirm">確認</button>
-    </div>
-  </div>
-</div>
-
 <div id="toast"></div>
 
 <script>
-var SCRIPT = 'https://script.google.com/macros/s/AKfycbzIvsU_cIVFXxL--cLtCiFtS-qoj9kMsn1RlD9qRw0Q0Um_M5hc1288HcekVYkKXHbL4w/exec';
-var CSV    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?output=csv';
+var SCRIPT='https://script.google.com/macros/s/AKfycbzIvsU_cIVFXxL--cLtCiFtS-qoj9kMsn1RlD9qRw0Q0Um_M5hc1288HcekVYkKXHbL4w/exec';
+var CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?gid=357150087&single=true&output=csv';
+var PWD={boss:'boss2026',staff:'staff2026',finance:'finance2026'};
+var role='boss', user='', rows=[], logs=[], pa=null;
 
-// ── 密碼設定 ──
-var PASSWORDS = {
-  boss:    'boss2026',
-  staff:   'staff2026',
-  finance: 'finance2026'
+// ── 欄位對應（您的 Google 表單欄位名稱）──
+var F={
+  time:    '時間戳記',
+  staff:   '業務名稱',
+  type:    '案件屬性',
+  name:    '案件名稱',
+  supp:    '供應商名稱（賣方）',
+  buyer:   '客戶名稱（買方）',
+  buyCur:  '採購幣別',
+  buyAmt:  '應付總金額',
+  sellCur: '銷售幣別',
+  sellAmt: '應收總金額',
+  etd:     'ETD/卸魚日',
+  eta:     'ETA/到貨日',
+  payment: '收款條件',
+  profit:  '預估毛利潤',
+  trade:   '貿易條件',
+  status:  '老闆已同意',
+  note:    '老闆是否有先同意採購',
+  extra:   '其他費用',
+  asst:    '承辦業助',
+  formId:  '表單編號',
+  buyNote: '備註（採購）',
+  sellNote:'備註（銷售）',
+  freight: '運費',
+  tax:     '規費',
+  insure:  '保險費',
+  comm:    '佣金',
+  acct:    '會計審核',
+  acctNote:'會計審核備註',
 };
 
-var currentRole = 'boss';
-var currentUser = '';
-var allData = [];
-var logs = [];
-var pendingAction = null;
+function g(r,k){ return (r[F[k]]||'').toString().trim(); }
+function pf(v){ return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0; }
 
 // ── 登入 ──
-function setRole(role, el) {
-  currentRole = role;
-  document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('login-pwd').value = '';
-  document.getElementById('login-err').textContent = '';
+function setR(r,el){
+  role=r;
+  document.querySelectorAll('.rtab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('lpwd').value='';
+  document.getElementById('lerr').textContent='';
 }
-
-function doLogin() {
-  var pwd = document.getElementById('login-pwd').value;
-  if (pwd === PASSWORDS[currentRole]) {
-    currentUser = currentRole === 'boss' ? '董事長' : currentRole === 'staff' ? '業務員' : '財務';
-    addLog('登入', currentUser, '', '');
-    showApp();
+function login(){
+  var p=document.getElementById('lpwd').value;
+  if(p===PWD[role]){
+    user=role==='boss'?'董事長':role==='staff'?'業務員':'財務';
+    addLog('登入',user,'','');
+    document.getElementById('L').style.display='none';
+    document.getElementById('A').style.display='block';
+    var bd=document.getElementById('rbdg');
+    var hs=document.getElementById('hsub');
+    if(role==='boss'){bd.textContent='👑 董事長';bd.className='rbadge rb1';hs.textContent='董事長即時看板';}
+    else if(role==='staff'){bd.textContent='👤 業務員';bd.className='rbadge rb2';hs.textContent='業務員填報系統';}
+    else{bd.textContent='💰 財務';bd.className='rbadge rb2';hs.textContent='財務放款管理';}
+    buildNav(); load();
   } else {
-    document.getElementById('login-err').textContent = '密碼錯誤，請重新輸入';
-    document.getElementById('login-pwd').value = '';
-    document.getElementById('login-pwd').focus();
+    document.getElementById('lerr').textContent='密碼錯誤';
+    document.getElementById('lpwd').value='';
   }
 }
-
-function doLogout() {
-  addLog('登出', currentUser, '', '');
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('main-app').style.display = 'none';
-  document.getElementById('login-pwd').value = '';
-  currentUser = '';
+function logout(){
+  addLog('登出',user,'','');
+  document.getElementById('L').style.display='flex';
+  document.getElementById('A').style.display='none';
+  document.getElementById('lpwd').value='';
 }
 
-function showApp() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('main-app').style.display = 'block';
-
-  // 角色標籤
-  var badge = document.getElementById('role-badge');
-  var sub   = document.getElementById('hd-sub');
-  if (currentRole === 'boss') {
-    badge.textContent = '👑 董事長'; badge.className = 'role-badge rb-boss';
-    sub.textContent = '董事長即時看板';
-  } else if (currentRole === 'staff') {
-    badge.textContent = '👤 業務員'; badge.className = 'role-badge rb-staff';
-    sub.textContent = '業務員填報系統';
-  } else {
-    badge.textContent = '💰 財務'; badge.className = 'role-badge rb-staff';
-    sub.textContent = '財務放款管理';
-  }
-
-  buildNav();
-  loadData();
-}
-
-// ── 底部導覽（依角色不同）──
-function buildNav() {
-  var nav = document.getElementById('bnav');
-  var items;
-  if (currentRole === 'boss') {
-    items = [
-      {id:'dash',   ico:'📊', lbl:'總覽'},
-      {id:'approval',ico:'✅', lbl:'簽核', pulse:true},
-      {id:'records', ico:'📋', lbl:'紀錄'},
-      {id:'log',     ico:'🔍', lbl:'Log'},
-    ];
-  } else if (currentRole === 'staff') {
-    items = [
-      {id:'dash',   ico:'📊', lbl:'我的案件'},
-      {id:'records', ico:'📋', lbl:'所有紀錄'},
-    ];
-  } else {
-    items = [
-      {id:'dash',   ico:'📊', lbl:'總覽'},
-      {id:'records', ico:'📋', lbl:'待放款'},
-      {id:'log',     ico:'🔍', lbl:'Log'},
-    ];
-  }
-  nav.innerHTML = items.map(it =>
-    `<button class="bni${it.id==='dash'?' active':''}" id="nav-${it.id}" onclick="switchScreen('${it.id}')">`
-    + `<span class="ico">${it.ico}</span>${it.lbl}`
-    + (it.pulse ? `<span class="pulse" id="ndot" style="display:none;"></span>` : '')
-    + `</button>`
+// ── 導覽列 ──
+function buildNav(){
+  var its=role==='boss'
+    ?[{i:'dash',e:'📊',l:'總覽'},{i:'approval',e:'✅',l:'簽核',p:true},{i:'records',e:'📋',l:'紀錄'},{i:'log',e:'🔍',l:'Log'}]
+    :role==='staff'
+    ?[{i:'dash',e:'📊',l:'總覽'},{i:'records',e:'📋',l:'我的案件'}]
+    :[{i:'dash',e:'📊',l:'總覽'},{i:'records',e:'📋',l:'待放款'},{i:'log',e:'🔍',l:'Log'}];
+  document.getElementById('nav').innerHTML=its.map(it=>
+    `<button class="bni${it.i==='dash'?' on':''}" id="n-${it.i}" onclick="go('${it.i}')">`
+    +`<span class="ico">${it.e}</span>${it.l}`
+    +(it.p?`<span class="pulse" id="nd" style="display:none;"></span>`:'')
+    +`</button>`
   ).join('');
 }
 
-// ── 載入資料 ──
-function loadData() {
-  document.getElementById('dash-content').innerHTML = '<div class="loading"><div class="spin"></div>載入中...</div>';
-  fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(CSV + '&_=' + Date.now()))
-    .then(r => r.text())
-    .then(csv => { allData = parseCSV(csv); render(); })
-    .catch(() => {
-      fetch(CSV + '&_=' + Date.now())
-        .then(r => r.text())
-        .then(csv => { allData = parseCSV(csv); render(); })
-        .catch(() => { showErr(); });
-    });
+// ── 載入 ──
+function load(){
+  document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
+  var url='https://api.allorigins.win/raw?url='+encodeURIComponent(CSV+'&_='+Date.now());
+  fetch(url).then(r=>r.text()).then(csv=>{rows=parseCSV(csv);render();})
+  .catch(()=>{
+    fetch(CSV+'&_='+Date.now()).then(r=>r.text()).then(csv=>{rows=parseCSV(csv);render();})
+    .catch(()=>{document.getElementById('dc').innerHTML=
+      '<div class="empty"><span class="eico">⚠️</span>'
+      +'<div style="font-size:13px;font-weight:700;color:#dc2626;">無法讀取 Sheets</div>'
+      +'<a href="https://docs.google.com/spreadsheets/d/1qIHKxU-42qDVT2WDcLZp1Z3Ixg1_VRTURJ96uAVfyhM/edit" target="_blank" '
+      +'style="display:inline-block;margin-top:12px;padding:9px 18px;background:#0369a1;color:#fff;'
+      +'border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">開啟 Sheets</a></div>';});
+  });
 }
 
-function showErr() {
-  document.getElementById('dash-content').innerHTML =
-    '<div class="empty"><span class="empty-ico">⚠️</span>'
-    + '<div style="font-size:13px;font-weight:700;color:#dc2626;">無法讀取 Sheets</div>'
-    + '<div style="font-size:12px;color:#64748b;margin-top:6px;">請確認 Sheets 已發布為 CSV</div>'
-    + '<a href="https://docs.google.com/spreadsheets/d/1qIHKxU-42qDVT2WDcLZp1Z3Ixg1_VRTURJ96uAVfyhM/edit" target="_blank" '
-    + 'style="display:inline-block;margin-top:14px;padding:10px 20px;background:#0369a1;color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">開啟 Sheets</a></div>';
-}
-
-function parseCSV(csv) {
-  var lines = csv.split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-  var hdrs = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
-  return lines.slice(1).map((line, idx) => {
-    var vals = []; var cur = ''; var inQ = false;
-    for (var i = 0; i < line.length; i++) {
-      if (line[i] === '"') { inQ = !inQ; }
-      else if (line[i] === ',' && !inQ) { vals.push(cur); cur = ''; }
-      else cur += line[i];
+function parseCSV(csv){
+  var lines=csv.split('\n').filter(l=>l.trim());
+  if(lines.length<2)return[];
+  var hdrs=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
+  return lines.slice(1).map((line,idx)=>{
+    var vals=[],cur='',inQ=false;
+    for(var i=0;i<line.length;i++){
+      if(line[i]==='"')inQ=!inQ;
+      else if(line[i]===','&&!inQ){vals.push(cur);cur='';}
+      else cur+=line[i];
     }
     vals.push(cur);
-    var obj = { _row: idx + 2 };
-    hdrs.forEach((h,i) => obj[h] = (vals[i]||'').trim());
+    var obj={_row:idx+2};
+    hdrs.forEach((h,i)=>obj[h]=(vals[i]||'').trim());
     return obj;
   });
 }
 
 // ── 渲染 ──
-function render() {
-  var pending  = allData.filter(r => getField(r,'簽核狀態') === '待審核');
-  var approved = allData.filter(r => getField(r,'簽核狀態') === '已簽核');
-  var totalPay = sum(allData,'應付NTD');
-  var totalRev = sum(allData,'應收NTD');
-  var totalPro = sum(allData,'預估毛利NTD');
-  var margin   = totalRev > 0 ? (totalPro/totalRev*100).toFixed(1) : 0;
+function render(){
+  var pending=rows.filter(r=>g(r,'status')==='');  // 老闆已同意欄位空的=待審核
+  var all=rows;
+  var totalBuy=0,totalSell=0,totalPro=0;
+  all.forEach(r=>{
+    var bc=g(r,'buyCur'),sc2=g(r,'sellCur');
+    var rate={USD:30.5,JPY:0.205,EUR:33.5,TWD:1};
+    totalBuy+=pf(g(r,'buyAmt'))*(rate[bc]||1);
+    totalSell+=pf(g(r,'sellAmt'))*(rate[sc2]||1);
+    totalPro+=pf(g(r,'profit'));
+  });
+  var margin=totalSell>0?(totalPro/totalSell*100).toFixed(1):0;
 
-  // alert
-  var ab = document.getElementById('alert-bar');
-  if (currentRole === 'boss' && pending.length) {
+  var ab=document.getElementById('abar');
+  var pd=document.getElementById('pd');
+  var nd=document.getElementById('nd');
+  if(role==='boss'&&pending.length){
     ab.classList.remove('hide');
-    document.getElementById('alert-txt').textContent = '⚠️ 有 ' + pending.length + ' 筆合約待您簽核';
-    var pd = document.getElementById('pdot');
-    var nd = document.getElementById('ndot');
-    if(pd) pd.style.display = 'inline-block';
-    if(nd) nd.style.display = 'inline-block';
-  } else {
-    ab.classList.add('hide');
-  }
+    document.getElementById('atxt').textContent='⚠️ 有 '+pending.length+' 筆合約待您審核';
+    if(pd)pd.style.display='inline-block';
+    if(nd)nd.style.display='inline-block';
+  }else{ab.classList.add('hide');}
 
   // dashboard
-  var d = '<div class="sec" style="padding-top:14px;"><div class="sec-lbl">財務總覽</div>'
-    + '<div class="stats">'
-    + sc('s1','📥','總進貨','NTD '+fmtM(totalPay),'v1', allData.length+' 筆')
-    + sc('s2','📤','總出貨','NTD '+fmtM(totalRev),'v2','')
-    + sc('s3','💹','總毛利','NTD '+fmtM(totalPro),'v3', margin+'%')
-    + sc('s4','⏳','待簽核', pending.length+' 筆','v4','')
-    + '</div></div>';
-
-  if (currentRole === 'boss' && pending.length) {
-    d += '<div class="sec" style="padding-top:10px;"><div class="sec-lbl">⚡ 待簽核</div>'
-      + pending.slice(0,3).map(r => card(r, true)).join('') + '</div>';
+  var d='<div class="sec" style="padding-top:12px;"><div class="slbl">財務總覽</div>'
+    +'<div class="sg">'
+    +sc('s1','📥','總進貨','NTD '+fmtM(totalBuy),'v1',all.length+' 筆')
+    +sc('s2','📤','總出貨','NTD '+fmtM(totalSell),'v2','')
+    +sc('s3','💹','預估毛利','NTD '+fmtM(totalPro),'v3',margin+'%')
+    +sc('s4','⏳','待審核',pending.length+' 筆','v4','')
+    +'</div></div>';
+  if(role==='boss'&&pending.length){
+    d+='<div class="sec" style="padding-top:10px;"><div class="slbl">⚡ 待審核</div>'
+      +pending.slice(0,3).map(r=>card(r,true)).join('')+'</div>';
   }
-  d += '<div class="sec" style="padding-top:10px;"><div class="sec-lbl">最近合約</div>'
-    + allData.slice(0,5).map(r => card(r, false)).join('') + '</div>';
-  document.getElementById('dash-content').innerHTML = d;
+  d+='<div class="sec" style="padding-top:10px;"><div class="slbl">最近合約</div>'
+    +all.slice(-5).reverse().map(r=>card(r,false)).join('')+'</div>';
+  document.getElementById('dc').innerHTML=d;
 
-  // approval
-  document.getElementById('approval-list').innerHTML = pending.length
-    ? pending.map(r => card(r, currentRole === 'boss')).join('')
-    : '<div class="empty"><span class="empty-ico">✅</span>目前沒有待簽核合約</div>';
+  document.getElementById('al').innerHTML=pending.length
+    ?pending.map(r=>card(r,role==='boss')).join('')
+    :'<div class="empty"><span class="eico">✅</span>目前沒有待審核合約</div>';
 
-  // records
-  var showData = currentRole === 'finance'
-    ? allData.filter(r => getField(r,'簽核狀態') === '已簽核')
-    : allData;
-  document.getElementById('records-list').innerHTML = showData.length
-    ? showData.map(r => card(r, false)).join('')
-    : '<div class="empty"><span class="empty-ico">📋</span>尚無資料</div>';
+  var showR=role==='finance'?rows.filter(r=>g(r,'status').includes('同意')||g(r,'status')==='是'):all;
+  document.getElementById('rl').innerHTML=showR.length
+    ?[...showR].reverse().map(r=>card(r,false)).join('')
+    :'<div class="empty"><span class="eico">📋</span>尚無資料</div>';
 
-  // log
-  if (document.getElementById('log-body')) {
-    var lb = document.getElementById('log-body');
-    if (logs.length === 0) {
-      lb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">尚無操作記錄</td></tr>';
-    } else {
-      lb.innerHTML = [...logs].reverse().map(l =>
-        '<tr><td style="white-space:nowrap;font-size:11px;">' + l.time + '</td>'
-        + '<td><b>' + l.user + '</b></td>'
-        + '<td><span class="log-tag ' + l.cls + '">' + l.action + '</span></td>'
-        + '<td style="font-size:11px;">' + l.target + '</td>'
-        + '<td style="font-size:11px;color:#64748b;">' + l.note + '</td></tr>'
-      ).join('');
-    }
+  var lb=document.getElementById('lb');
+  if(lb){
+    lb.innerHTML=logs.length===0
+      ?'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">尚無操作記錄</td></tr>'
+      :[...logs].reverse().map(l=>'<tr><td style="white-space:nowrap;font-size:11px;">'+l.t+'</td>'
+        +'<td><b>'+l.u+'</b></td>'
+        +'<td><span class="ltag '+l.c+'">'+l.a+'</span></td>'
+        +'<td style="font-size:11px;">'+l.g+'</td>'
+        +'<td style="font-size:11px;color:#64748b;">'+l.n+'</td></tr>').join('');
   }
 }
 
-function sc(cls,ico,lbl,val,vc,sub) {
-  return '<div class="stat '+cls+'"><span class="stat-ico">'+ico+'</span>'
-    +'<div class="stat-lbl">'+lbl+'</div><div class="stat-val '+vc+'">'+val+'</div>'
-    +(sub?'<div class="stat-sub">'+sub+'</div>':'')+'</div>';
+function sc(cls,ico,lbl,val,vc,sub){
+  return '<div class="st '+cls+'"><span class="stico">'+ico+'</span>'
+    +'<div class="stlbl">'+lbl+'</div><div class="stval '+vc+'">'+val+'</div>'
+    +(sub?'<div class="stsub">'+sub+'</div>':'')+'</div>';
 }
 
-function card(r, showActions) {
-  var status = getField(r,'簽核狀態') || '待審核';
-  var sc2    = status==='待審核'?'pending':status==='已簽核'?'approved':'rejected';
-  var bc     = status==='待審核'?'bp':status==='已簽核'?'ba':status==='退回修改'?'br':'bs';
-  var buyer  = getField(r,'客戶(買方)') || getField(r,'客戶') || '—';
-  var item   = getField(r,'品項') || '—';
-  var staff  = getField(r,'業務名稱') || getField(r,'業務') || '—';
-  var time   = getField(r,'時間戳記') || getField(r,'時間') || '';
-  var buyNTD = pf(getField(r,'應付NTD'));
-  var revNTD = pf(getField(r,'應收NTD'));
-  var profit = pf(getField(r,'預估毛利NTD'));
-  var note   = getField(r,'老闆批示') || '';
-  var rowNum = r._row;
+function card(r,showAct){
+  var status=g(r,'status');
+  var isPending=status===''||status==='否'||status==='待審核';
+  var sc2=isPending?'p':status.includes('同意')||status==='是'?'a':'r';
+  var bc=isPending?'bp':status.includes('同意')||status==='是'?'ba':'br';
+  var sdisplay=isPending?'待審核':status||'待審核';
+  var buyer=g(r,'buyer')||'—';
+  var item=g(r,'name')||'—';
+  var staff=g(r,'staff')||'—';
+  var asst=g(r,'asst');
+  var time=g(r,'time')||'';
+  var buyCur=g(r,'buyCur')||'TWD';
+  var buyAmt=pf(g(r,'buyAmt'));
+  var sellCur=g(r,'sellCur')||'TWD';
+  var sellAmt=pf(g(r,'sellAmt'));
+  var profit=pf(g(r,'profit'));
+  var etd=g(r,'etd')||'—';
+  var eta=g(r,'eta')||'—';
+  var pay=g(r,'payment')||g(r,'buyNote')||'—';
+  var trade=g(r,'trade')||'—';
+  var bossNote=g(r,'note')||'';
+  var freight=pf(g(r,'freight'));
+  var extra=pf(g(r,'extra'))||freight+pf(g(r,'tax'))+pf(g(r,'insure'))+pf(g(r,'comm'));
+  var rowNum=r._row;
 
-  var h = '<div class="ccard '+sc2+'">'
-    + '<div class="cc-top"><div>'
-    + '<div class="cc-name">'+buyer+'&nbsp;—&nbsp;'+item+'</div>'
-    + '<div class="cc-meta">'+staff+'&nbsp;·&nbsp;'+time+'</div>'
-    + '</div><span class="badge '+bc+'">'+status+'</span></div>'
-    + '<div class="cc-body">'
-    + r3('應付',    'NTD '+fmtN(buyNTD), 'cost')
-    + r3('應收',    'NTD '+fmtN(revNTD), 'money')
-    + r3('ETD→ETA', (getField(r,'ETD出貨日')||getField(r,'ETD')||'—')+' → '+(getField(r,'ETA到貨日')||getField(r,'ETA')||'—'), '')
-    + r3('付款',    getField(r,'付款條件')||'—', '')
-    + (note ? r3('批示', note, '') : '')
-    + '</div>'
-    + '<div class="profit-strip"><span class="ps-lbl">預估毛利</span>'
-    + '<span class="ps-val">NTD '+fmtN(profit)+'</span></div>';
+  var rate={USD:30.5,JPY:0.205,EUR:33.5,TWD:1};
+  var buyNTD=buyAmt*(rate[buyCur]||1);
+  var sellNTD=sellAmt*(rate[sellCur]||1);
 
-  if (showActions && status === '待審核') {
-    h += '<div class="cc-actions">'
-      + '<button class="btn-ng" onclick="doAction('+rowNum+','退回修改')">❌ 退回</button>'
-      + '<button class="btn-ok" onclick="doAction('+rowNum+','已簽核')">✅ 簽核放款</button>'
-      + '</div>';
+  var h='<div class="cc '+sc2+'">'
+    +'<div class="cctop"><div>'
+    +'<div class="ccname">'+buyer+'　—　'+item+'</div>'
+    +'<div class="ccmeta">'+staff+(asst?' ／ '+asst:'')+'　·　'+time+'</div>'
+    +'</div><span class="bdg '+bc+'">'+sdisplay+'</span></div>'
+    +'<div class="ccbody">'
+    +cr('供應商', g(r,'supp')||'—', '')
+    +cr('採購', buyCur+' '+fmtN(buyAmt)+' → NTD '+fmtN(buyNTD), 'cost')
+    +cr('銷售', sellCur+' '+fmtN(sellAmt)+' → NTD '+fmtN(sellNTD), 'money')
+    +cr('貿易條件', trade, '')
+    +cr('ETD → ETA', etd+' → '+eta, '')
+    +cr('付款條件', pay, '')
+    +(extra>0?cr('其他費用','NTD '+fmtN(extra),''):'')
+    +(bossNote?cr('老闆指示',bossNote,''):'')
+    +'</div>'
+    +'<div class="pstrip"><span class="pslbl">預估毛利潤</span>'
+    +'<span class="psval">NTD '+fmtN(profit)+'</span></div>';
+
+  if(showAct&&isPending){
+    h+='<div class="ccact">'
+      +'<button class="bng" onclick="doAct('+rowNum+',\'退回\')">❌ 退回</button>'
+      +'<button class="bok" onclick="doAct('+rowNum+',\'同意\')">✅ 同意簽核</button>'
+      +'</div>';
   }
-  h += '</div>';
+  h+='</div>';
   return h;
 }
 
-function r3(k,v,cls) {
-  return '<div class="cc-row"><span class="ck">'+k+'</span><span class="cv '+cls+'">'+v+'</span></div>';
+function cr(k,v,cls){
+  return '<div class="crow"><span class="ck">'+k+'</span><span class="cv '+cls+'">'+v+'</span></div>';
 }
 
 // ── 簽核 ──
-function doAction(rowNum, status) {
-  if (currentRole !== 'boss') { toast('只有董事長可以簽核', '#dc2626'); return; }
-  pendingAction = { rowNum, status };
-  var target = allData.find(r => r._row === rowNum);
-  var name = target ? (getField(target,'客戶(買方)')||getField(target,'客戶')||'') + ' — ' + (getField(target,'品項')||'') : '';
-  document.getElementById('modal-title').textContent = status === '已簽核' ? '✅ 確認簽核放款' : '❌ 退回給業務修改';
-  document.getElementById('modal-sub').textContent = name;
-  document.getElementById('modal-note').value = '';
-  document.getElementById('modal').classList.add('open');
+function doAct(rowNum,status){
+  if(role!=='boss'){toast('只有董事長可以簽核','#dc2626');return;}
+  pa={rowNum,status};
+  var t=rows.find(r=>r._row===rowNum);
+  var name=t?g(t,'buyer')+' — '+g(t,'name'):'';
+  document.getElementById('mt').textContent=status==='同意'?'✅ 確認同意簽核':'❌ 退回給業務修改';
+  document.getElementById('ms').textContent=name;
+  document.getElementById('mn').value='';
+  document.getElementById('M').classList.add('open');
 }
 
-function confirmAction() {
-  if (!pendingAction) return;
-  var note   = document.getElementById('modal-note').value;
-  var rowNum = pendingAction.rowNum;
-  var status = pendingAction.status;
-  var target = allData.find(r => r._row === rowNum);
-  var name   = target ? (getField(target,'客戶(買方)')||'') + ' — ' + (getField(target,'品項')||'') : 'Row '+rowNum;
-  closeModal();
-
-  // 呼叫 Apps Script 寫回 Sheets
-  fetch(SCRIPT, {
-    method: 'POST',
-    body: JSON.stringify({ action: 'approve', row: rowNum, status, note, approver: currentUser, time: now() }),
-    mode: 'no-cors'
-  }).finally(() => {
-    if (target) { target['簽核狀態'] = status; target['老闆批示'] = note; }
-    addLog(status === '已簽核' ? '簽核放款' : '退回修改', currentUser, name, note);
+document.getElementById('mc').onclick=function(){
+  if(!pa)return;
+  var note=document.getElementById('mn').value;
+  var rowNum=pa.rowNum,status=pa.status;
+  var t=rows.find(r=>r._row===rowNum);
+  var name=t?g(t,'buyer')+' — '+g(t,'name'):'Row'+rowNum;
+  closeM();
+  fetch(SCRIPT,{method:'POST',body:JSON.stringify({
+    action:'approve',row:rowNum,status:status==='同意'?'是':'退回',
+    note,approver:user,time:now()
+  }),mode:'no-cors'}).finally(()=>{
+    if(t){t[F.status]=status==='同意'?'是':'退回';t[F.note]=note;}
+    addLog(status==='同意'?'同意簽核':'退回修改',user,name,note);
     render();
-    toast(status === '已簽核' ? '✅ 已簽核！財務收到通知' : '❌ 已退回，業務收到通知',
-          status === '已簽核' ? '#16a34a' : '#dc2626');
+    toast(status==='同意'?'✅ 已簽核！系統通知財務':'❌ 已退回，業務收到通知',
+          status==='同意'?'#16a34a':'#dc2626');
   });
+};
+
+function closeM(){document.getElementById('M').classList.remove('open');}
+document.getElementById('M').addEventListener('click',function(e){if(e.target===this)closeM();});
+
+function go(id){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.bni').forEach(b=>b.classList.remove('on'));
+  var s=document.getElementById('s-'+id),n=document.getElementById('n-'+id);
+  if(s)s.classList.add('on');
+  if(n)n.classList.add('on');
+  if(id==='log')render();
 }
 
-document.getElementById('modal-confirm').onclick = confirmAction;
-function closeModal() {
-  document.getElementById('modal').classList.remove('open');
-}
-document.getElementById('modal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-
-// ── Log ──
-function addLog(action, user, target, note) {
-  var cls = action.includes('簽核') ? 'lt-ok' : action.includes('退回') ? 'lt-ng' : 'lt-in';
-  logs.push({ time: now(), user, action, target: target||'', note: note||'', cls });
-  // 只保留最近 100 筆
-  if (logs.length > 100) logs.shift();
-  // 也存到 localStorage
-  try { localStorage.setItem('trade_logs', JSON.stringify(logs)); } catch(e) {}
+function addLog(a,u,g2,n){
+  var c=a.includes('同意')||a.includes('簽核')?'lok':a.includes('退回')?'lng':'lin';
+  logs.push({t:now(),u,a,g:g2,n,c});
+  if(logs.length>100)logs.shift();
+  try{localStorage.setItem('tl',JSON.stringify(logs));}catch(e){}
 }
 
-// ── 畫面切換 ──
-function switchScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.bni').forEach(b => b.classList.remove('active'));
-  var s = document.getElementById('screen-' + id);
-  var n = document.getElementById('nav-' + id);
-  if (s) s.classList.add('active');
-  if (n) n.classList.add('active');
-  if (id === 'log') render();
+function fmtN(n){return Math.round(n||0).toLocaleString('zh-TW');}
+function fmtM(n){var v=Math.round(n||0);return Math.abs(v)>=10000?(v/10000).toFixed(1)+'萬':v.toLocaleString('zh-TW');}
+function now(){return new Date().toLocaleString('zh-TW',{hour12:false});}
+function toast(msg,bg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.style.background=bg||'#16a34a';
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);
 }
-
-// ── 工具 ──
-function getField(r, key) {
-  return r[key] || r[key.replace('(','(').replace(')',')')]|| '';
-}
-function pf(v) { return parseFloat(v) || 0; }
-function sum(arr, key) { return arr.reduce((s,r) => s + pf(r[key]), 0); }
-function fmtN(n) { return Math.round(n||0).toLocaleString('zh-TW'); }
-function fmtM(n) {
-  var v = Math.round(n||0);
-  return Math.abs(v) >= 10000 ? (v/10000).toFixed(1)+'萬' : v.toLocaleString('zh-TW');
-}
-function now() {
-  return new Date().toLocaleString('zh-TW', {hour12:false});
-}
-function toast(msg, bg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.style.background = bg||'#16a34a';
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-// 載入歷史 log
-try {
-  var saved = localStorage.getItem('trade_logs');
-  if (saved) logs = JSON.parse(saved);
-} catch(e) {}
-
-// 每 60 秒自動重整
-setInterval(loadData, 60000);
+try{var sv=localStorage.getItem('tl');if(sv)logs=JSON.parse(sv);}catch(e){}
+setInterval(load,60000);
 </script>
 </body>
 </html>
