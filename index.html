@@ -261,27 +261,41 @@ function buildNav(){
   ).join('');
 }
 
-// ── 多 proxy 讀取 ──
-var PROXIES=[
-  function(u){return 'https://api.allorigins.win/raw?url='+encodeURIComponent(u);},
-  function(u){return 'https://corsproxy.io/?'+encodeURIComponent(u);},
-  function(u){return u;}
-];
+// ── 讀取資料（直接從 Apps Script 取得，不依賴 proxy）──
 function load(){
   document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
-  tryP(0);
-}
-function tryP(i){
-  if(i>=PROXIES.length){showErr();return;}
-  fetch(PROXIES[i](CSV+'&t='+Date.now()),{cache:'no-cache'})
-    .then(function(r){if(!r.ok)throw new Error(r.status);return r.text();})
-    .then(function(csv){
-      if(!csv||csv.length<20)throw new Error('empty');
-      var parsed=parseCSV(csv);
-      if(parsed.length===0)throw new Error('no rows');
-      rows=parsed; render();
+  // 直接呼叫 Apps Script GET endpoint 取得資料
+  fetch(SCRIPT+'?action=getData&_='+Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data.status==='ok' && data.rows && data.rows.length>0){
+        rows=data.rows; render();
+      } else {
+        // 備用：嘗試 CSV
+        loadCSV();
+      }
     })
-    .catch(function(){tryP(i+1);});
+    .catch(function(){ loadCSV(); });
+}
+
+function loadCSV(){
+  fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(CSV+'&_='+Date.now()))
+    .then(function(r){ return r.text(); })
+    .then(function(csv){
+      var parsed=parseCSV(csv);
+      if(parsed.length>0){ rows=parsed; render(); }
+      else showErr();
+    })
+    .catch(function(){
+      fetch(CSV+'&_='+Date.now())
+        .then(function(r){ return r.text(); })
+        .then(function(csv){
+          var parsed=parseCSV(csv);
+          if(parsed.length>0){ rows=parsed; render(); }
+          else showErr();
+        })
+        .catch(showErr);
+    });
 }
 function showErr(){
   document.getElementById('dc').innerHTML=
