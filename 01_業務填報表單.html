@@ -193,7 +193,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
         <select class="currency-sel" id="buy-cur" onchange="calcProfit()">
           <option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option>
         </select>
-        <input type="number" class="amount-input" id="buy-amt" placeholder="1919000" oninput="calcProfit()">
+        <input type="number" class="amount-input" id="buy-amt" type="number" min="0" step="any" inputmode="numeric" placeholder="1919000" oninput="calcProfit()">
       </div>
     </div>
     <div class="field">
@@ -202,12 +202,12 @@ textarea{height:72px;resize:none;line-height:1.6;}
         <select class="currency-sel" id="sell-cur" onchange="calcProfit()">
           <option>USD</option><option>TWD</option><option>JPY</option><option>EUR</option>
         </select>
-        <input type="number" class="amount-input" id="sell-amt" placeholder="67725" oninput="calcProfit()">
+        <input type="number" class="amount-input" id="sell-amt" type="number" min="0" step="any" inputmode="numeric" placeholder="67725" oninput="calcProfit()">
       </div>
     </div>
     <div class="field">
       <div class="label">其他費用合計 <span class="opt">選填，NTD</span></div>
-      <input type="number" id="extra-cost" placeholder="0（運費+規費+保險費等）" oninput="calcProfit()">
+      <input type="number" id="extra-cost" type="number" min="0" step="any" inputmode="numeric" placeholder="0（運費+規費+保險費等）" oninput="calcProfit()">
     </div>
     <div class="calc-box" id="calc-box">
       <div class="calc-title">預估毛利試算</div>

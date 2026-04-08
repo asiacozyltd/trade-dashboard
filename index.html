@@ -585,25 +585,72 @@ function showD(rowNum){
       +'<button class="bok" id="bok-'+rowNum+'" onclick="doApp('+rowNum+',\'是\')">✅ 同意簽核</button>'
       +'</div></div>';
   }
-  // 編輯區（業務員）
+  // 編輯區（業務員 - 除老闆備註外全部可改）
   if(curUser&&curUser.role==='staff'){
-    var ef=function(id,lbl,val){
+    var ei=function(id,lbl,val,tp){
+      var t=tp||'text';
       return '<div><label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;">'+lbl+'</label>'
-        +'<input id="'+id+'" style="width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;outline:none;" value="'+(val||'')+'"></div>';
+        +'<input type="'+t+'" id="'+id+'" style="width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;outline:none;font-family:inherit;" value="'+(val||'')+'"></div>';
+    };
+    var eta=function(id,lbl,val){
+      return '<div><label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;">'+lbl+'</label>'
+        +'<textarea id="'+id+'" style="width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;outline:none;height:56px;resize:none;font-family:inherit;">'+(val||'')+'</textarea></div>';
+    };
+    var esel=function(id,lbl,val,opts){
+      var ops=opts.map(function(o){return '<option value="'+o+'"'+(o===val?' selected':'')+'>'+o+'</option>';}).join('');
+      return '<div><label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;">'+lbl+'</label>'
+        +'<select id="'+id+'" style="width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;outline:none;font-family:inherit;">'+ops+'</select></div>';
     };
     h+='<div style="background:#eff6ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin-top:14px;">'
-      +'<div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:12px;">✏️ 修改案件資料</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
-      +ef('e-name-'+rowNum,   '案件名稱',   g(r,'name'))
-      +ef('e-buyer-'+rowNum,  '客戶（買方）', g(r,'buyer'))
-      +ef('e-buyamt-'+rowNum, '應付總金額',  g(r,'buyAmt'))
-      +ef('e-sellamt-'+rowNum,'應收總金額',  g(r,'sellAmt'))
-      +ef('e-etd-'+rowNum,    'ETD 出貨日',  g(r,'etd'))
-      +ef('e-profit-'+rowNum, '預估毛利潤',  g(r,'profit'))
+      +'<div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:14px;">✏️ 修改案件資料（老闆批示欄不開放修改）</div>'
+      // 基本資訊
+      +'<div style="font-size:10px;font-weight:700;color:#0369a1;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #bae6fd;padding-bottom:5px;">基本資訊</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+      +ei('e-staff-'+rowNum, '業務名稱', g(r,'staff'))
+      +ei('e-type-'+rowNum,  '案件屬性', g(r,'type'))
+      +ei('e-name-'+rowNum,  '案件名稱', g(r,'name'))
+      +ei('e-asst-'+rowNum,  '承辦業助', g(r,'asst'))
       +'</div>'
-      +'<div style="margin-bottom:10px;"><label style="font-size:10px;font-weight:700;color:#64748b;display:block;margin-bottom:3px;text-transform:uppercase;">備註（採購）</label>'
-      +'<textarea id="e-buyrem-'+rowNum+'" style="width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;padding:7px 10px;font-size:13px;outline:none;height:60px;resize:none;font-family:inherit;">'+g(r,'buyRem')+'</textarea></div>'
-      +'<button id="ebtn-'+rowNum+'" onclick="doEdit('+rowNum+')" style="width:100%;padding:11px;border-radius:9px;background:linear-gradient(135deg,#0369a1,#0ea5e9);color:#fff;font-size:13px;font-weight:700;border:none;cursor:pointer;">💾 儲存修改至 Sheets</button>'
+      // 採購
+      +'<div style="font-size:10px;font-weight:700;color:#dc2626;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #fca5a5;padding-bottom:5px;">採購（賣方）</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+      +ei('e-supp-'+rowNum,    '供應商（賣方）',  g(r,'supp'))
+      +esel('e-buycur-'+rowNum,'採購幣別',        g(r,'buyCur'),['TWD','USD','JPY','EUR','其他'])
+      +ei('e-buyamt-'+rowNum,  '應付總金額',      g(r,'buyAmt'),'number')
+      +ei('e-buydate-'+rowNum, '預計付款日期',    g(r,'buyDate'),'date')
+      +ei('e-buypay-'+rowNum,  '付款條件',        g(r,'buyPay'))
+      +ei('e-buycon-'+rowNum,  '賣方合約',        g(r,'buyCon'))
+      +'</div>'
+      +eta('e-buyrem-'+rowNum, '備註（採購）', g(r,'buyRem'))
+      +'<div style="margin-bottom:12px;"></div>'
+      // 銷售
+      +'<div style="font-size:10px;font-weight:700;color:#16a34a;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #86efac;padding-bottom:5px;">銷售（買方）</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+      +ei('e-buyer-'+rowNum,   '客戶名稱（買方）', g(r,'buyer'))
+      +esel('e-sellcur-'+rowNum,'銷售幣別',         g(r,'sellCur'),['USD','TWD','JPY','EUR','其他'])
+      +ei('e-sellamt-'+rowNum,  '應收總金額',       g(r,'sellAmt'),'number')
+      +ei('e-selldate-'+rowNum, '預計收款日',       g(r,'sellDate'),'date')
+      +ei('e-sellpay-'+rowNum,  '收款條件',         g(r,'sellPay'))
+      +ei('e-sellcon-'+rowNum,  '買方合約',         g(r,'sellCon'))
+      +'</div>'
+      +eta('e-sellrem-'+rowNum, '備註（銷售）', g(r,'sellRem'))
+      +'<div style="margin-bottom:12px;"></div>'
+      // 物流
+      +'<div style="font-size:10px;font-weight:700;color:#0369a1;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid #bae6fd;padding-bottom:5px;">物流 / 貿易</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+      +esel('e-trade-'+rowNum,  '貿易條件',  g(r,'trade'),['CFR','FOB','CIF','EXW','其他'])
+      +ei('e-etd-'+rowNum,      'ETD 出貨日', g(r,'etd'),'date')
+      +ei('e-eta-'+rowNum,      'ETA 到貨日', g(r,'eta'),'date')
+      +ei('e-origin-'+rowNum,   '出貨地',     g(r,'origin'))
+      +ei('e-dest-'+rowNum,     '目的地',     g(r,'dest'))
+      +ei('e-freight-'+rowNum,  '運費',       g(r,'freight'),'number')
+      +ei('e-insure-'+rowNum,   '保險費',     g(r,'insure'),'number')
+      +ei('e-tax-'+rowNum,      '規費',       g(r,'tax'),'number')
+      +ei('e-comm-'+rowNum,     '佣金',       g(r,'comm'),'number')
+      +ei('e-extra-'+rowNum,    '其他費用',   g(r,'extra'),'number')
+      +ei('e-profit-'+rowNum,   '預估毛利潤', g(r,'profit'))
+      +'</div>'
+      +'<button id="ebtn-'+rowNum+'" onclick="doEdit('+rowNum+')" style="width:100%;padding:12px;border-radius:9px;background:linear-gradient(135deg,#0369a1,#0ea5e9);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;margin-top:4px;">💾 儲存修改至 Sheets</button>'
       +'</div>';
   }
   document.getElementById('mb').innerHTML=h;
@@ -643,20 +690,42 @@ function doEdit(rowNum){
   var btn=document.getElementById('ebtn-'+rowNum);
   if(btn){btn.disabled=true;btn.textContent='儲存中...';}
   var fields={};
-  var nm=document.getElementById('e-name-'+rowNum);
-  var by=document.getElementById('e-buyer-'+rowNum);
-  var ba=document.getElementById('e-buyamt-'+rowNum);
-  var sa=document.getElementById('e-sellamt-'+rowNum);
-  var etd=document.getElementById('e-etd-'+rowNum);
-  var pr=document.getElementById('e-profit-'+rowNum);
-  var br=document.getElementById('e-buyrem-'+rowNum);
-  if(nm)fields['案件名稱']=nm.value;
-  if(by)fields['客戶名稱（買方）']=by.value;
-  if(ba)fields['應付總金額']=ba.value;
-  if(sa)fields['應收總金額']=sa.value;
-  if(etd)fields['ETD/卸魚日']=etd.value;
-  if(pr)fields['預估毛利潤']=pr.value;
-  if(br)fields['備註（採購）']=br.value;
+  // 欄位對應：[元素ID, Sheets欄位名稱]
+  var map=[
+    ['e-staff-',   '業務名稱'],
+    ['e-type-',    '案件屬性'],
+    ['e-name-',    '案件名稱'],
+    ['e-asst-',    '承辦業助'],
+    ['e-supp-',    '供應商名稱（賣方）'],
+    ['e-buycur-',  '採購幣別'],
+    ['e-buyamt-',  '應付總金額'],
+    ['e-buydate-', '預計付款日期'],
+    ['e-buypay-',  '付款條件'],
+    ['e-buycon-',  '合約 [賣方合約（採購）]'],
+    ['e-buyrem-',  '備註（採購）'],
+    ['e-buyer-',   '客戶名稱（買方）'],
+    ['e-sellcur-', '銷售幣別'],
+    ['e-sellamt-', '應收總金額'],
+    ['e-selldate-','預計收款日'],
+    ['e-sellpay-', '收款條件'],
+    ['e-sellcon-', '合約 [買方合約（銷售）]'],
+    ['e-sellrem-', '備註（銷售）'],
+    ['e-trade-',   '貿易條件'],
+    ['e-etd-',     'ETD/卸魚日'],
+    ['e-eta-',     'ETA/到貨日'],
+    ['e-origin-',  '出貨地/發貨港口/出貨地點'],
+    ['e-dest-',    '目的地/收貨港口/收貨地點'],
+    ['e-freight-', '運費'],
+    ['e-insure-',  '保險費'],
+    ['e-tax-',     '規費'],
+    ['e-comm-',    '佣金'],
+    ['e-extra-',   '其他費用'],
+    ['e-profit-',  '預估毛利潤'],
+  ];
+  map.forEach(function(m){
+    var el=document.getElementById(m[0]+rowNum);
+    if(el)fields[m[1]]=el.value;
+  });
   var r=rows.find(function(x){return x._row===rowNum;});
   fetch(SCRIPT,{
     method:'POST',
