@@ -773,85 +773,104 @@ function renderDaily(){
 // 點擊日曆格子 → 顯示當日案件明細
 function showDayDetail(el){
   var dateStr = typeof el === 'string' ? el : el.dataset.date;
-  // 找出當天所有案件
   var dayRows = rows.filter(function(r){
     var t = g(r,'time');
-    if(!t) return false;
-    var dp = t.split(' ')[0];
-    return dp === dateStr;
+    return t && t.split(' ')[0] === dateStr;
   });
 
   document.getElementById('day-title').textContent = dateStr + '　共 ' + dayRows.length + ' 筆案件';
+  var body = document.getElementById('day-body');
 
   if(!dayRows.length){
-    document.getElementById('day-body').innerHTML =
-      '<div class="empty"><span class="eico">📋</span>當日無案件</div>';
+    body.innerHTML = '<div class="empty"><span class="eico">📋</span>當日無案件</div>';
     document.getElementById('DayM').classList.add('open');
     return;
   }
 
-  var html = '';
+  // 用 DOM 建立，避免引號衝突
+  body.innerHTML = '';
   dayRows.forEach(function(r){
-    var pend=isPend(r),appr=isAppr(r);
+    var pend=isPend(r), appr=isAppr(r);
     var bc=pend?'bp':appr?'ba':'br';
     var sl=pend?'待審核':appr?'已同意':'退回';
-    var buyCur  = g(r,'buyCur')||'TWD';
-    var buyAmt  = g(r,'buyAmt');
-    var sellCur = g(r,'sellCur')||'TWD';
-    var sellAmt = g(r,'sellAmt');
-    var buyRem  = g(r,'buyRem');
-    var sellRem = g(r,'sellRem');
-    var rowNum  = r._row;
+    var rowNum = r._row;
 
-    html += '<div style="background:var(--card);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">';
+    var card = document.createElement('div');
+    card.style.cssText='background:var(--card);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;';
 
-    // 標題列
-    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
-      +'<div>'
-      +'<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">'+g(r,'formId')+'</div>'
+    // 標題
+    var topDiv = document.createElement('div');
+    topDiv.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;';
+    var infoDiv = document.createElement('div');
+    infoDiv.innerHTML = '<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">'+g(r,'formId')+'</div>'
       +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+g(r,'name')+'</div>'
-      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+g(r,'staff')+(g(r,'asst')?' / '+g(r,'asst'):'')+'</div>'
-      +'</div>'
-      +'<span class="bdg '+bc+'">'+sl+'</span>'
-      +'</div>';
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+g(r,'staff')+(g(r,'asst')?' / '+g(r,'asst'):'')+'</div>';
+    var badge = document.createElement('span');
+    badge.className = 'bdg '+bc;
+    badge.textContent = sl;
+    topDiv.appendChild(infoDiv);
+    topDiv.appendChild(badge);
+    card.appendChild(topDiv);
 
-    // 金額（原幣）
-    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:'+(buyRem||sellRem?'10':'4')+'px;">';
+    // 金額
+    var amtGrid = document.createElement('div');
+    amtGrid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;';
+    var buyAmt = g(r,'buyAmt'), sellAmt = g(r,'sellAmt');
+    var buyCur = g(r,'buyCur')||'TWD', sellCur = g(r,'sellCur')||'TWD';
     if(buyAmt){
-      html += '<div style="background:#fef2f2;border-radius:7px;padding:8px 10px;">'
-        +'<div style="font-size:10px;color:var(--coral);font-weight:700;margin-bottom:2px;">↓ 應付（採購）</div>'
+      var buyBox = document.createElement('div');
+      buyBox.style.cssText='background:#fef2f2;border-radius:7px;padding:8px 10px;';
+      buyBox.innerHTML='<div style="font-size:10px;color:var(--coral);font-weight:700;margin-bottom:2px;">↓ 應付（採購）</div>'
         +'<div style="font-size:14px;font-weight:700;color:var(--coral);font-family:monospace;">'+buyCur+' '+fmtN(pf(buyAmt))+'</div>'
-        +(g(r,'buyDate')?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">付款日 '+g(r,'buyDate')+'</div>':'')
-        +'</div>';
+        +(g(r,'buyDate')?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">付款日 '+g(r,'buyDate')+'</div>':'');
+      amtGrid.appendChild(buyBox);
     }
     if(sellAmt){
-      html += '<div style="background:#f0fdf4;border-radius:7px;padding:8px 10px;">'
-        +'<div style="font-size:10px;color:var(--jade);font-weight:700;margin-bottom:2px;">↑ 應收（銷售）</div>'
+      var sellBox = document.createElement('div');
+      sellBox.style.cssText='background:#f0fdf4;border-radius:7px;padding:8px 10px;';
+      sellBox.innerHTML='<div style="font-size:10px;color:var(--jade);font-weight:700;margin-bottom:2px;">↑ 應收（銷售）</div>'
         +'<div style="font-size:14px;font-weight:700;color:var(--jade);font-family:monospace;">'+sellCur+' '+fmtN(pf(sellAmt))+'</div>'
-        +(g(r,'sellDate')?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">收款日 '+g(r,'sellDate')+'</div>':'')
-        +'</div>';
+        +(g(r,'sellDate')?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">收款日 '+g(r,'sellDate')+'</div>':'');
+      amtGrid.appendChild(sellBox);
     }
-    html += '</div>';
+    card.appendChild(amtGrid);
 
     // 備註
+    var buyRem = g(r,'buyRem'), sellRem = g(r,'sellRem');
     if(buyRem){
-      html += '<div style="background:#fef9f9;border-left:3px solid #fca5a5;border-radius:0 6px 6px 0;padding:7px 10px;margin-bottom:6px;font-size:12px;color:#7f1d1d;line-height:1.6;">'
-        +'<b style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;">備註（採購）</b><br>'+buyRem+'</div>';
+      var br = document.createElement('div');
+      br.style.cssText='background:#fef9f9;border-left:3px solid #fca5a5;border-radius:0 6px 6px 0;padding:7px 10px;margin-bottom:6px;font-size:12px;color:#7f1d1d;line-height:1.6;';
+      br.innerHTML='<b style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;">備註（採購）</b><br>'+buyRem;
+      card.appendChild(br);
     }
     if(sellRem){
-      html += '<div style="background:#f0fdf9;border-left:3px solid #86efac;border-radius:0 6px 6px 0;padding:7px 10px;margin-bottom:6px;font-size:12px;color:#14532d;line-height:1.6;">'
-        +'<b style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;">備註（銷售）</b><br>'+sellRem+'</div>';
+      var sr = document.createElement('div');
+      sr.style.cssText='background:#f0fdf9;border-left:3px solid #86efac;border-radius:0 6px 6px 0;padding:7px 10px;margin-bottom:6px;font-size:12px;color:#14532d;line-height:1.6;';
+      sr.innerHTML='<b style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;">備註（銷售）</b><br>'+sellRem;
+      card.appendChild(sr);
     }
 
-    // 查看詳細按鈕
-    html += '<button onclick="document.getElementById('DayM').classList.remove('open');showD('+rowNum+')" '
-      +'style="width:100%;margin-top:6px;padding:8px;border-radius:8px;background:#f1f5f9;color:var(--sea);font-size:12px;font-weight:700;border:0.5px solid var(--border);cursor:pointer;">查看完整詳細 / 操作 →</button>';
+    // 查看詳細按鈕（用 addEventListener，完全沒有引號問題）
+    var detailBtn = document.createElement('button');
+    detailBtn.textContent = '查看完整詳細 / 操作 →';
+    detailBtn.style.cssText='width:100%;margin-top:6px;padding:8px;border-radius:8px;background:#f1f5f9;color:#0369a1;font-size:12px;font-weight:700;border:0.5px solid #e2e8f0;cursor:pointer;';
+    detailBtn.addEventListener('click', (function(rn){
+      return function(){
+        document.getElementById('DayM').classList.remove('open');
+        showD(rn);
+      };
+    })(rowNum));
+    card.appendChild(detailBtn);
 
-    html += '</div>';
+    body.appendChild(card);
   });
 
-  document.getElementById('day-body').innerHTML = html;
   document.getElementById('DayM').classList.add('open');
+}
+// 關閉日曆視窗並開啟案件詳細
+function closeDayAndShowD(rowNum){
+  document.getElementById('DayM').classList.remove('open');
+  showD(parseInt(rowNum));
 }
 
 // 格式化金額：千位數逗號分隔（會計格式）
