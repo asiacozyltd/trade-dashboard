@@ -1172,6 +1172,33 @@ function doApp(rowNum,status){
   });
 }
 
+// 通知老闆：案件被修改
+function notifyBossEdit(r, editorName, changes){
+  if(!r) return;
+  var caseName = g(r,'name');
+  var formId   = g(r,'formId');
+  var payload  = {
+    action:    'notifyEdit',
+    caseName:  caseName,
+    formId:    formId,
+    editor:    editorName,
+    changes:   changes.join(' / '),
+    staff:     g(r,'staff'),
+    buyAmt:    g(r,'buyAmt'),
+    buyCur:    g(r,'buyCur'),
+    sellAmt:   g(r,'sellAmt'),
+    sellCur:   g(r,'sellCur'),
+    buyDate:   g(r,'buyDate'),
+    sellDate:  g(r,'sellDate'),
+    profit:    g(r,'profit'),
+  };
+  fetch(SCRIPT,{
+    method:'POST',
+    body:JSON.stringify(payload),
+    mode:'no-cors'
+  });
+}
+
 // 編輯
 function doEdit(rowNum){
   var btn=document.getElementById('ebtn-'+rowNum);
@@ -1213,8 +1240,14 @@ function doEdit(rowNum){
     if(r) Object.keys(fields).forEach(function(k){r[k]=fields[k];});
     // 寫入詳細 Log
     addLog('修改案件',curUser.name, caseName, changeLog);
+
+    // ★ 通知老闆：只有有實質變動才發通知
+    if(changes.length > 0){
+      notifyBossEdit(r, curUser.name, changes);
+    }
+
     closeD();onLoad();
-    toast('💾 修改已儲存','#0369a1');
+    toast('💾 修改已儲存，已通知老闆','#0369a1');
     if(btn){btn.disabled=false;btn.textContent='💾 儲存修改至 Sheets';}
   });
 }
