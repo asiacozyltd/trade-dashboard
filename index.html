@@ -536,6 +536,9 @@ function login(){
       u.role==='admin'?'管理員後台':
       u.role==='finance'?'財務放款管理':'業務員系統';
     buildNav();load();fetchRates();
+    // 啟動定時更新
+    setInterval(load,60000);
+    setInterval(fetchRates,1800000);
   }else{
     document.getElementById('lerr').textContent='密碼錯誤';
     document.getElementById('lpwd').value='';
@@ -1138,8 +1141,15 @@ function dr(lbl,val){
   return '<div class="drow"><div class="drow-l">'+lbl+'</div><div class="drow-v">'+val+'</div></div>';
 }
 function closeD(){document.getElementById('DM').classList.remove('open');}
-document.getElementById('DM').addEventListener('click',function(e){if(e.target===this)closeD();});
-document.getElementById('DayM').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+// 等 DOM 建立完成後再綁定事件
+document.addEventListener('DOMContentLoaded', function(){
+  var dm = document.getElementById('DM');
+  var daym = document.getElementById('DayM');
+  var delm = document.getElementById('DelM');
+  if(dm)   dm.addEventListener('click',function(e){if(e.target===this)closeD();});
+  if(daym) daym.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+  if(delm) delm.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+});
 
 // 簽核
 function doApp(rowNum,status){
@@ -1431,8 +1441,7 @@ function toast(msg,bg){
   t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);
 }
 try{var sv=localStorage.getItem('tl');if(sv)logs=JSON.parse(sv);}catch(e){}
-setInterval(load,60000);
-setInterval(fetchRates,1800000);
+// setInterval 在登入後才啟動（在 login() 裡呼叫）
 </script>
 </body>
 </html>
