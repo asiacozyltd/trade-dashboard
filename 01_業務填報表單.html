@@ -68,6 +68,8 @@ textarea{height:72px;resize:none;line-height:1.6;}
 .di{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .2s;}
 .di.on{background:var(--teal);width:20px;border-radius:4px;}
 .hint{font-size:11px;color:var(--muted);margin-top:5px;}
+.sec-hidden{display:none;}
+.sec-optional{opacity:.45;pointer-events:none;}
 .other-input{display:none;margin-top:8px;}
 .other-input.show{display:block;}
 .sec-div{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 10px;padding-bottom:6px;border-bottom:1.5px solid #e0f2fe;display:flex;align-items:center;gap:5px;}
@@ -141,7 +143,8 @@ textarea{height:72px;resize:none;line-height:1.6;}
   <div class="stitle">採購 &amp; 銷售資訊</div>
   <div class="card">
 
-    <div class="sec-div">採購（賣方）</div>
+    <div class="sec-div" id="buy-sec-title">採購（賣方）</div>
+    <div id="buy-sec">
 
     <!-- F: 供應商名稱（賣方） -->
     <div class="field">
@@ -187,7 +190,9 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <textarea id="buy-note" placeholder="採購相關補充說明..."></textarea>
     </div>
 
-    <div class="sec-div">銷售（買方）</div>
+    </div><!-- end buy-sec -->
+    <div class="sec-div" id="sell-sec-title">銷售（買方）</div>
+    <div id="sell-sec">
 
     <!-- M: 客戶名稱（買方） -->
     <div class="field">
@@ -200,7 +205,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <div class="lbl">銷售幣別 &amp; 應收總金額 <span class="req">*</span></div>
       <div class="aw">
         <select class="cs" id="sell-cur" onchange="calcProfit()">
-          <option>USD</option><option>TWD</option><option>JPY</option><option>EUR</option>
+          <option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option>
         </select>
         <input type="number" class="ai" id="sell-amt" min="0" step="any" inputmode="numeric" placeholder="例：67725" oninput="calcProfit()">
       </div>
@@ -233,6 +238,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <textarea id="sell-note" placeholder="銷售相關補充說明..."></textarea>
     </div>
 
+    </div><!-- end sell-sec -->
     <!-- 毛利試算 -->
     <div class="cb">
       <div class="cb-t">預估毛利試算（含費用將在下一頁更新）</div>
@@ -431,14 +437,21 @@ function validate(n){
       return null;
     },
     2:()=>{
-      if(!v('supplier')) return '請填入供應商名稱';
-      if(!v('buy-amt')) return '請填入採購金額';
-      if(!v('buy-date')) return '請填入預計付款日期';
-      if(!getBuyPay()) return '請選擇付款條件';
-      if(!v('buyer')) return '請填入客戶名稱';
-      if(!v('sell-amt')) return '請填入銷售金額';
-      if(!v('sell-date')) return '請填入預計收款日';
-      if(!getSellPay()) return '請選擇收款條件';
+      const tp=fd.type||'';
+      const needBuy = tp==='採購' || tp==='採購+銷售(三角貿易)';
+      const needSell = tp==='銷售' || tp==='採購+銷售(三角貿易)';
+      if(needBuy){
+        if(!v('supplier')) return '請填入供應商名稱（採購）';
+        if(!v('buy-amt'))  return '請填入採購金額';
+        if(!v('buy-date')) return '請填入預計付款日期';
+        if(!getBuyPay())   return '請選擇付款條件（採購）';
+      }
+      if(needSell){
+        if(!v('buyer'))     return '請填入客戶名稱（銷售）';
+        if(!v('sell-amt'))  return '請填入銷售金額';
+        if(!v('sell-date')) return '請填入預計收款日';
+        if(!getSellPay())   return '請選擇收款條件（銷售）';
+      }
       return null;
     },
     3:()=>{
@@ -471,6 +484,24 @@ function selR(group,val,el){
   fd[group]=val;
   el.parentElement.querySelectorAll('.ri').forEach(i=>i.classList.remove('sel'));
   el.classList.add('sel');
+  if(group==='type') updateSections(val);
+}
+
+function updateSections(tp){
+  const needBuy  = tp==='採購' || tp==='採購+銷售(三角貿易)';
+  const needSell = tp==='銷售' || tp==='採購+銷售(三角貿易)';
+  const buyEl    = document.getElementById('buy-sec');
+  const buyT     = document.getElementById('buy-sec-title');
+  const sellEl   = document.getElementById('sell-sec');
+  const sellT    = document.getElementById('sell-sec-title');
+  if(buyEl){
+    buyEl.style.display  = needBuy  ? '' : 'none';
+    buyT.style.display   = needBuy  ? '' : 'none';
+  }
+  if(sellEl){
+    sellEl.style.display = needSell ? '' : 'none';
+    sellT.style.display  = needSell ? '' : 'none';
+  }
 }
 
 // ── 費用加總 ──
