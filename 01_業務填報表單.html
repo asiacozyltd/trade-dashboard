@@ -30,6 +30,7 @@ body{background:var(--bg);font-family:'Noto Sans TC',sans-serif;color:var(--text
 .opt{font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;}
 input,select,textarea{width:100%;background:#f8fafc;border:1.5px solid var(--border);border-radius:10px;color:var(--text);padding:12px 14px;font-size:15px;font-family:'Noto Sans TC',sans-serif;outline:none;transition:border-color .2s;-webkit-appearance:none;}
 input:focus,select:focus,textarea:focus{border-color:var(--teal);background:#fff;}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
 input::placeholder,textarea::placeholder{color:#c0ccd8;}
 textarea{height:72px;resize:none;line-height:1.6;}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -43,6 +44,13 @@ textarea{height:72px;resize:none;line-height:1.6;}
 .aw{display:flex;gap:8px;}
 .cs{width:110px;flex-shrink:0;}
 .ai{flex:1;}
+/* 費用區塊 */
+.cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.cost-field label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:5px;}
+.cost-total{background:linear-gradient(135deg,#eff6ff,#e0f2fe);border:1.5px solid #bae6fd;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;}
+.ct-lbl{font-size:13px;font-weight:700;color:var(--teal);}
+.ct-val{font-size:18px;font-weight:700;color:var(--teal);font-family:'DM Mono',monospace;}
+/* 毛利試算 */
 .cb{background:linear-gradient(135deg,#eff6ff,#e0f2fe);border:1.5px solid #bae6fd;border-radius:12px;padding:14px 16px;margin:12px 0;}
 .cb-t{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;}
 .cb-r{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
@@ -62,15 +70,13 @@ textarea{height:72px;resize:none;line-height:1.6;}
 .hint{font-size:11px;color:var(--muted);margin-top:5px;}
 .other-input{display:none;margin-top:8px;}
 .other-input.show{display:block;}
-/* success */
+.sec-div{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 10px;padding-bottom:6px;border-bottom:1.5px solid #e0f2fe;display:flex;align-items:center;gap:5px;}
+.sec-div::before{content:'';width:3px;height:12px;background:var(--teal);border-radius:2px;flex-shrink:0;}
 .ss{text-align:center;padding:40px 20px;}
 .si{font-size:64px;margin-bottom:16px;display:block;}
 .st2{font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px;}
 .ss2{font-size:14px;color:var(--sub);line-height:1.7;margin-bottom:28px;}
 .bnew{padding:14px 32px;border-radius:12px;background:linear-gradient(135deg,#0369a1,var(--teal));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;}
-/* section divider */
-.sec-div{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 10px;padding-bottom:6px;border-bottom:1.5px solid #e0f2fe;display:flex;align-items:center;gap:5px;}
-.sec-div::before{content:'';width:3px;height:12px;background:var(--teal);border-radius:2px;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -84,28 +90,25 @@ textarea{height:72px;resize:none;line-height:1.6;}
   <div class="pl" id="pl">第 1 步，共 4 步</div>
 </div>
 
-<!-- PAGE 1: 基本資訊 -->
+<!-- ══ PAGE 1: 基本資訊 ══ -->
 <div class="pg on" id="page-1">
   <div class="pi"><div class="di on"></div><div class="di"></div><div class="di"></div><div class="di"></div></div>
   <div class="stitle">基本資訊</div>
   <div class="card">
 
+    <!-- C: 業務名稱 -->
     <div class="field">
       <div class="lbl">負責業務 <span class="req">*</span></div>
-      <select id="staff" onchange="toggleOtherStaff()">
+      <select id="staff" onchange="toggleOther('staff','staff-other')">
         <option value="">請選擇</option>
-        <option>黃啟靖</option>
-        <option>楊正國</option>
-        <option>朱嬿琳</option>
-        <option>呂建宏</option>
-        <option>呂紀萱</option>
-        <option>陳彥竹</option>
-        <option>SHERRY</option>
-        <option value="其他">其他</option>
+        <option>黃啟靖</option><option>楊正國</option><option>朱嬿琳</option>
+        <option>呂建宏</option><option>呂紀萱</option><option>陳彥竹</option>
+        <option>SHERRY</option><option value="其他">其他</option>
       </select>
       <input type="text" id="staff-other" class="other-input" placeholder="請輸入業務姓名">
     </div>
 
+    <!-- D: 案件屬性 -->
     <div class="field">
       <div class="lbl">案件屬性 <span class="req">*</span></div>
       <div class="rg">
@@ -115,22 +118,24 @@ textarea{height:72px;resize:none;line-height:1.6;}
       </div>
     </div>
 
+    <!-- E: 案件名稱 -->
     <div class="field">
       <div class="lbl">案件名稱 <span class="req">*</span></div>
       <input type="text" id="case-name" placeholder="例：白帶魚-FISH INT'L-0401">
       <div class="hint">格式建議：品名-客戶-日期</div>
     </div>
 
+    <!-- S: 承辦業助 -->
     <div class="field">
       <div class="lbl">承辦業助 <span class="opt">選填</span></div>
-      <input type="text" id="asst" placeholder="填入承辦業助姓名（若無請留空）">
+      <input type="text" id="asst" placeholder="若無請留空">
     </div>
 
   </div>
   <div class="navbtns"><button class="bn" onclick="goNext(1)">下一步 →</button></div>
 </div>
 
-<!-- PAGE 2: 採購 & 銷售 -->
+<!-- ══ PAGE 2: 採購 & 銷售 ══ -->
 <div class="pg" id="page-2">
   <div class="pi"><div class="di"></div><div class="di on"></div><div class="di"></div><div class="di"></div></div>
   <div class="stitle">採購 &amp; 銷售資訊</div>
@@ -138,12 +143,15 @@ textarea{height:72px;resize:none;line-height:1.6;}
 
     <div class="sec-div">採購（賣方）</div>
 
+    <!-- F: 供應商名稱（賣方） -->
     <div class="field">
       <div class="lbl">供應商（賣方）<span class="req">*</span></div>
       <input type="text" id="supplier" placeholder="填入供應商公司名稱">
     </div>
+
+    <!-- G: 採購幣別  H: 應付總金額 -->
     <div class="field">
-      <div class="lbl">採購幣別 &amp; 金額 <span class="req">*</span></div>
+      <div class="lbl">採購幣別 &amp; 應付總金額 <span class="req">*</span></div>
       <div class="aw">
         <select class="cs" id="buy-cur" onchange="calcProfit()">
           <option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option>
@@ -151,13 +159,17 @@ textarea{height:72px;resize:none;line-height:1.6;}
         <input type="number" class="ai" id="buy-amt" min="0" step="any" inputmode="numeric" placeholder="例：1919000" oninput="calcProfit()">
       </div>
     </div>
+
+    <!-- I: 預計付款日期 -->
     <div class="field">
       <div class="lbl">預計付款日期 <span class="req">*</span></div>
       <input type="date" id="buy-date">
     </div>
+
+    <!-- J: 付款條件 -->
     <div class="field">
       <div class="lbl">付款條件（採購）<span class="req">*</span></div>
-      <select id="buy-pay" onchange="toggleOtherBuyPay()">
+      <select id="buy-pay" onchange="toggleOther('buy-pay','buy-pay-other')">
         <option value="">請選擇</option>
         <option>100% TT upon shipping docs before ETA</option>
         <option>交貨後14天內</option>
@@ -169,14 +181,23 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <input type="text" id="buy-pay-other" class="other-input" placeholder="請輸入付款條件">
     </div>
 
+    <!-- K: 備註（採購） -->
+    <div class="field">
+      <div class="lbl">備註（採購）<span class="opt">選填</span></div>
+      <textarea id="buy-note" placeholder="採購相關補充說明..."></textarea>
+    </div>
+
     <div class="sec-div">銷售（買方）</div>
 
+    <!-- M: 客戶名稱（買方） -->
     <div class="field">
       <div class="lbl">客戶（買方）<span class="req">*</span></div>
       <input type="text" id="buyer" placeholder="填入客戶公司名稱">
     </div>
+
+    <!-- N: 銷售幣別  O: 應收總金額 -->
     <div class="field">
-      <div class="lbl">銷售幣別 &amp; 金額 <span class="req">*</span></div>
+      <div class="lbl">銷售幣別 &amp; 應收總金額 <span class="req">*</span></div>
       <div class="aw">
         <select class="cs" id="sell-cur" onchange="calcProfit()">
           <option>USD</option><option>TWD</option><option>JPY</option><option>EUR</option>
@@ -184,13 +205,17 @@ textarea{height:72px;resize:none;line-height:1.6;}
         <input type="number" class="ai" id="sell-amt" min="0" step="any" inputmode="numeric" placeholder="例：67725" oninput="calcProfit()">
       </div>
     </div>
+
+    <!-- P: 預計收款日 -->
     <div class="field">
       <div class="lbl">預計收款日 <span class="req">*</span></div>
       <input type="date" id="sell-date">
     </div>
+
+    <!-- Q: 收款條件 -->
     <div class="field">
       <div class="lbl">收款條件（銷售）<span class="req">*</span></div>
-      <select id="sell-pay" onchange="toggleOtherSellPay()">
+      <select id="sell-pay" onchange="toggleOther('sell-pay','sell-pay-other')">
         <option value="">請選擇</option>
         <option>全額L/C at sight</option>
         <option>100% TT upon shipping docs before ETA</option>
@@ -202,19 +227,15 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <input type="text" id="sell-pay-other" class="other-input" placeholder="請輸入收款條件">
     </div>
 
-    <div class="sec-div">費用</div>
-
+    <!-- 備註（銷售）-->
     <div class="field">
-      <div class="lbl">品項 <span class="req">*</span></div>
-      <input type="text" id="item" placeholder="例：白帶魚 19,000 KG">
-    </div>
-    <div class="field">
-      <div class="lbl">其他費用合計 <span class="opt">選填 NTD</span></div>
-      <input type="number" id="extra-cost" min="0" step="any" inputmode="numeric" placeholder="0（運費+規費+保險費+佣金等）" oninput="calcProfit()">
+      <div class="lbl">備註（銷售）<span class="opt">選填</span></div>
+      <textarea id="sell-note" placeholder="銷售相關補充說明..."></textarea>
     </div>
 
+    <!-- 毛利試算 -->
     <div class="cb">
-      <div class="cb-t">預估毛利試算</div>
+      <div class="cb-t">預估毛利試算（含費用將在下一頁更新）</div>
       <div class="cb-r"><span class="cb-k">進貨成本（NTD）</span><span class="cb-v" id="c-cost">—</span></div>
       <div class="cb-r"><span class="cb-k">出貨收入（NTD）</span><span class="cb-v" id="c-rev">—</span></div>
       <hr class="cb-d">
@@ -228,15 +249,36 @@ textarea{height:72px;resize:none;line-height:1.6;}
   </div>
 </div>
 
-<!-- PAGE 3: 交易細節 -->
+<!-- ══ PAGE 3: 交易細節 + 費用 ══ -->
 <div class="pg" id="page-3">
   <div class="pi"><div class="di"></div><div class="di"></div><div class="di on"></div><div class="di"></div></div>
   <div class="stitle">交易細節</div>
   <div class="card">
 
+    <!-- U: 合約[賣方合約（採購）]  V: 合約[買方合約（銷售）] -->
+    <div class="sec-div">合約狀態</div>
+    <div class="field">
+      <div class="lbl">賣方合約（採購）</div>
+      <div class="rg">
+        <div class="ri" onclick="selR('buyCon','已簽',this)"><div class="rd"><div class="rdi"></div></div><span>已簽</span></div>
+        <div class="ri" onclick="selR('buyCon','待補',this)"><div class="rd"><div class="rdi"></div></div><span>待補簽</span></div>
+        <div class="ri" onclick="selR('buyCon','無',this)"><div class="rd"><div class="rdi"></div></div><span>無</span></div>
+      </div>
+    </div>
+    <div class="field">
+      <div class="lbl">買方合約（銷售）</div>
+      <div class="rg">
+        <div class="ri" onclick="selR('sellCon','已簽',this)"><div class="rd"><div class="rdi"></div></div><span>已簽</span></div>
+        <div class="ri" onclick="selR('sellCon','待補',this)"><div class="rd"><div class="rdi"></div></div><span>待補簽</span></div>
+        <div class="ri" onclick="selR('sellCon','無',this)"><div class="rd"><div class="rdi"></div></div><span>無</span></div>
+      </div>
+    </div>
+
+    <!-- W: 貿易條件 -->
+    <div class="sec-div">物流資訊</div>
     <div class="field">
       <div class="lbl">貿易條件 <span class="req">*</span></div>
-      <select id="trade-term" onchange="toggleOtherTrade()">
+      <select id="trade-term" onchange="toggleOther('trade-term','trade-other')">
         <option value="">請選擇</option>
         <option>CFR</option><option>FOB</option><option>CIF</option>
         <option>EXW</option><option value="其他">其他（請填寫）</option>
@@ -244,6 +286,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <input type="text" id="trade-other" class="other-input" placeholder="請輸入貿易條件">
     </div>
 
+    <!-- X: ETD  Y: ETA -->
     <div class="field">
       <div class="row2">
         <div>
@@ -257,40 +300,88 @@ textarea{height:72px;resize:none;line-height:1.6;}
       </div>
     </div>
 
+    <!-- Z: 出貨地  AA: 目的地 -->
     <div class="field">
-      <div class="lbl">出貨地 / 發貨港口</div>
-      <input type="text" id="origin" placeholder="例：高雄">
-    </div>
-    <div class="field">
-      <div class="lbl">目的地 / 收貨港口</div>
-      <input type="text" id="dest" placeholder="例：Casablanca Morocco">
-    </div>
-
-    <div class="field">
-      <div class="lbl">合約狀態</div>
-      <div class="rg">
-        <div class="ri" onclick="selR('contract','有合約',this)"><div class="rd"><div class="rdi"></div></div><span>有合約</span></div>
-        <div class="ri" onclick="selR('contract','待補簽',this)"><div class="rd"><div class="rdi"></div></div><span>待補簽</span></div>
-        <div class="ri" onclick="selR('contract','無',this)"><div class="rd"><div class="rdi"></div></div><span>無</span></div>
+      <div class="row2">
+        <div>
+          <div class="lbl">出貨地 / 發貨港口</div>
+          <input type="text" id="origin" placeholder="例：高雄">
+        </div>
+        <div>
+          <div class="lbl">目的地 / 收貨港口</div>
+          <input type="text" id="dest" placeholder="例：Casablanca">
+        </div>
       </div>
     </div>
 
   </div>
+
+  <!-- ══ 費用區塊 ══ -->
+  <div class="stitle" style="margin-top:4px;">費用明細</div>
+  <div class="card">
+    <div class="cost-grid">
+
+      <!-- AB: 其他費用 -->
+      <div class="cost-field">
+        <label>其他費用（NTD）</label>
+        <input type="number" id="cost-extra" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+      </div>
+
+      <!-- AC: 運費 -->
+      <div class="cost-field">
+        <label>運費（NTD）</label>
+        <input type="number" id="cost-freight" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+      </div>
+
+      <!-- AD: 規費 -->
+      <div class="cost-field">
+        <label>規費（NTD）</label>
+        <input type="number" id="cost-tax" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+      </div>
+
+      <!-- AE: 保險費 -->
+      <div class="cost-field">
+        <label>保險費（NTD）</label>
+        <input type="number" id="cost-insure" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+      </div>
+
+      <!-- AF: 佣金 -->
+      <div class="cost-field">
+        <label>佣金（NTD）</label>
+        <input type="number" id="cost-comm" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+      </div>
+
+    </div>
+
+    <!-- 費用加總 -->
+    <div class="cost-total">
+      <span class="ct-lbl">費用合計（NTD）</span>
+      <span class="ct-val" id="cost-total-val">0</span>
+    </div>
+
+    <!-- 更新後的毛利試算 -->
+    <div class="cb" style="margin-top:12px;">
+      <div class="cb-t">預估毛利潤（扣除費用後）</div>
+      <div class="cb-r"><span class="cb-k">出貨收入（NTD）</span><span class="cb-v" id="c-rev2">—</span></div>
+      <div class="cb-r"><span class="cb-k">進貨成本（NTD）</span><span class="cb-v" id="c-cost2">—</span></div>
+      <div class="cb-r"><span class="cb-k">費用合計（NTD）</span><span class="cb-v" id="c-fees">0</span></div>
+      <hr class="cb-d">
+      <div class="cb-p"><span class="cb-k">預估毛利潤</span><span class="cb-v" id="c-profit2">請先填金額</span></div>
+    </div>
+
+  </div>
+
   <div class="navbtns">
     <button class="bb" onclick="goBack(3)">← 上一步</button>
     <button class="bn" onclick="goNext(3)">下一步 →</button>
   </div>
 </div>
 
-<!-- PAGE 4: 確認送出 -->
+<!-- ══ PAGE 4: 確認送出 ══ -->
 <div class="pg" id="page-4">
   <div class="pi"><div class="di"></div><div class="di"></div><div class="di"></div><div class="di on"></div></div>
   <div class="stitle">確認送出</div>
   <div class="card" id="preview-card"></div>
-  <div class="field" style="margin-top:14px;">
-    <div class="lbl">備註 <span class="opt">選填</span></div>
-    <textarea id="note" placeholder="補充說明、品項細項、數量單價等..."></textarea>
-  </div>
   <button class="bsub" id="submit-btn" onclick="submitForm()">📤 送出回報（通知老闆審核）</button>
   <div class="navbtns" style="margin-top:10px;">
     <button class="bb" onclick="goBack(4)">← 修改</button>
@@ -302,7 +393,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
   <div class="ss">
     <span class="si">✅</span>
     <div class="st2">回報成功！</div>
-    <div class="ss2">合約資料已送出<br>老闆將收到通知進行審核<br>毛利已自動計算寫入 Sheets</div>
+    <div class="ss2">合約資料已送出<br>老闆將收到通知進行審核</div>
     <button class="bnew" onclick="resetForm()">＋ 繼續填下一筆</button>
   </div>
 </div>
@@ -331,78 +422,88 @@ function showPage(n){
 
 // ── 驗證 ──
 function validate(n){
-  const s=document.getElementById('staff').value;
-  const so=document.getElementById('staff-other').value.trim();
-  const checks={
+  const errs={
     1:()=>{
-      if(!s){alert('請選擇負責業務');return false;}
-      if(s==='其他'&&!so){alert('請填入業務姓名');return false;}
-      if(!fd.type){alert('請選擇案件屬性');return false;}
-      if(!v('case-name')){alert('請填入案件名稱');return false;}
-      return true;
+      if(!getStaff()) return '請選擇負責業務';
+      if(document.getElementById('staff').value==='其他'&&!v('staff-other')) return '請填入業務姓名';
+      if(!fd.type) return '請選擇案件屬性';
+      if(!v('case-name')) return '請填入案件名稱';
+      return null;
     },
     2:()=>{
-      if(!v('supplier')){alert('請填入供應商');return false;}
-      if(!v('buy-amt')){alert('請填入採購金額');return false;}
-      if(!v('buy-date')){alert('請填入預計付款日期');return false;}
-      if(!getBuyPay()){alert('請選擇付款條件');return false;}
-      if(!v('buyer')){alert('請填入客戶名稱');return false;}
-      if(!v('sell-amt')){alert('請填入銷售金額');return false;}
-      if(!v('sell-date')){alert('請填入預計收款日');return false;}
-      if(!getSellPay()){alert('請選擇收款條件');return false;}
-      if(!v('item')){alert('請填入品項');return false;}
-      return true;
+      if(!v('supplier')) return '請填入供應商名稱';
+      if(!v('buy-amt')) return '請填入採購金額';
+      if(!v('buy-date')) return '請填入預計付款日期';
+      if(!getBuyPay()) return '請選擇付款條件';
+      if(!v('buyer')) return '請填入客戶名稱';
+      if(!v('sell-amt')) return '請填入銷售金額';
+      if(!v('sell-date')) return '請填入預計收款日';
+      if(!getSellPay()) return '請選擇收款條件';
+      return null;
     },
     3:()=>{
-      if(!getTrade()){alert('請選擇貿易條件');return false;}
-      if(!v('etd')){alert('請填入ETD出貨日');return false;}
-      if(!v('eta')){alert('請填入ETA到貨日');return false;}
-      return true;
+      if(!getTrade()) return '請選擇貿易條件';
+      if(!v('etd')) return '請填入 ETD 出貨日';
+      if(!v('eta')) return '請填入 ETA 到貨日';
+      return null;
     },
   };
-  return checks[n]?checks[n]():true;
-}
-function v(id){ return document.getElementById(id)?.value?.trim()||''; }
-function getBuyPay(){
-  const s=document.getElementById('buy-pay').value;
-  if(s==='其他') return v('buy-pay-other');
-  return s;
-}
-function getSellPay(){
-  const s=document.getElementById('sell-pay').value;
-  if(s==='其他') return v('sell-pay-other');
-  return s;
-}
-function getTrade(){
-  const s=document.getElementById('trade-term').value;
-  if(s==='其他') return v('trade-other');
-  return s;
-}
-function getStaff(){
-  const s=document.getElementById('staff').value;
-  if(s==='其他') return v('staff-other');
-  return s;
+  const err=errs[n]&&errs[n]();
+  if(err){alert(err);return false;}
+  return true;
 }
 
-// ── 其他選項顯示 ──
-function toggleOtherStaff(){
-  const show=document.getElementById('staff').value==='其他';
-  document.getElementById('staff-other').classList.toggle('show',show);
-}
-function toggleOtherBuyPay(){
-  const show=document.getElementById('buy-pay').value==='其他';
-  document.getElementById('buy-pay-other').classList.toggle('show',show);
-}
-function toggleOtherSellPay(){
-  const show=document.getElementById('sell-pay').value==='其他';
-  document.getElementById('sell-pay-other').classList.toggle('show',show);
-}
-function toggleOtherTrade(){
-  const show=document.getElementById('trade-term').value==='其他';
-  document.getElementById('trade-other').classList.toggle('show',show);
+function v(id){ return (document.getElementById(id)?.value||'').trim(); }
+function getStaff(){ const s=v('staff'); return s==='其他'?v('staff-other'):s; }
+function getBuyPay(){ const s=v('buy-pay'); return s==='其他'?v('buy-pay-other'):s; }
+function getSellPay(){ const s=v('sell-pay'); return s==='其他'?v('sell-pay-other'):s; }
+function getTrade(){ const s=v('trade-term'); return s==='其他'?v('trade-other'):s; }
+function numV(id){ return parseFloat(document.getElementById(id)?.value)||0; }
+
+// ── 其他欄位顯示 ──
+function toggleOther(selId, inputId){
+  const show=document.getElementById(selId).value==='其他';
+  document.getElementById(inputId).classList.toggle('show',show);
 }
 
-// ── 收集 ──
+// ── 單選 ──
+function selR(group,val,el){
+  fd[group]=val;
+  el.parentElement.querySelectorAll('.ri').forEach(i=>i.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── 費用加總 ──
+function calcCostTotal(){
+  const total=numV('cost-extra')+numV('cost-freight')+numV('cost-tax')+numV('cost-insure')+numV('cost-comm');
+  document.getElementById('cost-total-val').textContent='NTD '+fmt(total);
+  return total;
+}
+
+// ── 毛利計算 ──
+function calcProfit(){
+  const bA=numV('buy-amt'), sA=numV('sell-amt');
+  const bC=v('buy-cur')||'TWD', sC=v('sell-cur')||'USD';
+  const fees=calcCostTotal();
+  if(!bA||!sA) return;
+  const bN=bA*(RATE[bC]||1), sN=sA*(RATE[sC]||1);
+  const p=sN-bN-fees;
+  // Page 2 preview
+  document.getElementById('c-cost').textContent='NTD '+fmt(bN);
+  document.getElementById('c-rev').textContent='NTD '+fmt(sN);
+  const el=document.getElementById('c-profit');
+  el.textContent='NTD '+fmt(sN-bN); // page2 不含費用
+  el.style.color=(sN-bN)>=0?'#0284c7':'#dc2626';
+  // Page 3 final
+  document.getElementById('c-cost2').textContent='NTD '+fmt(bN);
+  document.getElementById('c-rev2').textContent='NTD '+fmt(sN);
+  document.getElementById('c-fees').textContent='NTD '+fmt(fees);
+  const el2=document.getElementById('c-profit2');
+  el2.textContent='NTD '+fmt(p);
+  el2.style.color=p>=0?'#0284c7':'#dc2626';
+}
+
+// ── 收集資料 ──
 function collect(n){
   if(n===1){
     fd.staff    = getStaff();
@@ -411,80 +512,70 @@ function collect(n){
   }
   if(n===2){
     fd.supplier  = v('supplier');
-    fd.buyCur    = v('buy-cur');
-    fd.buyAmt    = parseFloat(v('buy-amt'))||0;
+    fd.buyCur    = v('buy-cur')||'TWD';
+    fd.buyAmt    = numV('buy-amt');
     fd.buyDate   = v('buy-date');
     fd.buyPay    = getBuyPay();
+    fd.buyNote   = v('buy-note');
     fd.buyer     = v('buyer');
-    fd.sellCur   = v('sell-cur');
-    fd.sellAmt   = parseFloat(v('sell-amt'))||0;
+    fd.sellCur   = v('sell-cur')||'USD';
+    fd.sellAmt   = numV('sell-amt');
     fd.sellDate  = v('sell-date');
     fd.sellPay   = getSellPay();
-    fd.item      = v('item');
-    fd.extraCost = parseFloat(v('extra-cost'))||0;
-    fd.buyNTD    = fd.buyAmt * (RATE[fd.buyCur]||1);
-    fd.sellNTD   = fd.sellAmt * (RATE[fd.sellCur]||1);
-    fd.profit    = fd.sellNTD - fd.buyNTD - fd.extraCost;
-    fd.margin    = fd.sellNTD > 0 ? (fd.profit/fd.sellNTD*100).toFixed(1) : 0;
+    fd.sellNote  = v('sell-note');
+    fd.buyNTD    = fd.buyAmt*(RATE[fd.buyCur]||1);
+    fd.sellNTD   = fd.sellAmt*(RATE[fd.sellCur]||1);
   }
   if(n===3){
+    fd.buyCon   = fd.buyCon||'未選';
+    fd.sellCon  = fd.sellCon||'未選';
     fd.trade    = getTrade();
     fd.etd      = v('etd');
     fd.eta      = v('eta');
     fd.origin   = v('origin');
     fd.dest     = v('dest');
-    fd.contract = fd.contract||'未選';
+    fd.extra    = numV('cost-extra');
+    fd.freight  = numV('cost-freight');
+    fd.tax      = numV('cost-tax');
+    fd.insure   = numV('cost-insure');
+    fd.comm     = numV('cost-comm');
+    fd.totalFee = fd.extra+fd.freight+fd.tax+fd.insure+fd.comm;
+    fd.profit   = fd.sellNTD - fd.buyNTD - fd.totalFee;
+    fd.margin   = fd.sellNTD > 0 ? (fd.profit/fd.sellNTD*100).toFixed(1) : 0;
   }
-}
-
-// ── 單選 ──
-function selR(group, val, el){
-  fd[group] = val;
-  el.parentElement.querySelectorAll('.ri').forEach(i=>i.classList.remove('sel'));
-  el.classList.add('sel');
-}
-
-// ── 毛利計算 ──
-function calcProfit(){
-  const bA=parseFloat(document.getElementById('buy-amt').value)||0;
-  const sA=parseFloat(document.getElementById('sell-amt').value)||0;
-  const bC=document.getElementById('buy-cur').value;
-  const sC=document.getElementById('sell-cur').value;
-  const ex=parseFloat(document.getElementById('extra-cost').value)||0;
-  if(!bA||!sA) return;
-  const bN=bA*(RATE[bC]||1), sN=sA*(RATE[sC]||1), p=sN-bN-ex;
-  document.getElementById('c-cost').textContent='NTD '+fmt(bN);
-  document.getElementById('c-rev').textContent='NTD '+fmt(sN);
-  const el=document.getElementById('c-profit');
-  el.textContent='NTD '+fmt(p);
-  el.style.color=p>=0?'#0284c7':'#dc2626';
 }
 
 // ── 預覽 ──
 function buildPreview(){
-  fd.note=v('note')||'';
   const rows=[
-    ['負責業務',      fd.staff],
-    ['案件屬性',      fd.type],
-    ['案件名稱',      fd.caseName],
-    ['承辦業助',      fd.asst||'—'],
-    ['供應商（賣方）', fd.supplier],
-    ['採購金額',      fd.buyCur+' '+fmt(fd.buyAmt)+' (NTD '+fmt(fd.buyNTD)+')'],
-    ['預計付款日',    fd.buyDate],
-    ['付款條件',      fd.buyPay],
-    ['客戶（買方）',  fd.buyer],
-    ['銷售金額',      fd.sellCur+' '+fmt(fd.sellAmt)+' (NTD '+fmt(fd.sellNTD)+')'],
-    ['預計收款日',    fd.sellDate],
-    ['收款條件',      fd.sellPay],
-    ['品項',          fd.item],
-    ['其他費用',      'NTD '+fmt(fd.extraCost)],
-    ['預估毛利',      '<span style="color:#0284c7;font-weight:700">NTD '+fmt(fd.profit)+' ('+fd.margin+'%)</span>'],
-    ['貿易條件',      fd.trade],
-    ['ETD',           fd.etd],
-    ['ETA',           fd.eta],
-    ['出貨地',        fd.origin||'—'],
-    ['目的地',        fd.dest||'—'],
-    ['合約狀態',      fd.contract||'未選'],
+    ['負責業務',   fd.staff],
+    ['案件屬性',   fd.type],
+    ['案件名稱',   fd.caseName],
+    ['承辦業助',   fd.asst||'—'],
+    ['供應商',     fd.supplier],
+    ['採購',       fd.buyCur+' '+fmt(fd.buyAmt)+' → NTD '+fmt(fd.buyNTD)],
+    ['預計付款日', fd.buyDate],
+    ['付款條件',   fd.buyPay],
+    ['備註（採購）',fd.buyNote||'—'],
+    ['客戶',       fd.buyer],
+    ['銷售',       fd.sellCur+' '+fmt(fd.sellAmt)+' → NTD '+fmt(fd.sellNTD)],
+    ['預計收款日', fd.sellDate],
+    ['收款條件',   fd.sellPay],
+    ['備註（銷售）',fd.sellNote||'—'],
+    ['賣方合約',   fd.buyCon],
+    ['買方合約',   fd.sellCon],
+    ['貿易條件',   fd.trade],
+    ['ETD',        fd.etd],
+    ['ETA',        fd.eta],
+    ['出貨地',     fd.origin||'—'],
+    ['目的地',     fd.dest||'—'],
+    ['其他費用',   'NTD '+fmt(fd.extra)],
+    ['運費',       'NTD '+fmt(fd.freight)],
+    ['規費',       'NTD '+fmt(fd.tax)],
+    ['保險費',     'NTD '+fmt(fd.insure)],
+    ['佣金',       'NTD '+fmt(fd.comm)],
+    ['費用合計',   'NTD '+fmt(fd.totalFee)],
+    ['預估毛利潤', '<b style="color:#0284c7">NTD '+fmt(fd.profit)+' ('+fd.margin+'%)</b>'],
   ];
   document.getElementById('preview-card').innerHTML=rows.map(r=>`
     <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
@@ -493,51 +584,55 @@ function buildPreview(){
     </div>`).join('');
 }
 
-// ── 送出 ──
+// ── 送出（欄位順序對應試算表）──
 async function submitForm(){
   const btn=document.getElementById('submit-btn');
   btn.disabled=true; btn.textContent='送出中...';
-  fd.note=v('note')||'';
   fd.timestamp=new Date().toLocaleString('zh-TW');
+  fd.formId='T'+new Date().toISOString().slice(0,10).replace(/-/g,'')+String(Date.now()).slice(-3);
 
-  // 對應 Google 表單欄位順序
+  // ★ 欄位順序完全對應試算表欄位 A~AF ★
+  // A: 時間戳記  B: 電子郵件  C: 業務名稱  D: 案件屬性  E: 案件名稱
+  // F: 供應商    G: 採購幣別  H: 應付總金額 I: 預計付款日期 J: 付款條件
+  // K: 備註採購  (L: 是否有銷售對象)  M: 客戶  N: 銷售幣別  O: 應收總金額
+  // P: 預計收款日 Q: 收款條件  (R: 備註銷售)  S: 承辦業助  T: 預估毛利潤
+  // U: 賣方合約  V: 買方合約  W: 貿易條件  X: ETD  Y: ETA
+  // Z: 出貨地  AA: 目的地  AB: 其他費用  AC: 運費  AD: 規費  AE: 保險費  AF: 佣金
+
   const payload={
-    timestamp:  fd.timestamp,
-    email:      '',
-    staff:      fd.staff,
-    type:       fd.type,
-    caseName:   fd.caseName,
-    supplier:   fd.supplier,
-    buyCur:     fd.buyCur,
-    buyAmt:     fd.buyAmt,
-    buyDate:    fd.buyDate,
-    buyPay:     fd.buyPay,
-    buyNote:    fd.note,
-    hasBuyer:   fd.buyer ? '是' : '否',
-    buyer:      fd.buyer,
-    sellCur:    fd.sellCur,
-    sellAmt:    fd.sellAmt,
-    sellDate:   fd.sellDate,
-    sellPay:    fd.sellPay,
-    sellNote:   '',
-    asst:       fd.asst||'',
-    profit:     fd.sellCur+' '+fmt(fd.profit),
-    buyCon:     '',
-    sellCon:    '',
-    trade:      fd.trade,
-    etd:        fd.etd,
-    eta:        fd.eta,
-    origin:     fd.origin||'',
-    dest:       fd.dest||'',
-    extra:      fd.extraCost||0,
-    freight:    '',
-    tax:        '',
-    insure:     '',
-    comm:       '',
-    status:     '',
-    bossNote:   '',
-    signTime:   '',
-    formId:     'T'+new Date().toISOString().slice(0,10).replace(/-/g,'')+String(Date.now()).slice(-3),
+    timestamp: fd.timestamp,        // A
+    email:     '',                   // B
+    staff:     fd.staff,             // C
+    type:      fd.type,              // D
+    caseName:  fd.caseName,          // E
+    supplier:  fd.supplier,          // F
+    buyCur:    fd.buyCur,            // G
+    buyAmt:    fd.buyAmt,            // H
+    buyDate:   fd.buyDate,           // I
+    buyPay:    fd.buyPay,            // J
+    buyNote:   fd.buyNote,           // K
+    hasBuyer:  fd.buyer?'是':'否',   // L
+    buyer:     fd.buyer,             // M
+    sellCur:   fd.sellCur,           // N
+    sellAmt:   fd.sellAmt,           // O
+    sellDate:  fd.sellDate,          // P
+    sellPay:   fd.sellPay,           // Q
+    sellNote:  fd.sellNote,          // R
+    asst:      fd.asst||'',          // S
+    profit:    fd.sellCur+' '+fmt(fd.profit), // T
+    buyCon:    fd.buyCon,            // U
+    sellCon:   fd.sellCon,           // V
+    trade:     fd.trade,             // W
+    etd:       fd.etd,               // X
+    eta:       fd.eta,               // Y
+    origin:    fd.origin||'',        // Z
+    dest:      fd.dest||'',          // AA
+    extra:     fd.extra||0,          // AB
+    freight:   fd.freight||0,        // AC
+    tax:       fd.tax||0,            // AD
+    insure:    fd.insure||0,         // AE
+    comm:      fd.comm||0,           // AF
+    formId:    fd.formId,
   };
 
   try{
@@ -553,10 +648,11 @@ function resetForm(){
   document.querySelectorAll('.ri').forEach(el=>el.classList.remove('sel'));
   document.querySelectorAll('.other-input').forEach(el=>el.classList.remove('show'));
   Object.keys(fd).forEach(k=>delete fd[k]);
+  document.getElementById('cost-total-val').textContent='0';
   showPage(1);
 }
 
-function fmt(n){return Math.round(n||0).toLocaleString('zh-TW');}
+function fmt(n){ return Math.round(n||0).toLocaleString('zh-TW'); }
 </script>
 </body>
 </html>
