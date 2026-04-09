@@ -547,36 +547,37 @@ function setR(el){
   document.getElementById('lerr').textContent='';
 }
 function login(){
-  var p=document.getElementById('lpwd').value;
-  var role=document.querySelector('.rtab.on').dataset.role;
-  var btn=document.querySelector('.lbtn');
-  if(btn){btn.disabled=true;btn.textContent='驗證中...';}
+  var p    = document.getElementById('lpwd').value;
+  var role = document.querySelector('.rtab.on').dataset.role;
+  var btn  = document.querySelector('.lbtn');
+  if(btn){ btn.disabled=true; btn.textContent='驗證中...'; }
   // 先從雲端更新帳號再登入
   fetchAccounts(function(){
-    CU=loadU();
-    var u=CU.find(function(x){return x.role===role&&x.pwd===p;});
-    if(!u)u=CU.find(function(x){return x.pwd===p;});
-    if(btn){btn.disabled=false;btn.textContent='登入';}
+    CU = loadU();
+    var u = CU.find(function(x){ return x.role===role && x.pwd===p; });
+    if(!u) u = CU.find(function(x){ return x.pwd===p; });
+    if(btn){ btn.disabled=false; btn.textContent='登入'; }
     if(u){
-    curUser=u;
-    addLog('登入',u.name,'','');
-    document.getElementById('L').style.display='none';
-    document.getElementById('A').style.display='block';
-    var bd=document.getElementById('rbdg');
-    var roleIco = u.role==='boss'?'👑 ':u.role==='admin'?'🔧 ':u.role==='finance'?'💰 ':'👤 ';
-    bd.textContent=roleIco+u.name;
-    bd.className='rbadge '+(u.role==='boss'||u.role==='admin'?'rb1':'rb2');
-    document.getElementById('hsub').textContent=
-      u.role==='boss'?'董事長即時看板':
-      u.role==='admin'?'管理員後台':
-      u.role==='finance'?'財務放款管理':'業務員系統';
-    buildNav();load();fetchRates();
-    // 啟動定時更新
-    setInterval(load,60000);
-    setInterval(fetchRates,1800000);
-  }else{
-      document.getElementById('lerr').textContent='密碼錯誤';
-      document.getElementById('lpwd').value='';
+      curUser = u;
+      addLog('登入', u.name, '', '');
+      document.getElementById('L').style.display = 'none';
+      document.getElementById('A').style.display = 'block';
+      var bd = document.getElementById('rbdg');
+      var roleIco = u.role==='boss'?'👑 ':u.role==='admin'?'🔧 ':u.role==='finance'?'💰 ':'👤 ';
+      bd.textContent = roleIco + u.name;
+      bd.className = 'rbadge ' + (u.role==='boss'||u.role==='admin' ? 'rb1' : 'rb2');
+      document.getElementById('hsub').textContent =
+        u.role==='boss'    ? '董事長即時看板' :
+        u.role==='admin'   ? '管理員後台'     :
+        u.role==='finance' ? '財務放款管理'   : '業務員系統';
+      buildNav();
+      load();
+      fetchRates();
+      setInterval(load, 60000);
+      setInterval(fetchRates, 1800000);
+    } else {
+      document.getElementById('lerr').textContent = '密碼錯誤';
+      document.getElementById('lpwd').value = '';
     }
   });
 }
