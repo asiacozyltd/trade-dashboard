@@ -258,30 +258,35 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
   <div class="card-grid" id="al"></div>
 </div>
 <div class="scr" id="s-daily">
-  <div class="daily-wrap">
-    <div class="daily-hd">
-      <div class="daily-title">每日應收 / 應付彙整</div>
-      <select class="daily-sel" id="daily-range" onchange="renderDaily()">
-        <option value="30">近30天</option>
-        <option value="90">近90天</option>
-        <option value="0">全部</option>
-      </select>
+  <!-- 日曆 -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:14px;font-weight:700;" id="daily-month">本月應收 / 應付日曆</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:var(--jade);">↑ 應收</span>
+        <span style="font-size:11px;color:var(--coral);">↓ 應付</span>
+        <span style="font-size:11px;color:var(--muted);">（原幣金額）</span>
+      </div>
     </div>
-    <div style="overflow-x:auto;">
-      <table class="dtbl">
-        <thead><tr>
-          <th style="text-align:left;padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);">日期</th>
-          <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">應收（NTD）</th>
-          <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">應付（NTD）</th>
-          <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">預估毛利</th>
-          <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">筆數</th>
-        </tr></thead>
-        <tbody id="daily-body"></tbody>
-      </table>
+    <div style="overflow-x:auto;padding:8px;">
+      <div id="cal-body" style="min-width:560px;"></div>
     </div>
-    <div class="chart-wrap">
-      <canvas id="daily-chart" height="200"></canvas>
+  </div>
+
+  <!-- 月小計 -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);">
+      <div style="font-size:14px;font-weight:700;">本月原幣彙整</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px;">依幣別分別加總，顯示原始金額</div>
     </div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead><tr>
+        <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:left;">幣別</th>
+        <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--jade);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">應收合計</th>
+        <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--coral);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">應付合計</th>
+      </tr></thead>
+      <tbody id="summary-body"></tbody>
+    </table>
   </div>
 </div>
 <div class="scr" id="s-log">
@@ -633,76 +638,132 @@ function clearSearch(){
 
 // 每日彙整
 function renderDaily(){
-  var days=parseInt(document.getElementById('daily-range').value)||30;
-  var cutoff=days>0?new Date(Date.now()-days*86400000):new Date(0);
+  var today = new Date();
+  var yr    = today.getFullYear();
+  var mo    = today.getMonth(); // 0-based
+  var moStr = (mo+1) < 10 ? '0'+(mo+1) : String(mo+1);
+  var prefix = yr+'/'+moStr;
 
-  // 以時間戳記分組
-  var map={};
+  // 依日期分組（原幣，不換算）
+  var map = {};
   rows.forEach(function(r){
-    var t=g(r,'time');
-    var dt=t.split(' ')[0]||t.slice(0,10);
-    if(new Date(dt)<cutoff)return;
-    if(!map[dt])map[dt]={date:dt,sell:0,buy:0,profit:0,cnt:0};
-    var m=calcMargin(r);
-    map[dt].sell+=m.sellNTD;
-    map[dt].buy+=m.buyNTD;
-    map[dt].profit+=m.profitNTD;
-    map[dt].cnt++;
+    var t = g(r,'time'); // "yyyy/MM/dd HH:mm:ss"
+    if(!t) return;
+    var datePart = t.split(' ')[0]; // "yyyy/MM/dd"
+    if(datePart.slice(0,7) !== prefix) return; // 只取當月
+    var day = parseInt(datePart.slice(8,10));
+    if(!map[day]) map[day] = {sell:[],buy:[],profit:0,cnt:0};
+    var buyCur  = (g(r,'buyCur')||'TWD').toUpperCase();
+    var buyAmt  = pf(g(r,'buyAmt'));
+    var sellCur = (g(r,'sellCur')||'TWD').toUpperCase();
+    var sellAmt = pf(g(r,'sellAmt'));
+    // 原幣累計（依幣別分別累計）
+    if(buyAmt>0){
+      var found=false;
+      map[day].buy.forEach(function(b){if(b.cur===buyCur){b.amt+=buyAmt;found=true;}});
+      if(!found)map[day].buy.push({cur:buyCur,amt:buyAmt});
+    }
+    if(sellAmt>0){
+      var found2=false;
+      map[day].sell.forEach(function(s){if(s.cur===sellCur){s.amt+=sellAmt;found2=true;}});
+      if(!found2)map[day].sell.push({cur:sellCur,amt:sellAmt});
+    }
+    map[day].cnt++;
   });
 
-  var sorted=Object.values(map).sort(function(a,b){return a.date>b.date?-1:1;});
-  var totSell=0,totBuy=0,totProfit=0,totCnt=0;
-  sorted.forEach(function(d){totSell+=d.sell;totBuy+=d.buy;totProfit+=d.profit;totCnt+=d.cnt;});
+  // 更新月份標題
+  document.getElementById('daily-month').textContent = yr+'年'+(mo+1)+'月 應收/應付日曆';
 
-  var body=document.getElementById('daily-body');
-  body.innerHTML=sorted.map(function(d){
-    return '<tr style="border-top:0.5px solid var(--border);">'
-      +'<td style="padding:10px 16px;color:var(--ink);">'+d.date+'</td>'
-      +'<td style="padding:10px 16px;text-align:right;color:var(--jade);font-weight:500;">'+fmtN(d.sell)+'</td>'
-      +'<td style="padding:10px 16px;text-align:right;color:var(--coral);font-weight:500;">'+fmtN(d.buy)+'</td>'
-      +'<td style="padding:10px 16px;text-align:right;color:'+(d.profit>=0?'var(--jade)':'var(--coral)')+';font-weight:500;">'+fmtN(d.profit)+'</td>'
-      +'<td style="padding:10px 16px;text-align:right;color:var(--muted);">'+d.cnt+'</td>'
-      +'</tr>';
-  }).join('')
-  +'<tr style="border-top:2px solid var(--border);background:#f0fdf4;">'
-  +'<td style="padding:10px 16px;font-weight:700;color:var(--muted);">合計</td>'
-  +'<td style="padding:10px 16px;text-align:right;font-weight:700;color:var(--jade);">'+fmtN(totSell)+'</td>'
-  +'<td style="padding:10px 16px;text-align:right;font-weight:700;color:var(--coral);">'+fmtN(totBuy)+'</td>'
-  +'<td style="padding:10px 16px;text-align:right;font-weight:700;color:'+(totProfit>=0?'var(--jade)':'var(--coral)')+';">'+fmtN(totProfit)+'</td>'
-  +'<td style="padding:10px 16px;text-align:right;font-weight:700;color:var(--muted);">'+totCnt+'</td>'
-  +'</tr>';
+  // 建立日曆
+  var daysInMonth = new Date(yr,mo+1,0).getDate();
+  var firstDay    = new Date(yr,mo,1).getDay(); // 0=Sun
+  var todayDate   = today.getDate();
 
-  // 圖表
-  var chartData=sorted.slice().reverse();
-  var labels=chartData.map(function(d){return d.date.slice(5);});
-  var sellArr=chartData.map(function(d){return Math.round(d.sell);});
-  var buyArr=chartData.map(function(d){return Math.round(d.buy);});
-  var profitArr=chartData.map(function(d){return Math.round(d.profit);});
+  var cal = '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+  // 星期標題
+  cal += '<thead><tr>';
+  ['日','一','二','三','四','五','六'].forEach(function(d){
+    cal += '<th style="padding:8px 4px;font-size:11px;font-weight:700;color:var(--muted);text-align:center;border-bottom:1px solid var(--border);letter-spacing:.04em;">'+d+'</th>';
+  });
+  cal += '</tr></thead><tbody>';
 
-  if(dailyChart){dailyChart.destroy();dailyChart=null;}
-  var ctx=document.getElementById('daily-chart');
-  if(ctx&&labels.length>0){
-    dailyChart=new Chart(ctx,{
-      type:'bar',
-      data:{
-        labels:labels,
-        datasets:[
-          {label:'應收 NTD',data:sellArr,backgroundColor:'rgba(22,163,74,.6)',borderColor:'rgba(22,163,74,1)',borderWidth:1},
-          {label:'應付 NTD',data:buyArr,backgroundColor:'rgba(220,38,38,.5)',borderColor:'rgba(220,38,38,1)',borderWidth:1},
-          {label:'預估毛利',data:profitArr,type:'line',borderColor:'rgba(3,105,161,1)',backgroundColor:'rgba(3,105,161,.1)',borderWidth:2,pointRadius:3,fill:true,yAxisID:'y1'}
-        ]
-      },
-      options:{
-        responsive:true,
-        interaction:{mode:'index',intersect:false},
-        plugins:{legend:{labels:{font:{family:'Noto Sans TC',size:11},boxWidth:12}}},
-        scales:{
-          y:{ticks:{callback:function(v){return fmtM(v);},font:{size:11}},grid:{color:'rgba(0,0,0,.05)'}},
-          y1:{position:'right',ticks:{callback:function(v){return fmtM(v);},font:{size:11}},grid:{drawOnChartArea:false}}
+  var day = 1;
+  var rows2 = Math.ceil((daysInMonth + firstDay) / 7);
+  for(var w=0; w<rows2; w++){
+    cal += '<tr>';
+    for(var d=0; d<7; d++){
+      var cellDay = w*7 + d - firstDay + 1;
+      if(cellDay < 1 || cellDay > daysInMonth){
+        cal += '<td style="background:#fafafa;border:0.5px solid var(--border);height:90px;"></td>';
+      } else {
+        var isToday = cellDay === todayDate;
+        var data    = map[cellDay];
+        var bg      = isToday ? '#eff6ff' : '#fff';
+        var border  = isToday ? '1.5px solid #0369a1' : '0.5px solid var(--border)';
+        var dayColor= isToday ? '#0369a1' : (d===0?'#dc2626':d===6?'#0369a1':'var(--ink)');
+
+        cal += '<td style="background:'+bg+';border:'+border+';height:90px;padding:5px 6px;vertical-align:top;">';
+        cal += '<div style="font-size:12px;font-weight:700;color:'+dayColor+';margin-bottom:4px;">'+cellDay+(isToday?'<span style="font-size:9px;font-weight:400;color:#0369a1;margin-left:3px;">今</span>':'')+'</div>';
+
+        if(data){
+          // 應收
+          data.sell.forEach(function(s){
+            cal += '<div style="font-size:10px;color:#16a34a;line-height:1.4;white-space:nowrap;overflow:hidden;">↑'+s.cur+' '+fmtK(s.amt)+'</div>';
+          });
+          // 應付
+          data.buy.forEach(function(b){
+            cal += '<div style="font-size:10px;color:#dc2626;line-height:1.4;white-space:nowrap;overflow:hidden;">↓'+b.cur+' '+fmtK(b.amt)+'</div>';
+          });
+          // 筆數
+          cal += '<div style="font-size:9px;color:var(--muted);margin-top:2px;">'+data.cnt+'筆</div>';
         }
+        cal += '</td>';
       }
-    });
+    }
+    cal += '</tr>';
+    if(day > daysInMonth) break;
+    day += 7;
   }
+  cal += '</tbody></table>';
+
+  document.getElementById('cal-body').innerHTML = cal;
+
+  // 月小計表格（原幣彙整）
+  var totalByCur = {};
+  rows.forEach(function(r){
+    var t = g(r,'time');
+    if(!t||t.split(' ')[0].slice(0,7)!==prefix) return;
+    var buyCur=  (g(r,'buyCur')||'TWD').toUpperCase();
+    var buyAmt=  pf(g(r,'buyAmt'));
+    var sellCur= (g(r,'sellCur')||'TWD').toUpperCase();
+    var sellAmt= pf(g(r,'sellAmt'));
+    if(!totalByCur[buyCur])  totalByCur[buyCur]  = {sell:0,buy:0};
+    if(!totalByCur[sellCur]) totalByCur[sellCur] = {sell:0,buy:0};
+    if(buyAmt>0)   totalByCur[buyCur].buy  += buyAmt;
+    if(sellAmt>0)  totalByCur[sellCur].sell += sellAmt;
+  });
+
+  var summaryHtml = '';
+  Object.keys(totalByCur).sort().forEach(function(cur){
+    var d = totalByCur[cur];
+    if(d.sell===0 && d.buy===0) return;
+    summaryHtml +=
+      '<tr style="border-top:0.5px solid var(--border);">'
+      +'<td style="padding:9px 14px;font-weight:700;color:var(--ink);">'+cur+'</td>'
+      +'<td style="padding:9px 14px;text-align:right;color:var(--jade);font-weight:500;">'+(d.sell>0?fmtN(d.sell):'—')+'</td>'
+      +'<td style="padding:9px 14px;text-align:right;color:var(--coral);font-weight:500;">'+(d.buy>0?fmtN(d.buy):'—')+'</td>'
+      +'</tr>';
+  });
+  document.getElementById('summary-body').innerHTML = summaryHtml ||
+    '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">本月尚無資料</td></tr>';
+}
+
+// 格式化千位數（K/M 縮寫）
+function fmtK(n){
+  n = Math.round(n||0);
+  if(n>=1000000) return (n/1000000).toFixed(1)+'M';
+  if(n>=1000)    return (n/1000).toFixed(n>=10000?0:1)+'K';
+  return n.toLocaleString('zh-TW');
 }
 
 // 詳細 Modal
