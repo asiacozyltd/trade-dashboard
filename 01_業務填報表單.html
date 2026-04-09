@@ -283,7 +283,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
     <!-- W: 貿易條件 -->
     <div class="sec-div">物流資訊</div>
     <div class="field">
-      <div class="lbl">貿易條件 <span class="req">*</span></div>
+      <div class="lbl">貿易條件 <span class="opt">選填</span></div>
       <select id="trade-term" onchange="toggleOther('trade-term','trade-other')">
         <option value="">請選擇</option>
         <option>CFR</option><option>FOB</option><option>CIF</option>
@@ -296,11 +296,11 @@ textarea{height:72px;resize:none;line-height:1.6;}
     <div class="field">
       <div class="row2">
         <div>
-          <div class="lbl">ETD 出貨日 <span class="req">*</span></div>
+          <div class="lbl">ETD 出貨日 <span class="opt">選填</span></div>
           <input type="date" id="etd">
         </div>
         <div>
-          <div class="lbl">ETA 到貨日 <span class="req">*</span></div>
+          <div class="lbl">ETA 到貨日 <span class="opt">選填</span></div>
           <input type="date" id="eta">
         </div>
       </div>
@@ -455,9 +455,7 @@ function validate(n){
       return null;
     },
     3:()=>{
-      if(!getTrade()) return '請選擇貿易條件';
-      if(!v('etd')) return '請填入 ETD 出貨日';
-      if(!v('eta')) return '請填入 ETA 到貨日';
+
       return null;
     },
   };
