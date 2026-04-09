@@ -658,31 +658,54 @@ function renderDaily(){
   var moStr = (mo+1) < 10 ? '0'+(mo+1) : String(mo+1);
   var prefix = yr+'/'+moStr;
 
-  // 依日期分組（原幣，不換算）
+  // 依「預計付款日」和「預計收款日」分配到日曆（原幣，不換算）
   var map = {};
+  function addToMap(day, type, cur, amt){
+    if(!day || day<1 || day>daysInMonth) return;
+    if(!map[day]) map[day] = {sell:[],buy:[],rows:[]};
+    if(type==='buy' && amt>0){
+      var found=false;
+      map[day].buy.forEach(function(b){if(b.cur===cur){b.amt+=amt;found=true;}});
+      if(!found) map[day].buy.push({cur:cur,amt:amt});
+    }
+    if(type==='sell' && amt>0){
+      var found2=false;
+      map[day].sell.forEach(function(s){if(s.cur===cur){s.amt+=amt;found2=true;}});
+      if(!found2) map[day].sell.push({cur:cur,amt:amt});
+    }
+  }
+
   rows.forEach(function(r){
-    var t = g(r,'time'); // "yyyy/MM/dd HH:mm:ss"
-    if(!t) return;
-    var datePart = t.split(' ')[0]; // "yyyy/MM/dd"
-    if(datePart.slice(0,7) !== prefix) return; // 只取當月
-    var day = parseInt(datePart.slice(8,10));
-    if(!map[day]) map[day] = {sell:[],buy:[],profit:0,cnt:0};
     var buyCur  = (g(r,'buyCur')||'TWD').toUpperCase();
     var buyAmt  = pf(g(r,'buyAmt'));
     var sellCur = (g(r,'sellCur')||'TWD').toUpperCase();
     var sellAmt = pf(g(r,'sellAmt'));
-    // 原幣累計（依幣別分別累計）
-    if(buyAmt>0){
-      var found=false;
-      map[day].buy.forEach(function(b){if(b.cur===buyCur){b.amt+=buyAmt;found=true;}});
-      if(!found)map[day].buy.push({cur:buyCur,amt:buyAmt});
+
+    // 預計付款日 → 應付欄
+    var buyDate = g(r,'buyDate'); // "yyyy/MM/dd" 或 "yyyy/M/d"
+    if(buyDate && buyAmt>0){
+      var bd = buyDate.replace(/\//g,'-');
+      var bdObj = new Date(bd);
+      if(!isNaN(bdObj) && bdObj.getFullYear()===yr && bdObj.getMonth()===mo){
+        var day = bdObj.getDate();
+        if(!map[day]) map[day] = {sell:[],buy:[],rows:[]};
+        addToMap(day,'buy',buyCur,buyAmt);
+        if(map[day].rows.indexOf(r._row)<0) map[day].rows.push(r._row);
+      }
     }
-    if(sellAmt>0){
-      var found2=false;
-      map[day].sell.forEach(function(s){if(s.cur===sellCur){s.amt+=sellAmt;found2=true;}});
-      if(!found2)map[day].sell.push({cur:sellCur,amt:sellAmt});
+
+    // 預計收款日 → 應收欄
+    var sellDate = g(r,'sellDate');
+    if(sellDate && sellAmt>0){
+      var sd = sellDate.replace(/\//g,'-');
+      var sdObj = new Date(sd);
+      if(!isNaN(sdObj) && sdObj.getFullYear()===yr && sdObj.getMonth()===mo){
+        var day2 = sdObj.getDate();
+        if(!map[day2]) map[day2] = {sell:[],buy:[],rows:[]};
+        addToMap(day2,'sell',sellCur,sellAmt);
+        if(map[day2].rows.indexOf(r._row)<0) map[day2].rows.push(r._row);
+      }
     }
-    map[day].cnt++;
   });
 
   // 更新月份標題
@@ -740,19 +763,31 @@ function renderDaily(){
 
   document.getElementById('cal-body').innerHTML = cal;
 
-  // 月小計表格（原幣彙整）
+  // 月小計表格（依付款日/收款日落在當月的案件，原幣彙整）
   var totalByCur = {};
   rows.forEach(function(r){
-    var t = g(r,'time');
-    if(!t||t.split(' ')[0].slice(0,7)!==prefix) return;
     var buyCur=  (g(r,'buyCur')||'TWD').toUpperCase();
     var buyAmt=  pf(g(r,'buyAmt'));
     var sellCur= (g(r,'sellCur')||'TWD').toUpperCase();
     var sellAmt= pf(g(r,'sellAmt'));
-    if(!totalByCur[buyCur])  totalByCur[buyCur]  = {sell:0,buy:0};
-    if(!totalByCur[sellCur]) totalByCur[sellCur] = {sell:0,buy:0};
-    if(buyAmt>0)   totalByCur[buyCur].buy  += buyAmt;
-    if(sellAmt>0)  totalByCur[sellCur].sell += sellAmt;
+    // 付款日在當月 → 計入應付
+    var bd = (g(r,'buyDate')||'').replace(/\//g,'-');
+    if(bd && buyAmt>0){
+      var bdObj=new Date(bd);
+      if(!isNaN(bdObj) && bdObj.getFullYear()===yr && bdObj.getMonth()===mo){
+        if(!totalByCur[buyCur]) totalByCur[buyCur]={sell:0,buy:0};
+        totalByCur[buyCur].buy += buyAmt;
+      }
+    }
+    // 收款日在當月 → 計入應收
+    var sd = (g(r,'sellDate')||'').replace(/\//g,'-');
+    if(sd && sellAmt>0){
+      var sdObj=new Date(sd);
+      if(!isNaN(sdObj) && sdObj.getFullYear()===yr && sdObj.getMonth()===mo){
+        if(!totalByCur[sellCur]) totalByCur[sellCur]={sell:0,buy:0};
+        totalByCur[sellCur].sell += sellAmt;
+      }
+    }
   });
 
   var summaryHtml = '';
@@ -773,9 +808,12 @@ function renderDaily(){
 // 點擊日曆格子 → 顯示當日案件明細
 function showDayDetail(el){
   var dateStr = typeof el === 'string' ? el : el.dataset.date;
+  // 找出當天有應付 或 應收 的案件（依付款日/收款日，不是填報日）
   var dayRows = rows.filter(function(r){
-    var t = g(r,'time');
-    return t && t.split(' ')[0] === dateStr;
+    var bd = (g(r,'buyDate')||'').replace(/\//g,'-');
+    var sd = (g(r,'sellDate')||'').replace(/\//g,'-');
+    var matchDate = dateStr.replace(/\//g,'-');
+    return bd === matchDate || sd === matchDate;
   });
 
   document.getElementById('day-title').textContent = dateStr + '　共 ' + dayRows.length + ' 筆案件';
