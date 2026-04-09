@@ -260,8 +260,13 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 <div class="scr" id="s-daily">
   <!-- 日曆 -->
   <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:16px;">
-    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:14px;font-weight:700;" id="daily-month">本月應收 / 應付日曆</div>
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button onclick="changeMonth(-1)" style="width:32px;height:32px;border-radius:50%;background:#f1f5f9;border:1px solid var(--border);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">‹</button>
+        <div style="font-size:15px;font-weight:700;min-width:120px;text-align:center;" id="daily-month">本月應收 / 應付日曆</div>
+        <button onclick="changeMonth(1)" style="width:32px;height:32px;border-radius:50%;background:#f1f5f9;border:1px solid var(--border);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">›</button>
+        <button onclick="viewYear=new Date().getFullYear();viewMonth=new Date().getMonth();renderDaily()" style="padding:5px 12px;border-radius:20px;background:#eff6ff;border:1px solid #bae6fd;color:#0369a1;font-size:11px;font-weight:700;cursor:pointer;">今月</button>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;">
         <span style="font-size:11px;color:var(--jade);">↑ 應收</span>
         <span style="font-size:11px;color:var(--coral);">↓ 應付</span>
@@ -651,12 +656,22 @@ function clearSearch(){
 }
 
 // 每日彙整
+var viewYear  = new Date().getFullYear();
+var viewMonth = new Date().getMonth(); // 0-based
+
+function changeMonth(delta){
+  viewMonth += delta;
+  if(viewMonth > 11){ viewMonth = 0; viewYear++; }
+  if(viewMonth < 0) { viewMonth = 11; viewYear--; }
+  renderDaily();
+}
+
 function renderDaily(){
-  var today = new Date();
-  var yr    = today.getFullYear();
-  var mo    = today.getMonth(); // 0-based
+  var yr    = viewYear;
+  var mo    = viewMonth;
   var moStr = (mo+1) < 10 ? '0'+(mo+1) : String(mo+1);
   var prefix = yr+'/'+moStr;
+  var today = new Date();
 
   // 依「預計付款日」和「預計收款日」分配到日曆（原幣，不換算）
   var map = {};
@@ -733,7 +748,7 @@ function renderDaily(){
       if(cellDay < 1 || cellDay > daysInMonth){
         cal += '<td style="background:#fafafa;border:0.5px solid var(--border);height:90px;"></td>';
       } else {
-        var isToday = cellDay === todayDate;
+        var isToday = cellDay === todayDate && yr === today.getFullYear() && mo === today.getMonth();
         var data    = map[cellDay];
         var bg      = isToday ? '#eff6ff' : '#fff';
         var border  = isToday ? '1.5px solid #0369a1' : '0.5px solid var(--border)';
