@@ -320,6 +320,20 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
   </div>
 </div>
 
+<!-- Day Detail Modal -->
+<div class="modal-bg" id="DayM" style="z-index:550;">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="mhd">
+      <div>
+        <div style="font-size:11px;color:#7fa0c0;margin-bottom:2px;">每日案件明細</div>
+        <div style="font-size:15px;font-weight:700;color:var(--gold2);" id="day-title"></div>
+      </div>
+      <span class="mcl" onclick="document.getElementById('DayM').classList.remove('open')">✕</span>
+    </div>
+    <div style="padding:16px;" id="day-body"></div>
+  </div>
+</div>
+
 <!-- Confirm Delete Modal -->
 <div class="modal-bg" id="DelM" style="z-index:600;">
   <div class="modal-box" style="max-width:380px;">
@@ -706,6 +720,8 @@ function renderDaily(){
         cal += '<div style="font-size:12px;font-weight:700;color:'+dayColor+';margin-bottom:4px;">'+cellDay+(isToday?'<span style="font-size:9px;font-weight:400;color:#0369a1;margin-left:3px;">今</span>':'')+'</div>';
 
         if(data){
+          var fullDate = yr+'/'+(mo+1<10?'0'+(mo+1):mo+1)+'/'+(cellDay<10?'0'+cellDay:cellDay);
+          cal = cal.replace('<td style="background:'+bg, '<td onclick="showDayDetail(''+fullDate+'')" style="cursor:pointer;background:'+bg);
           // 應收
           data.sell.forEach(function(s){
             cal += '<div style="font-size:10px;color:#16a34a;line-height:1.4;white-space:nowrap;overflow:hidden;">↑'+s.cur+' '+fmtK(s.amt)+'</div>';
@@ -715,7 +731,7 @@ function renderDaily(){
             cal += '<div style="font-size:10px;color:#dc2626;line-height:1.4;white-space:nowrap;overflow:hidden;">↓'+b.cur+' '+fmtK(b.amt)+'</div>';
           });
           // 筆數
-          cal += '<div style="font-size:9px;color:var(--muted);margin-top:2px;">'+data.cnt+'筆</div>';
+          cal += '<div style="font-size:9px;color:var(--muted);margin-top:2px;text-decoration:underline;text-decoration-color:#94a3b8;">'+data.cnt+'筆 →</div>';
         }
         cal += '</td>';
       }
@@ -758,12 +774,92 @@ function renderDaily(){
     '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">本月尚無資料</td></tr>';
 }
 
-// 格式化千位數（K/M 縮寫）
+// 點擊日曆格子 → 顯示當日案件明細
+function showDayDetail(dateStr){
+  // 找出當天所有案件
+  var dayRows = rows.filter(function(r){
+    var t = g(r,'time');
+    if(!t) return false;
+    var dp = t.split(' ')[0];
+    return dp === dateStr;
+  });
+
+  document.getElementById('day-title').textContent = dateStr + '　共 ' + dayRows.length + ' 筆案件';
+
+  if(!dayRows.length){
+    document.getElementById('day-body').innerHTML =
+      '<div class="empty"><span class="eico">📋</span>當日無案件</div>';
+    document.getElementById('DayM').classList.add('open');
+    return;
+  }
+
+  var html = '';
+  dayRows.forEach(function(r){
+    var pend=isPend(r),appr=isAppr(r);
+    var bc=pend?'bp':appr?'ba':'br';
+    var sl=pend?'待審核':appr?'已同意':'退回';
+    var buyCur  = g(r,'buyCur')||'TWD';
+    var buyAmt  = g(r,'buyAmt');
+    var sellCur = g(r,'sellCur')||'TWD';
+    var sellAmt = g(r,'sellAmt');
+    var buyRem  = g(r,'buyRem');
+    var sellRem = g(r,'sellRem');
+    var rowNum  = r._row;
+
+    html += '<div style="background:var(--card);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;">';
+
+    // 標題列
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">'
+      +'<div>'
+      +'<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">'+g(r,'formId')+'</div>'
+      +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+g(r,'name')+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+g(r,'staff')+(g(r,'asst')?' / '+g(r,'asst'):'')+'</div>'
+      +'</div>'
+      +'<span class="bdg '+bc+'">'+sl+'</span>'
+      +'</div>';
+
+    // 金額（原幣）
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:'+(buyRem||sellRem?'10':'4')+'px;">';
+    if(buyAmt){
+      html += '<div style="background:#fef2f2;border-radius:7px;padding:8px 10px;">'
+        +'<div style="font-size:10px;color:var(--coral);font-weight:700;margin-bottom:2px;">↓ 應付（採購）</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--coral);font-family:monospace;">'+buyCur+' '+fmtN(pf(buyAmt))+'</div>'
+        +(g(r,'buyDate')?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">付款日 '+g(r,'buyDate')+'</div>':'')
+        +'</div>';
+    }
+    if(sellAmt){
+      html += '<div style="background:#f0fdf4;border-radius:7px;padding:8px 10px;">'
+        +'<div style="font-size:10px;color:var(--jade);font-weight:700;margin-bottom:2px;">↑ 應收（銷售）</div>'
+        +'<div style="font-size:14px;font-weight:700;color:var(--jade);font-family:monospace;">'+sellCur+' '+fmtN(pf(sellAmt))+'</div>'
+        +(g(r,'sellDate')?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">收款日 '+g(r,'sellDate')+'</div>':'')
+        +'</div>';
+    }
+    html += '</div>';
+
+    // 備註
+    if(buyRem){
+      html += '<div style="background:#fef9f9;border-left:3px solid #fca5a5;border-radius:0 6px 6px 0;padding:7px 10px;margin-bottom:6px;font-size:12px;color:#7f1d1d;line-height:1.6;">'
+        +'<b style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;">備註（採購）</b><br>'+buyRem+'</div>';
+    }
+    if(sellRem){
+      html += '<div style="background:#f0fdf9;border-left:3px solid #86efac;border-radius:0 6px 6px 0;padding:7px 10px;margin-bottom:6px;font-size:12px;color:#14532d;line-height:1.6;">'
+        +'<b style="font-size:10px;text-transform:uppercase;letter-spacing:.04em;">備註（銷售）</b><br>'+sellRem+'</div>';
+    }
+
+    // 查看詳細按鈕
+    html += '<button onclick="document.getElementById('DayM').classList.remove('open');showD('+rowNum+')" '
+      +'style="width:100%;margin-top:6px;padding:8px;border-radius:8px;background:#f1f5f9;color:var(--sea);font-size:12px;font-weight:700;border:0.5px solid var(--border);cursor:pointer;">查看完整詳細 / 操作 →</button>';
+
+    html += '</div>';
+  });
+
+  document.getElementById('day-body').innerHTML = html;
+  document.getElementById('DayM').classList.add('open');
+}
+
+// 格式化金額：千位數逗號分隔（會計格式）
 function fmtK(n){
-  n = Math.round(n||0);
-  if(n>=1000000) return (n/1000000).toFixed(1)+'M';
-  if(n>=1000)    return (n/1000).toFixed(n>=10000?0:1)+'K';
-  return n.toLocaleString('zh-TW');
+  return Math.round(n||0).toLocaleString('zh-TW');
 }
 
 // 詳細 Modal
@@ -884,6 +980,7 @@ function dr(lbl,val){
 }
 function closeD(){document.getElementById('DM').classList.remove('open');}
 document.getElementById('DM').addEventListener('click',function(e){if(e.target===this)closeD();});
+document.getElementById('DayM').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
 
 // 簽核
 function doApp(rowNum,status){
