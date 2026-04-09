@@ -1288,14 +1288,15 @@ function renderStaffUsers(){
       +'<input class="uc-i" id="sp-'+u.id+'" value="'+ov.pwd+'"></div>'
       +'<div class="uc-f"><label class="uc-l">對應業務名稱（自動帶入）</label>'
       +'<input class="uc-i" id="ssn-'+u.id+'" value="'+ov.staffName+'" placeholder="與表單填寫的業務名稱相同"></div>'
-      +'<button class="btn-su" onclick="saveStaffUser(''+u.id+'')">儲存</button>'
+      +'<button class="btn-su" onclick="saveStaffUser(this.dataset.sid)" data-sid="'+u.id+'">儲存</button>'
       +'</div>';
   });
   html+='</div>';
   el.innerHTML=html;
 }
 
-function saveStaffUser(id){
+function saveStaffUser(elOrId){
+  var id = typeof elOrId==='string' ? elOrId : elOrId.dataset.sid;
   var name=document.getElementById('sn-'+id).value.trim();
   var pwd=document.getElementById('sp-'+id).value.trim();
   var staffName=document.getElementById('ssn-'+id).value.trim();
