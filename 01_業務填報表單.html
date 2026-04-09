@@ -642,7 +642,7 @@ async function submitForm(){
     buyDate:   fd.buyDate,           // I
     buyPay:    fd.buyPay,            // J
     buyNote:   fd.buyNote,           // K
-    hasBuyer:  fd.buyer?'是':'否',   // L
+    hasBuyer:  (fd.type==='銷售'||fd.type==='採購+銷售(三角貿易)')?'是':'否', // L
     buyer:     fd.buyer,             // M
     sellCur:   fd.sellCur,           // N
     sellAmt:   fd.sellAmt,           // O
@@ -650,7 +650,7 @@ async function submitForm(){
     sellPay:   fd.sellPay,           // Q
     sellNote:  fd.sellNote,          // R
     asst:      fd.asst||'',          // S
-    profit:    fd.sellCur+' '+fmt(fd.profit), // T
+    profit:    fd.profit||0,                  // T 預估毛利潤（數字）
     buyCon:    fd.buyCon,            // U
     sellCon:   fd.sellCon,           // V
     trade:     fd.trade,             // W
