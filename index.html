@@ -1313,21 +1313,63 @@ function doDelete(rowNum,name){
 
 // 後台管理
 function renderAdmin(){
-  var h='';
-  // 只有 admin 自己跟 boss 可以修改所有帳號；boss 後台只看到自己
-  var editableUsers = curUser.role==='admin'
-    ? BASE_USERS
-    : BASE_USERS.filter(function(u){return u.id===curUser.id;});
-  editableUsers.forEach(function(u){
-    var cu2=CU.find(function(x){return x.id===u.id;})||u;
-    h+='<div class="uc" id="uc-'+u.id+'">'
-      +'<div class="uc-role">'+u.role+'</div><div class="uc-nm">'+cu2.name+'</div>'
-      +'<div class="uc-f"><label class="uc-l">顯示名稱</label><input class="uc-i" id="un-'+u.id+'" value="'+cu2.name+'"></div>'
-      +'<div class="uc-f"><label class="uc-l">新密碼（留空不改）</label><input class="uc-i" type="password" id="up-'+u.id+'" placeholder="輸入新密碼" autocomplete="new-password"></div>'
-      +'<button class="btn-su" onclick="saveU2(\''+u.id+'\')">儲存</button>'
-      +'<span class="svd" id="sv-'+u.id+'">✓ 已儲存</span></div>';
+  // 用 DOM 方式建立，避免所有引號衝突
+  var ug = document.getElementById('ug');
+  if(!ug) return;
+  ug.innerHTML = '';
+
+  // 管理員看全部帳號（CU），董事長只看自己
+  var editableUsers = CU.filter(function(u){
+    if(curUser.role==='admin') return ['boss','admin','finance'].indexOf(u.role) >= 0;
+    return u.id === curUser.id;
   });
-  document.getElementById('ug').innerHTML=h;
+
+  editableUsers.forEach(function(u){
+    var card = document.createElement('div');
+    card.className = 'uc';
+    card.id = 'uc-'+u.id;
+
+    var roleDiv = document.createElement('div');
+    roleDiv.className = 'uc-role';
+    roleDiv.textContent = u.role;
+    card.appendChild(roleDiv);
+
+    var nmDiv = document.createElement('div');
+    nmDiv.className = 'uc-nm';
+    nmDiv.textContent = u.name;
+    card.appendChild(nmDiv);
+
+    // 名稱欄
+    var f1 = document.createElement('div'); f1.className='uc-f';
+    var l1 = document.createElement('label'); l1.className='uc-l'; l1.textContent='顯示名稱';
+    var i1 = document.createElement('input'); i1.className='uc-i'; i1.id='un-'+u.id; i1.value=u.name;
+    f1.appendChild(l1); f1.appendChild(i1); card.appendChild(f1);
+
+    // 密碼欄
+    var f2 = document.createElement('div'); f2.className='uc-f';
+    var l2 = document.createElement('label'); l2.className='uc-l'; l2.textContent='新密碼（留空不改）';
+    var i2 = document.createElement('input'); i2.className='uc-i'; i2.id='up-'+u.id;
+    i2.type='password'; i2.placeholder='輸入新密碼'; i2.autocomplete='new-password';
+    f2.appendChild(l2); f2.appendChild(i2); card.appendChild(f2);
+
+    // 儲存按鈕
+    var btn = document.createElement('button');
+    btn.className = 'btn-su';
+    btn.textContent = '儲存';
+    btn.setAttribute('data-uid', u.id);
+    btn.addEventListener('click', function(){
+      saveU2(this.getAttribute('data-uid'));
+    });
+    card.appendChild(btn);
+
+    // 儲存成功提示
+    var sv = document.createElement('span');
+    sv.className = 'svd'; sv.id = 'sv-'+u.id; sv.textContent = '✓ 已儲存';
+    card.appendChild(sv);
+
+    ug.appendChild(card);
+  });
+
   renderCU();
   renderStaffUsers();
 }
@@ -1357,26 +1399,66 @@ function addCU(){
 }
 function renderStaffUsers(){
   var el=document.getElementById('staff-users');
-  if(!el)return;
-  var saved=[];
-  try{var s=localStorage.getItem('tu');if(s)saved=JSON.parse(s);}catch(e){}
-  var html='<div class="ugrid">';
-  DEFAULT_STAFF.forEach(function(u){
-    var ov=saved.find(function(x){return x.id===u.id;})||u;
-    html+='<div class="uc">'
-      +'<div class="uc-role">業務員</div>'
-      +'<div class="uc-nm">'+ov.name+'</div>'
-      +'<div class="uc-f"><label class="uc-l">顯示名稱（需與表單業務名稱一致）</label>'
-      +'<input class="uc-i" id="sn-'+u.id+'" value="'+ov.name+'"></div>'
-      +'<div class="uc-f"><label class="uc-l">密碼</label>'
-      +'<input class="uc-i" id="sp-'+u.id+'" value="'+ov.pwd+'"></div>'
-      +'<div class="uc-f"><label class="uc-l">對應業務名稱（自動帶入）</label>'
-      +'<input class="uc-i" id="ssn-'+u.id+'" value="'+ov.staffName+'" placeholder="與表單填寫的業務名稱相同"></div>'
-      +'<button class="btn-su" onclick="saveStaffUser(this.dataset.sid)" data-sid="'+u.id+'">儲存</button>'
-      +'</div>';
+  if(!el) return;
+
+  // 從 CU（雲端帳號）取業務員清單
+  var staffList = CU.filter(function(u){ return u.role==='staff'; });
+  if(!staffList.length) staffList = DEFAULT_STAFF;
+
+  var grid = document.createElement('div');
+  grid.className = 'ugrid';
+
+  staffList.forEach(function(u){
+    var card = document.createElement('div');
+    card.className = 'uc';
+
+    var roleDiv = document.createElement('div');
+    roleDiv.className='uc-role'; roleDiv.textContent='業務員';
+    card.appendChild(roleDiv);
+
+    var nmDiv = document.createElement('div');
+    nmDiv.className='uc-nm'; nmDiv.textContent=u.name;
+    card.appendChild(nmDiv);
+
+    // 名稱
+    var f1=document.createElement('div'); f1.className='uc-f';
+    var l1=document.createElement('label'); l1.className='uc-l';
+    l1.textContent='顯示名稱（需與表單業務名稱一致）';
+    var i1=document.createElement('input'); i1.className='uc-i';
+    i1.id='sn-'+u.id; i1.value=u.name;
+    f1.appendChild(l1); f1.appendChild(i1); card.appendChild(f1);
+
+    // 密碼（不顯示現有密碼，留空不改）
+    var f2=document.createElement('div'); f2.className='uc-f';
+    var l2=document.createElement('label'); l2.className='uc-l';
+    l2.textContent='新密碼（留空不改）';
+    var i2=document.createElement('input'); i2.className='uc-i';
+    i2.id='sp-'+u.id; i2.type='password'; i2.placeholder='輸入新密碼';
+    f2.appendChild(l2); f2.appendChild(i2); card.appendChild(f2);
+
+    // 對應業務名稱
+    var f3=document.createElement('div'); f3.className='uc-f';
+    var l3=document.createElement('label'); l3.className='uc-l';
+    l3.textContent='對應表單業務名稱';
+    var i3=document.createElement('input'); i3.className='uc-i';
+    i3.id='ssn-'+u.id; i3.value=u.staffName||u.name;
+    i3.placeholder='與表單填寫的業務名稱相同';
+    f3.appendChild(l3); f3.appendChild(i3); card.appendChild(f3);
+
+    // 儲存按鈕
+    var btn=document.createElement('button');
+    btn.className='btn-su'; btn.textContent='儲存';
+    btn.setAttribute('data-sid', u.id);
+    btn.addEventListener('click', function(){
+      saveStaffUser(this.getAttribute('data-sid'));
+    });
+    card.appendChild(btn);
+
+    grid.appendChild(card);
   });
-  html+='</div>';
-  el.innerHTML=html;
+
+  el.innerHTML='';
+  el.appendChild(grid);
 }
 
 function saveStaffUser(elOrId){
