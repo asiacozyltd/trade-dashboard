@@ -1087,24 +1087,37 @@ function doEdit(rowNum){
     ['e-buyrem-','備註（採購）'],['e-sellrem-','備註（銷售）'],
   ];
   var fields={};
+  var r=rows.find(function(x){return x._row===rowNum;});
+
+  // ★ 比較修改前後，只記錄有變動的欄位
+  var changes=[];
   map.forEach(function(m){
     var el=document.getElementById(m[0]+rowNum);
-    if(el)fields[m[1]]=el.value;
+    if(!el) return;
+    var newVal=el.value.trim();
+    var oldVal=(r ? (r[m[1]]||'') : '').toString().trim();
+    fields[m[1]]=newVal;
+    if(newVal !== oldVal){
+      changes.push(m[1]+' 「'+oldVal+'」→「'+newVal+'」');
+    }
   });
-  var r=rows.find(function(x){return x._row===rowNum;});
+
+  var caseName = r ? g(r,'name') : 'Row'+rowNum;
+  var changeLog = changes.length > 0 ? changes.join(' / ') : '無變動';
+
   fetch(SCRIPT,{
     method:'POST',
     body:JSON.stringify({action:'update',row:rowNum,fields:fields,editor:curUser.name}),
     mode:'no-cors'
   }).finally(function(){
-    if(r)Object.keys(fields).forEach(function(k){r[k]=fields[k];});
-    addLog('修改案件',curUser.name,r?g(r,'name'):'Row'+rowNum,'');
+    if(r) Object.keys(fields).forEach(function(k){r[k]=fields[k];});
+    // 寫入詳細 Log
+    addLog('修改案件',curUser.name, caseName, changeLog);
     closeD();onLoad();
     toast('💾 修改已儲存','#0369a1');
     if(btn){btn.disabled=false;btn.textContent='💾 儲存修改至 Sheets';}
   });
 }
-
 // 刪除
 function confirmDel(rowNum){
   var r=rows.find(function(x){return x._row===rowNum;});
@@ -1211,7 +1224,7 @@ function renderLog(){
         +'<td><b>'+l.u+'</b></td>'
         +'<td><span class="ltag '+l.c+'">'+l.a+'</span></td>'
         +'<td style="font-size:11px;">'+l.g+'</td>'
-        +'<td style="font-size:11px;color:#64748b;">'+l.n+'</td></tr>';
+        +'<td style="font-size:11px;color:#64748b;max-width:300px;word-break:break-all;line-height:1.6;">'+l.n+'</td></tr>';
     }).join('');
 }
 
