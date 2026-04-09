@@ -437,26 +437,56 @@ function fetchRates(){
     });
 }
 
+// 帳號從 Google Sheets 載入，本地備用
 var BASE_USERS=[
   {id:'boss',    role:'boss',    name:'董事長',  pwd:'boss2026',  staffName:''},
   {id:'admin',   role:'admin',   name:'管理員',  pwd:'admin2026', staffName:''},
   {id:'finance', role:'finance', name:'財務',    pwd:'finance2026',staffName:''},
 ];
-// 業務員個人帳號（每人一組，staffName 對應表單填的業務名稱）
 var DEFAULT_STAFF=[
-  {id:'s_hcj',  role:'staff', name:'黃啟靖', pwd:'hcj2026',  staffName:'黃啟靖'},
-  {id:'s_czk',  role:'staff', name:'楊正國', pwd:'czk2026',  staffName:'楊正國'},
-  {id:'s_jyl',  role:'staff', name:'朱嬿琳', pwd:'jyl2026',  staffName:'朱嬿琳'},
-  {id:'s_lch',  role:'staff', name:'呂建宏', pwd:'lch2026',  staffName:'呂建宏'},
-  {id:'s_ljx',  role:'staff', name:'呂紀萱', pwd:'ljx2026',  staffName:'呂紀萱'},
-  {id:'s_cyc',  role:'staff', name:'陳彥竹', pwd:'cyc2026',  staffName:'陳彥竹'},
-  {id:'s_sherry',role:'staff',name:'SHERRY', pwd:'sherry2026',staffName:'SHERRY'},
+  {id:'s_hcj',   role:'staff', name:'黃啟靖', pwd:'hcj2026',    staffName:'黃啟靖'},
+  {id:'s_czk',   role:'staff', name:'楊正國', pwd:'czk2026',    staffName:'楊正國'},
+  {id:'s_jyl',   role:'staff', name:'朱嬿琳', pwd:'jyl2026',    staffName:'朱嬿琳'},
+  {id:'s_lch',   role:'staff', name:'呂建宏', pwd:'lch2026',    staffName:'呂建宏'},
+  {id:'s_ljx',   role:'staff', name:'呂紀萱', pwd:'ljx2026',    staffName:'呂紀萱'},
+  {id:'s_cyc',   role:'staff', name:'陳彥竹', pwd:'cyc2026',    staffName:'陳彥竹'},
+  {id:'s_sherry',role:'staff', name:'SHERRY', pwd:'sherry2026', staffName:'SHERRY'},
 ];
+// 從 Sheets 載入的帳號（跨裝置同步）
+var CLOUD_ACCOUNTS = null;
+
+// 載入雲端帳號（Apps Script Sheets）
+function fetchAccounts(callback){
+  fetch(SCRIPT+'?action=getAccounts&_='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==='ok'&&d.accounts&&d.accounts.length>0){
+        CLOUD_ACCOUNTS = d.accounts;
+        // 更新本地備用
+        try{localStorage.setItem('cloudAccounts', JSON.stringify(CLOUD_ACCOUNTS));}catch(e){}
+      }
+      if(callback) callback();
+    })
+    .catch(function(){
+      // 網路失敗：從本地快取讀
+      try{
+        var c=localStorage.getItem('cloudAccounts');
+        if(c) CLOUD_ACCOUNTS=JSON.parse(c);
+      }catch(e){}
+      if(callback) callback();
+    });
+}
 function loadU(){
+  // 優先使用雲端帳號（跨裝置同步）
+  if(CLOUD_ACCOUNTS && CLOUD_ACCOUNTS.length > 0){
+    return CLOUD_ACCOUNTS.concat(getCU());
+  }
+  // 備用：本地 localStorage
   try{
+    var c=localStorage.getItem('cloudAccounts');
+    if(c){var ca=JSON.parse(c);if(ca&&ca.length>0)return ca.concat(getCU());}
     var s=localStorage.getItem('tu');
     var saved=s?JSON.parse(s):[];
-    // 合併 BASE_USERS + DEFAULT_STAFF，允許從 localStorage 覆蓋密碼
     var allBase=BASE_USERS.concat(DEFAULT_STAFF);
     var base=allBase.map(function(u){
       var ov=saved.find(function(x){return x.id===u.id;});
@@ -519,10 +549,15 @@ function setR(el){
 function login(){
   var p=document.getElementById('lpwd').value;
   var role=document.querySelector('.rtab.on').dataset.role;
-  CU=loadU();
-  var u=CU.find(function(x){return x.role===role&&x.pwd===p;});
-  if(!u)u=CU.find(function(x){return x.pwd===p;});
-  if(u){
+  var btn=document.querySelector('.lbtn');
+  if(btn){btn.disabled=true;btn.textContent='驗證中...';}
+  // 先從雲端更新帳號再登入
+  fetchAccounts(function(){
+    CU=loadU();
+    var u=CU.find(function(x){return x.role===role&&x.pwd===p;});
+    if(!u)u=CU.find(function(x){return x.pwd===p;});
+    if(btn){btn.disabled=false;btn.textContent='登入';}
+    if(u){
     curUser=u;
     addLog('登入',u.name,'','');
     document.getElementById('L').style.display='none';
@@ -540,9 +575,10 @@ function login(){
     setInterval(load,60000);
     setInterval(fetchRates,1800000);
   }else{
-    document.getElementById('lerr').textContent='密碼錯誤';
-    document.getElementById('lpwd').value='';
-  }
+      document.getElementById('lerr').textContent='密碼錯誤';
+      document.getElementById('lpwd').value='';
+    }
+  });
 }
 function logout(){
   addLog('登出',curUser.name,'','');
@@ -1298,15 +1334,20 @@ function renderAdmin(){
 function saveU2(id){
   var name=document.getElementById('un-'+id).value.trim();
   var pwd=document.getElementById('up-'+id).value.trim();
-  var arr=BASE_USERS.map(function(u){
-    var c=Object.assign({},CU.find(function(x){return x.id===u.id;})||u);
-    if(u.id===id){if(name)c.name=name;if(pwd)c.pwd=pwd;}
-    return c;
+  // 同步更新到 Google Sheets（跨裝置）
+  fetch(SCRIPT,{
+    method:'POST',
+    body:JSON.stringify({action:'updateAccount',id:id,name:name,pwd:pwd||undefined}),
+    mode:'no-cors'
+  }).finally(function(){
+    // 更新本地雲端快取
+    fetchAccounts(function(){
+      CU=loadU();
+      var sv=document.getElementById('sv-'+id);
+      if(sv){sv.style.display='inline';setTimeout(function(){sv.style.display='none';},2000);}
+      toast('✅ 已更新（所有裝置同步）','#16a34a');
+    });
   });
-  saveU(arr);CU=loadU();
-  var sv=document.getElementById('sv-'+id);
-  if(sv){sv.style.display='inline';setTimeout(function(){sv.style.display='none';},2000);}
-  toast('✅ 已更新','#16a34a');
 }
 function addCU(){
   var cus=getCU();
@@ -1343,14 +1384,17 @@ function saveStaffUser(elOrId){
   var name=document.getElementById('sn-'+id).value.trim();
   var pwd=document.getElementById('sp-'+id).value.trim();
   var staffName=document.getElementById('ssn-'+id).value.trim();
-  var saved=[];
-  try{var s=localStorage.getItem('tu');if(s)saved=JSON.parse(s);}catch(e){}
-  var found=saved.find(function(x){return x.id===id;});
-  if(found){found.name=name||found.name;found.pwd=pwd||found.pwd;found.staffName=staffName||found.staffName;}
-  else{var def=DEFAULT_STAFF.find(function(x){return x.id===id;})||{};saved.push(Object.assign({},def,{name:name,pwd:pwd,staffName:staffName}));}
-  localStorage.setItem('tu',JSON.stringify(saved));
-  CU=loadU();
-  toast('✅ '+name+' 帳號已更新','#16a34a');
+  // 同步更新到 Google Sheets（跨裝置）
+  fetch(SCRIPT,{
+    method:'POST',
+    body:JSON.stringify({action:'updateAccount',id:id,name:name,pwd:pwd||undefined,staffName:staffName}),
+    mode:'no-cors'
+  }).finally(function(){
+    fetchAccounts(function(){
+      CU=loadU();
+      toast('✅ '+name+' 已更新（所有裝置同步）','#16a34a');
+    });
+  });
 }
 
 function renderCU(){
@@ -1426,17 +1470,17 @@ function changePwd(){
   if(oldP!==curUser.pwd){errEl.textContent='目前密碼錯誤';return;}
   if(newP.length<6){errEl.textContent='新密碼至少需要6個字元';return;}
   if(newP!==cfP){errEl.textContent='兩次輸入的新密碼不一致';return;}
-  // Save new password
-  var saved=[];
-  try{var s=localStorage.getItem('tu');if(s)saved=JSON.parse(s);}catch(e){}
-  var found=saved.find(function(x){return x.id===curUser.id;});
-  if(found){found.pwd=newP;}
-  else{saved.push(Object.assign({},curUser,{pwd:newP}));}
-  localStorage.setItem('tu',JSON.stringify(saved));
-  curUser.pwd=newP;
-  CU=loadU();
-  addLog('修改密碼',curUser.name,'','');
-  toast('✅ 密碼已更新','#16a34a');
+  // 同步更新到 Google Sheets（跨裝置）
+  fetch(SCRIPT,{
+    method:'POST',
+    body:JSON.stringify({action:'updateAccount',id:curUser.id,pwd:newP}),
+    mode:'no-cors'
+  }).finally(function(){
+    curUser.pwd=newP;
+    fetchAccounts(function(){CU=loadU();});
+    addLog('修改密碼',curUser.name,'','');
+    toast('✅ 密碼已更新，所有裝置同步生效','#16a34a');
+  });
   ['pwd-old','pwd-new','pwd-confirm'].forEach(function(id){
     var el2=document.getElementById(id);if(el2)el2.value='';
   });
