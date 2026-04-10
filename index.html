@@ -343,9 +343,12 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
     </div>
   </div>
 </div>
+<div class="scr" id="s-transfer">
+  <!-- 訂單轉入管理：會計確認已簽核案件轉入 Payments -->
+  <div id="transfer-pending"></div>
+</div>
+
 <div class="scr" id="s-payments">
-  <!-- 待轉入 -->
-  <div id="pay-pending"></div>
   <!-- 統計卡片 -->
   <div class="sg" style="margin-bottom:16px;" id="pay-stats"></div>
   <!-- 篩選 -->
@@ -730,14 +733,14 @@ function logout(){
 function buildNav(){
   var role=curUser.role;
   var tabs=role==='boss'
-    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件總表'},{i:'approval',l:'✅ 待簽核',p:true},{i:'daily',l:'📅 每日彙整'},{i:'log',l:'🔍 Log'},{i:'admin',l:'⚙️ 後台'}]
+    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件總表'},{i:'approval',l:'✅ 待簽核',p:true},{i:'daily',l:'🗓️ 收付日曆'},{i:'payments',l:'💰 款項管理'},{i:'log',l:'🔍 Log'},{i:'admin',l:'⚙️ 後台'}]
     :role==='admin'
-    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件總表'},{i:'daily',l:'📅 每日彙整'},{i:'log',l:'🔍 Log'},{i:'admin',l:'⚙️ 後台'}]
+    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件總表'},{i:'daily',l:'🗓️ 收付日曆'},{i:'payments',l:'💰 款項管理'},{i:'log',l:'🔍 Log'},{i:'admin',l:'⚙️ 後台'}]
     :role==='staff'
     ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 我的案件'},{i:'profile',l:'🔑 我的帳號'}]
     :role==='finance'
-    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'payments',l:'💳 款項管理'},{i:'daily',l:'📅 每日彙整'},{i:'log',l:'🔍 Log'}]
-    :[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'daily',l:'📅 每日彙整'},{i:'log',l:'🔍 Log'}];
+    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'transfer',l:'💳 訂單轉入管理'},{i:'daily',l:'🗓️ 收付日曆'},{i:'payments',l:'💰 款項管理'},{i:'log',l:'🔍 Log'}]
+    :[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'daily',l:'🗓️ 收付日曆'},{i:'log',l:'🔍 Log'}];
   document.getElementById('ntabs').innerHTML=tabs.map(function(t){
     return '<div class="nav-tab'+(t.i==='dash'?' on':'')+'" id="nt-'+t.i+'" data-tabid="'+t.i+'" onclick="goTabEl(this)">'
       +t.l+(t.p?'<span class="pulse" id="pdot" style="display:none;"></span>':'')+'</div>';
@@ -932,6 +935,72 @@ function changeMonth(delta){
 }
 
 // 載入 Payments 分頁資料
+function loadTransfer(){
+  // 載入已簽核但未轉入的案件
+  var el = document.getElementById('transfer-pending');
+  if(!el) return;
+  var payFormIds = allPayments.map(function(p){ return p['表單編號']; });
+  var pendingApproved = rows.filter(function(r){
+    var status   = (r[F.status]||'').toString();
+    var approved = status==='是'||status.indexOf('同意')>=0;
+    var formId   = (r[F.formId]||'').toString();
+    var alreadyIn= payFormIds.indexOf(formId)>=0;
+    return approved && !alreadyIn && formId;
+  });
+
+  if(!pendingApproved.length){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">'
+      +'<div style="font-size:32px;margin-bottom:12px;">✅</div>'
+      +'<div style="font-size:15px;font-weight:700;">所有已簽核案件均已轉入</div>'
+      +'<div style="font-size:13px;margin-top:6px;">目前沒有待確認的款項</div>'
+      +'</div>';
+    return;
+  }
+
+  var html='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin-bottom:12px;">'
+    +'<div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:4px;">⏳ 待轉入款項（'+pendingApproved.length+' 筆）</div>'
+    +'<div style="font-size:12px;color:#78350f;">老闆已同意，請逐筆確認後轉入 Payments 分頁</div>'
+    +'</div>';
+
+  pendingApproved.forEach(function(r){
+    var rowNum   = r._row;
+    var caseName = (r[F.name]||'').toString();
+    var formId   = (r[F.formId]||'').toString();
+    var staff    = (r[F.staff]||'').toString();
+    var buyCur   = ((r[F.buyCur]||'TWD')).toString().toUpperCase();
+    var buyAmt   = parseFloat(r[F.buyAmt])||0;
+    var buyDate  = (r[F.buyDate]||'—').toString();
+    var sellCur  = ((r[F.sellCur]||'TWD')).toString().toUpperCase();
+    var sellAmt  = parseFloat(r[F.sellAmt])||0;
+    var sellDate = (r[F.sellDate]||'—').toString();
+    var caseType = (r[F.type]||'').toString();
+
+    html+='<div style="background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
+      +'<div>'
+      +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+caseName+'</div>'
+      +'<div style="font-size:12px;color:var(--muted);margin-top:2px;">'+formId+' · '+staff+' · '+caseType+'</div>'
+      +'</div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+      +(buyAmt?'<div style="background:#fef2f2;border-radius:8px;padding:10px 12px;">'
+        +'<div style="font-size:10px;color:#991b1b;font-weight:700;text-transform:uppercase;margin-bottom:3px;">應付（採購）</div>'
+        +'<div style="font-size:14px;font-weight:700;color:#dc2626;">'+buyCur+' '+fmtN(buyAmt)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">預計：'+buyDate+'</div>'
+        +'</div>':'<div></div>')
+      +(sellAmt?'<div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;">'
+        +'<div style="font-size:10px;color:#14532d;font-weight:700;text-transform:uppercase;margin-bottom:3px;">應收（銷售）</div>'
+        +'<div style="font-size:14px;font-weight:700;color:#16a34a;">'+sellCur+' '+fmtN(sellAmt)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">預計：'+sellDate+'</div>'
+        +'</div>':'<div></div>')
+      +'</div>'
+      +'<button onclick="doAccountingConfirm('+rowNum+')" '
+      +'style="width:100%;padding:11px;border-radius:8px;background:#0369a1;color:#fff;border:none;'
+      +'font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.02em;">✅ 確認轉入 Payments</button>'
+      +'</div>';
+  });
+  el.innerHTML = html;
+}
+
 function loadPayments(cb){
   fetch(SCRIPT+'?action=getAllPayments&_='+Date.now())
     .then(function(r){return r.json();})
@@ -1872,6 +1941,72 @@ function changePwd(){
 var allPayments = [];
 var payFilter   = 'all';
 
+function loadTransfer(){
+  // 載入已簽核但未轉入的案件
+  var el = document.getElementById('transfer-pending');
+  if(!el) return;
+  var payFormIds = allPayments.map(function(p){ return p['表單編號']; });
+  var pendingApproved = rows.filter(function(r){
+    var status   = (r[F.status]||'').toString();
+    var approved = status==='是'||status.indexOf('同意')>=0;
+    var formId   = (r[F.formId]||'').toString();
+    var alreadyIn= payFormIds.indexOf(formId)>=0;
+    return approved && !alreadyIn && formId;
+  });
+
+  if(!pendingApproved.length){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);">'
+      +'<div style="font-size:32px;margin-bottom:12px;">✅</div>'
+      +'<div style="font-size:15px;font-weight:700;">所有已簽核案件均已轉入</div>'
+      +'<div style="font-size:13px;margin-top:6px;">目前沒有待確認的款項</div>'
+      +'</div>';
+    return;
+  }
+
+  var html='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin-bottom:12px;">'
+    +'<div style="font-size:14px;font-weight:700;color:#92400e;margin-bottom:4px;">⏳ 待轉入款項（'+pendingApproved.length+' 筆）</div>'
+    +'<div style="font-size:12px;color:#78350f;">老闆已同意，請逐筆確認後轉入 Payments 分頁</div>'
+    +'</div>';
+
+  pendingApproved.forEach(function(r){
+    var rowNum   = r._row;
+    var caseName = (r[F.name]||'').toString();
+    var formId   = (r[F.formId]||'').toString();
+    var staff    = (r[F.staff]||'').toString();
+    var buyCur   = ((r[F.buyCur]||'TWD')).toString().toUpperCase();
+    var buyAmt   = parseFloat(r[F.buyAmt])||0;
+    var buyDate  = (r[F.buyDate]||'—').toString();
+    var sellCur  = ((r[F.sellCur]||'TWD')).toString().toUpperCase();
+    var sellAmt  = parseFloat(r[F.sellAmt])||0;
+    var sellDate = (r[F.sellDate]||'—').toString();
+    var caseType = (r[F.type]||'').toString();
+
+    html+='<div style="background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">'
+      +'<div>'
+      +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+caseName+'</div>'
+      +'<div style="font-size:12px;color:var(--muted);margin-top:2px;">'+formId+' · '+staff+' · '+caseType+'</div>'
+      +'</div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">'
+      +(buyAmt?'<div style="background:#fef2f2;border-radius:8px;padding:10px 12px;">'
+        +'<div style="font-size:10px;color:#991b1b;font-weight:700;text-transform:uppercase;margin-bottom:3px;">應付（採購）</div>'
+        +'<div style="font-size:14px;font-weight:700;color:#dc2626;">'+buyCur+' '+fmtN(buyAmt)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">預計：'+buyDate+'</div>'
+        +'</div>':'<div></div>')
+      +(sellAmt?'<div style="background:#f0fdf4;border-radius:8px;padding:10px 12px;">'
+        +'<div style="font-size:10px;color:#14532d;font-weight:700;text-transform:uppercase;margin-bottom:3px;">應收（銷售）</div>'
+        +'<div style="font-size:14px;font-weight:700;color:#16a34a;">'+sellCur+' '+fmtN(sellAmt)+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">預計：'+sellDate+'</div>'
+        +'</div>':'<div></div>')
+      +'</div>'
+      +'<button onclick="doAccountingConfirm('+rowNum+')" '
+      +'style="width:100%;padding:11px;border-radius:8px;background:#0369a1;color:#fff;border:none;'
+      +'font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.02em;">✅ 確認轉入 Payments</button>'
+      +'</div>';
+  });
+  el.innerHTML = html;
+}
+
 function loadPayments(cb){
   fetch(SCRIPT+'?action=getAllPayments&_='+Date.now())
     .then(function(r){return r.json();})
@@ -1913,7 +2048,7 @@ function renderPayments(){
     return approved && !acctDone && !alreadyIn && formId;
   });
 
-  var pendingEl = document.getElementById('pay-pending');
+  var pendingEl = document.getElementById('transfer-pending');
   if(pendingEl){
     if(!pendingApproved.length){
       pendingEl.style.display='none';
@@ -2120,6 +2255,7 @@ function goTab(id){
   }
   if(id==='profile')initProfile();
   if(id==='payments'){loadPayments();}
+  if(id==='transfer'){loadTransfer();}
   if(id==='records'){document.getElementById('rc').textContent='共 '+filtered.length+' 筆';renderCards(filtered,'records-cards',true);}
 }
 
