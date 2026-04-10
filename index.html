@@ -908,7 +908,8 @@ function renderDaily(){
   var todayDate = today.getDate();
   var daysInMonth = new Date(yr,mo+1,0).getDate();
 
-  // ── 建立預估 map（來自 FormResponses）──
+  // ── 建立預估 map（來自 Payments 分頁）──
+  // 類型=採購 → 預估付款(↓)　類型=銷售 → 預估收款(↑)
   var estMap={};
   function addEst(day,type,cur,amt){
     if(!day||day<1||day>daysInMonth)return;
@@ -918,31 +919,16 @@ function renderDaily(){
     list.forEach(function(i){if(i.cur===cur){i.amt+=amt;found=true;}});
     if(!found)list.push({cur:cur,amt:amt});
   }
-  rows.forEach(function(r){
-    var buyCur=(g(r,'buyCur')||'TWD').toUpperCase();
-    var buyAmt=pf(g(r,'buyAmt'));
-    var sellCur=(g(r,'sellCur')||'TWD').toUpperCase();
-    var sellAmt=pf(g(r,'sellAmt'));
-    var bd=(g(r,'buyDate')||'').replace(/\//g,'-');
-    var sd=(g(r,'sellDate')||'').replace(/\//g,'-');
-    if(bd&&buyAmt>0){
-      var bdObj=new Date(bd);
-      if(!isNaN(bdObj)&&bdObj.getFullYear()===yr&&bdObj.getMonth()===mo){
-        var day=bdObj.getDate();
-        addEst(day,'buy',buyCur,buyAmt);
-        if(!estMap[day])estMap[day]={buy:[],sell:[],rows:[]};
-        if(estMap[day].rows.indexOf(r._row)<0)estMap[day].rows.push(r._row);
-      }
-    }
-    if(sd&&sellAmt>0){
-      var sdObj=new Date(sd);
-      if(!isNaN(sdObj)&&sdObj.getFullYear()===yr&&sdObj.getMonth()===mo){
-        var day2=sdObj.getDate();
-        addEst(day2,'sell',sellCur,sellAmt);
-        if(!estMap[day2])estMap[day2]={buy:[],sell:[],rows:[]};
-        if(estMap[day2].rows.indexOf(r._row)<0)estMap[day2].rows.push(r._row);
-      }
-    }
+  PAYMENTS_CACHE.forEach(function(p){
+    var dateStr=(p['預計日期']||'').toString().replace(/\//g,'-');
+    if(!dateStr)return;
+    var dObj=new Date(dateStr);
+    if(isNaN(dObj)||dObj.getFullYear()!==yr||dObj.getMonth()!==mo)return;
+    var day=dObj.getDate();
+    var cur=(p['幣別']||'TWD').toUpperCase();
+    var amt=parseFloat(p['金額'])||0;
+    var type=p['類型']==='採購'?'buy':'sell';
+    if(amt>0) addEst(day,type,cur,amt);
   });
 
   // ── 建立實際 map（來自 Payments 分頁已標記已付收）──
@@ -1000,8 +986,8 @@ function renderDaily(){
         var est=estMap[cellDay];
         if(est){
           var estLines=[];
-          est.buy.forEach(function(b){ estLines.push('<div style="font-size:9px;color:#dc2626;line-height:1.5;overflow:hidden;white-space:nowrap;">↓'+b.cur+' '+fmtN(b.amt)+'</div>'); });
-          est.sell.forEach(function(s){ estLines.push('<div style="font-size:9px;color:#16a34a;line-height:1.5;overflow:hidden;white-space:nowrap;">↑'+s.cur+' '+fmtN(s.amt)+'</div>'); });
+          est.buy.forEach(function(b){ estLines.push('<div style="font-size:9px;color:#dc2626;line-height:1.5;overflow:hidden;white-space:nowrap;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#dc2626;margin-right:3px;vertical-align:middle;"></span>'+b.cur+' '+fmtN(b.amt)+'</div>'); });
+          est.sell.forEach(function(s){ estLines.push('<div style="font-size:9px;color:#16a34a;line-height:1.5;overflow:hidden;white-space:nowrap;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#16a34a;margin-right:3px;vertical-align:middle;"></span>'+s.cur+' '+fmtN(s.amt)+'</div>'); });
           if(estLines.length){
             cal+='<div style="background:#f8fafc;border-radius:3px;padding:2px 3px;margin-bottom:2px;">'
               +'<div style="font-size:8px;color:#94a3b8;font-weight:700;letter-spacing:.03em;">預估</div>'
@@ -1013,8 +999,8 @@ function renderDaily(){
         var act=actMap[cellDay];
         if(act){
           var actLines=[];
-          act.buy.forEach(function(b){ actLines.push('<div style="font-size:9px;color:#15803d;line-height:1.5;overflow:hidden;white-space:nowrap;">↓'+b.cur+' '+fmtN(b.amt)+'</div>'); });
-          act.sell.forEach(function(s){ actLines.push('<div style="font-size:9px;color:#065f46;line-height:1.5;overflow:hidden;white-space:nowrap;">↑'+s.cur+' '+fmtN(s.amt)+'</div>'); });
+          act.buy.forEach(function(b){ actLines.push('<div style="font-size:9px;color:#15803d;line-height:1.5;overflow:hidden;white-space:nowrap;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#15803d;margin-right:3px;vertical-align:middle;"></span>'+b.cur+' '+fmtN(b.amt)+'</div>'); });
+          act.sell.forEach(function(s){ actLines.push('<div style="font-size:9px;color:#065f46;line-height:1.5;overflow:hidden;white-space:nowrap;"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#065f46;margin-right:3px;vertical-align:middle;"></span>'+s.cur+' '+fmtN(s.amt)+'</div>'); });
           if(actLines.length){
             cal+='<div style="background:#f0fdf4;border-radius:3px;padding:2px 3px;">'
               +'<div style="font-size:8px;color:#16a34a;font-weight:700;letter-spacing:.03em;">實際</div>'
