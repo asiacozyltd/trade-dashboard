@@ -612,19 +612,44 @@ var CU=loadU(),curUser=null,rows=[],filtered=[],logs=[];
 var dailyChart=null;
 
 var F={
-  time:'時間戳記',email:'電子郵件地址',staff:'業務名稱',type:'案件屬性',name:'案件名稱',
-  supp:'供應商名稱（賣方）',buyer:'客戶名稱（買方）',
-  buyCur:'採購幣別',buyAmt:'應付總金額',buyDate:'預計付款日期',buyPay:'付款條件',
-  buyRem:'備註（採購）',buyCon:'合約 [賣方合約（採購）]',
-  sellCur:'銷售幣別',sellAmt:'應收總金額',sellDate:'預計收款日',sellPay:'收款條件',
-  sellRem:'備註（銷售）',sellCon:'合約 [買方合約（銷售）]',
-  asst:'承辦業助',profit:'預估毛利潤',trade:'貿易條件',
-  etd:'ETD/卸魚日',eta:'ETA/到貨日',
-  origin:'出貨地/發貨港口/出貨地點',dest:'目的地/收貨港口/收貨地點',
-  extra:'其他費用',freight:'運費',tax:'規費',insure:'保險費',comm:'佣金',
-  status:'老闆已同意',bossNote:'老闆是否有先同意採購',
-  signTime:'簽屬時間',formId:'表單編號',
-  acct:'會計審核',acctNote:'會計審核備註'
+  time:        '時間戳記',
+  email:       '電子郵件地址',
+  staff:       '業務名稱',
+  type:        '案件屬性',
+  name:        '案件名稱',
+  supp:        '供應商名稱（賣方）',
+  buyCur:      '採購幣別',
+  buyAmt:      '應付總金額',
+  buyDate:     '預計付款日期',
+  buyPay:      '付款條件',
+  buyRem:      '備註（採購）',
+  hasBuyer:    '是否已有銷售對象',
+  buyer:       '客戶名稱（買方）',
+  sellCur:     '銷售幣別',
+  sellAmt:     '應收總金額',
+  sellDate:    '預計收款日',
+  sellPay:     '收款條件',
+  sellRem:     '備註（銷售）',
+  asst:        '承辦業助',
+  profit:      '預估毛利潤',
+  buyCon:      '合約 [賣方合約（採購）]',
+  sellCon:     '合約 [買方合約（銷售）]',
+  trade:       '貿易條件',
+  etd:         'ETD/卸魚日',
+  eta:         'ETA/到貨日',
+  origin:      '出貨地/發貨港口/出貨地點',
+  dest:        '目的地/收貨港口/收貨地點',
+  extra:       '其他費用',
+  freight:     '運費',
+  tax:         '規費',
+  insure:      '保險費',
+  comm:        '佣金',
+  status:      '老闆已同意',
+  bossNote:    '老闆是否有先同意採購',
+  signTime:    '簽屬時間',
+  formId:      '表單編號',
+  sellCostAmt: '銷售成本金額',
+  sellCostCur: '銷售成本幣別',
 };
 function g(r,k){return(r[F[k]]||'').toString().trim();}
 function pf(v){return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0;}
@@ -1273,65 +1298,76 @@ function showD(rowNum){
 
   var m=calcMargin(r);
   var h='';
+  var caseType3 = g(r,F.type)||'';
+  var isPurchOnly3 = caseType3==='採購';
+  var isSellOnly3  = caseType3==='銷售';
 
   // 採購
-  h+='<div class="dsec"><div class="dsec-t tb">　採購（賣方）</div><div class="dgrid">'
-    +dr('供應商',g(r,'supp'))+dr('採購幣別',g(r,'buyCur'))
-    +dr('應付總金額',fmtAmt(g(r,'buyAmt'),g(r,'buyCur')))+dr('折合NTD','NT$'+fmtN(m.buyNTD))
-    +dr('預計付款日',g(r,'buyDate'))+dr('付款條件',g(r,'buyPay'))
-    +dr('賣方合約',g(r,'buyCon'))
-    +(cv(g(r,'buyRem'))?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:#7f1d1d;">'+g(r,'buyRem')+'</div></div>':'')
-    +'</div></div>';
+  if(isPurchOnly3 || caseType3==='採購+銷售(三角貿易)'){
+    h+='<div class="dsec"><div class="dsec-t tb">　採購（賣方）</div><div class="dgrid">'
+      +dr('供應商',     g(r,F.supp))
+      +dr('採購幣別',   g(r,F.buyCur))
+      +dr('應付總金額', fmtAmt(g(r,F.buyAmt),g(r,F.buyCur)))
+      +dr('折合NTD',   'NT$'+fmtN(m.buyNTD))
+      +dr('預計付款日', g(r,F.buyDate))
+      +dr('付款條件',   g(r,F.buyPay))
+      +dr('賣方合約',   g(r,F.buyCon))
+      +(cv(g(r,F.buyRem))?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:#7f1d1d;">'+g(r,F.buyRem)+'</div></div>':'')
+      +'</div></div>';
+  }
 
   // 銷售
-  h+='<div class="dsec"><div class="dsec-t ts">　銷售（買方）</div><div class="dgrid">'
-    +dr('客戶名稱',g(r,'buyer'))+dr('銷售幣別',g(r,'sellCur'))
-    +dr('應收總金額',fmtAmt(g(r,'sellAmt'),g(r,'sellCur')))+dr('折合NTD','NT$'+fmtN(m.sellNTD))
-    +dr('預計收款日',g(r,'sellDate'))+dr('收款條件',g(r,'sellPay'))
-    +dr('買方合約',g(r,'sellCon'))
-    +(cv(g(r,'sellRem'))?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:#14532d;">'+g(r,'sellRem')+'</div></div>':'')
-    +'</div></div>';
+  if(isSellOnly3 || caseType3==='採購+銷售(三角貿易)'){
+    h+='<div class="dsec"><div class="dsec-t ts">　銷售（買方）</div><div class="dgrid">'
+      +dr('客戶名稱',   g(r,F.buyer))
+      +dr('銷售幣別',   g(r,F.sellCur))
+      +dr('應收總金額', fmtAmt(g(r,F.sellAmt),g(r,F.sellCur)))
+      +dr('折合NTD',   'NT$'+fmtN(m.sellNTD))
+      +dr('預計收款日', g(r,F.sellDate))
+      +dr('收款條件',   g(r,F.sellPay))
+      +dr('買方合約',   g(r,F.sellCon))
+      +(isSellOnly3 && m.buyNTD>0?dr('銷售成本',g(r,F.sellCostCur)+' '+fmtN(g(r,F.sellCostAmt))):'')
+      +(cv(g(r,F.sellRem))?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:#14532d;">'+g(r,F.sellRem)+'</div></div>':'')
+      +'</div></div>';
+  }
 
-  // 物流
-  h+='<div class="dsec"><div class="dsec-t tsh">　物流 / 貿易</div><div class="dgrid">'
-    +dr('貿易條件',g(r,'trade'))+dr('案件屬性',g(r,'type'))
-    +dr('ETD',g(r,'etd'))+dr('ETA',g(r,'eta'))
-    +dr('出貨地',g(r,'origin'))+dr('目的地',g(r,'dest'))
-    +dr('運費',g(r,'freight')?'NT$'+fmtN(pf(g(r,'freight'))):'')+dr('保險費',g(r,'insure')?'NT$'+fmtN(pf(g(r,'insure'))):'')
-    +dr('規費',g(r,'tax')?'NT$'+fmtN(pf(g(r,'tax'))):'')+dr('佣金',g(r,'comm')?'NT$'+fmtN(pf(g(r,'comm'))):'')
-    +dr('其他費用',g(r,'extra')?'NT$'+fmtN(pf(g(r,'extra'))):'')
+  // 物流/貿易
+  h+='<div class="dsec"><div class="dsec-t">　物流 / 貿易</div><div class="dgrid">'
+    +dr('案件屬性', g(r,F.type))
+    +dr('運費',     fmtAmt(g(r,F.freight),'TWD'))
+    +dr('保險費',   fmtAmt(g(r,F.insure),'TWD'))
+    +dr('規費',     fmtAmt(g(r,F.tax),'TWD'))
+    +dr('佣金',     fmtAmt(g(r,F.comm),'TWD'))
+    +dr('其他費用', fmtAmt(g(r,F.extra),'TWD'))
+    +dr('貿易條件', g(r,F.trade))
+    +dr('ETD/卸魚日',g(r,F.etd))
+    +dr('ETA/到貨日',g(r,F.eta))
+    +dr('出貨地',   g(r,F.origin))
+    +dr('目的地',   g(r,F.dest))
+    +dr('承辦業助', g(r,F.asst))
     +'</div></div>';
-
-  // 老闆指示
-  if(cv(g(r,'bossNote')))
-    h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;"><b style="color:#92400e;">👑 老闆指示：</b><span style="color:#78350f;">'+g(r,'bossNote')+'</span></div>';
-  if(cv(g(r,'acct')))
-    h+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;"><b style="color:#14532d;">💰 會計：</b>'+g(r,'acct')+(cv(g(r,'acctNote'))?' — '+g(r,'acctNote'):'')+'</div>';
 
   // 毛利
-  var cType2 = g(r,F.type)||'';
-  var isPurchOnly = cType2==='採購';
-  var isSellOnly2 = cType2==='銷售';
-  var sellCostAmt2 = pf(g(r,F.sellCostAmt)||g(r,'銷售成本金額'));
-  var sellCostCur2 = g(r,F.sellCostCur)||g(r,'銷售成本幣別')||'TWD';
-  var pColor = m.profitNTD>=0?'var(--jade)':'var(--coral)';
-  var pBg    = m.profitNTD>=0?'#f0fdf4':'#fef2f2';
-  h+='<div class="pbar" style="background:'+pBg+';">';
-  if(isSellOnly2 && sellCostAmt2>0){
+  var pColor3 = m.profitNTD>=0?'var(--jade)':'var(--coral)';
+  var pBg3    = m.profitNTD>=0?'#f0fdf4':'#fef2f2';
+  var costAmt3= parseFloat(g(r,F.sellCostAmt))||0;
+  var costCur3= g(r,F.sellCostCur)||'TWD';
+  h+='<div class="pbar" style="background:'+pBg3+';">';
+  if(isSellOnly3 && costAmt3>0){
     h+='<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">'
-      +'<span style="color:var(--muted);">銷售成本（'+sellCostCur2+'）</span>'
-      +'<span style="color:var(--coral);font-weight:700;">'+sellCostCur2+' '+fmtN(sellCostAmt2)+'</span>'
+      +'<span style="color:var(--muted);">銷售成本（'+costCur3+'）</span>'
+      +'<span style="color:var(--coral);font-weight:700;">'+costCur3+' '+fmtN(costAmt3)+'</span>'
       +'</div>';
   }
-  if(isPurchOnly){
+  if(isPurchOnly3){
     h+='<span style="font-size:12px;color:var(--muted);font-weight:700;">預估毛利潤（純採購案件）</span>'
       +'<div style="text-align:right;">'
       +'<span style="font-size:18px;font-weight:700;color:var(--muted);font-family:monospace;">NT$0</span>'
       +'</div>';
   } else {
-    h+='<span style="font-size:12px;color:'+pColor+';font-weight:700;">預估毛利潤（NTD）</span>'
+    h+='<span style="font-size:12px;color:'+pColor3+';font-weight:700;">預估毛利潤（NTD）</span>'
       +'<div style="text-align:right;">'
-      +'<span style="font-size:18px;font-weight:700;color:'+pColor+';font-family:monospace;">NT$'+fmtN(m.profitNTD)+'</span>'
+      +'<span style="font-size:18px;font-weight:700;color:'+pColor3+';font-family:monospace;">NT$'+fmtN(m.profitNTD)+'</span>'
       +'<span style="font-size:12px;color:var(--muted);margin-left:6px;">'+m.margin+'%</span>'
       +'</div>';
   }
@@ -1506,14 +1542,14 @@ function notifyBossEdit(r, editorName, changes){
     formId:    formId,
     editor:    editorName,
     changes:   changes.join(' / '),
-    staff:     g(r,'staff'),
-    buyAmt:    g(r,'buyAmt'),
-    buyCur:    g(r,'buyCur'),
-    sellAmt:   g(r,'sellAmt'),
-    sellCur:   g(r,'sellCur'),
-    buyDate:   g(r,'buyDate'),
-    sellDate:  g(r,'sellDate'),
-    profit:    g(r,'profit'),
+    staff:     g(r,F.staff),
+    buyAmt:    g(r,F.buyAmt),
+    buyCur:    g(r,F.buyCur),
+    sellAmt:   g(r,F.sellAmt),
+    sellCur:   g(r,F.sellCur),
+    buyDate:   g(r,F.buyDate),
+    sellDate:  g(r,F.sellDate),
+    profit:    g(r,F.profit),
   };
   fetch(SCRIPT,{
     method:'POST',
@@ -1528,13 +1564,14 @@ function doEdit(rowNum){
   if(btn){btn.disabled=true;btn.textContent='儲存中...';}
   var map=[
     ['e-staff-','業務名稱'],['e-type-','案件屬性'],['e-name-','案件名稱'],['e-asst-','承辦業助'],
-    ['e-supp-','供應商名稱（賣方）'],['e-buycur-','採購幣別'],['e-buyamt-','應付總金額'],
-    ['e-buydate-','預計付款日期'],['e-buyer-','客戶名稱（買方）'],['e-sellcur-','銷售幣別'],
-    ['e-sellamt-','應收總金額'],['e-selldate-','預計收款日'],['e-trade-','貿易條件'],
-    ['e-etd-','ETD/卸魚日'],['e-eta-','ETA/到貨日'],['e-origin-','出貨地/發貨港口/出貨地點'],
-    ['e-dest-','目的地/收貨港口/收貨地點'],['e-freight-','運費'],['e-insure-','保險費'],
-    ['e-tax-','規費'],['e-comm-','佣金'],['e-extra-','其他費用'],['e-profit-','預估毛利潤'],
-    ['e-buyrem-','備註（採購）'],['e-sellrem-','備註（銷售）'],
+    ['e-supp-',   F.supp],   ['e-buycur-', F.buyCur], ['e-buyamt-',  F.buyAmt],
+    ['e-buydate-',F.buyDate],['e-buyer-',  F.buyer],  ['e-sellcur-', F.sellCur],
+    ['e-sellamt-',F.sellAmt],['e-selldate-',F.sellDate],['e-trade-', F.trade],
+    ['e-etd-',    F.etd],    ['e-eta-',    F.eta],    ['e-origin-',  F.origin],
+    ['e-dest-',   F.dest],   ['e-freight-',F.freight],['e-insure-',  F.insure],
+    ['e-tax-',    F.tax],    ['e-comm-',   F.comm],   ['e-extra-',   F.extra],
+    ['e-profit-', F.profit], ['e-buyrem-', F.buyRem], ['e-sellrem-', F.sellRem],
+    ['e-buypay-', F.buyPay], ['e-sellpay-',F.sellPay],
   ];
   var fields={};
   var r=rows.find(function(x){return x._row===rowNum;});
