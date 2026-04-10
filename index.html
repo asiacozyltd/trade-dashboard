@@ -1303,7 +1303,7 @@ function showD(rowNum){
   var isSellOnly3  = caseType3==='銷售';
 
   // 採購
-  if(isPurchOnly3 || caseType3==='採購+銷售(三角貿易)'){
+  if(!isSellOnly3){
     h+='<div class="dsec"><div class="dsec-t tb">　採購（賣方）</div><div class="dgrid">'
       +dr('供應商',     g(r,F.supp))
       +dr('採購幣別',   g(r,F.buyCur))
@@ -1317,7 +1317,7 @@ function showD(rowNum){
   }
 
   // 銷售
-  if(isSellOnly3 || caseType3==='採購+銷售(三角貿易)'){
+  if(!isPurchOnly3){
     h+='<div class="dsec"><div class="dsec-t ts">　銷售（買方）</div><div class="dgrid">'
       +dr('客戶名稱',   g(r,F.buyer))
       +dr('銷售幣別',   g(r,F.sellCur))
