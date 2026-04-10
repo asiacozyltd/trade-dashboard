@@ -217,6 +217,23 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <textarea id="sell-note" placeholder="銷售相關補充說明..."></textarea>
     </div>
     </div><!-- end sell-sec -->
+
+    <!-- 銷售單純案件：成本費用（用於計算毛利率） -->
+    <div id="sell-cost-sec" style="display:none;">
+      <div class="sec-div" style="color:#7c3aed;">成本費用（銷售案件毛利計算用）</div>
+      <div id="sell-cost-inner">
+        <div class="field">
+          <div class="lbl">採購成本 <span class="req">*</span></div>
+          <div class="aw">
+            <select class="cs" id="sell-buy-cur" onchange="calcProfit()">
+              <option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option>
+            </select>
+            <input type="number" class="ai" id="sell-buy-amt" min="0" step="any"
+              inputmode="numeric" placeholder="填入採購成本金額" oninput="calcProfit()">
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- 毛利試算 -->
     <div class="cb">
       <div class="cb-t">預估毛利試算（含費用將在下一頁更新）</div>
@@ -475,20 +492,22 @@ function selR(group,val,el){
 }
 
 function updateSections(tp){
-  const needBuy  = tp==='採購' || tp==='採購+銷售(三角貿易)';
-  const needSell = tp==='銷售' || tp==='採購+銷售(三角貿易)';
-  const buyEl    = document.getElementById('buy-sec');
-  const buyT     = document.getElementById('buy-sec-title');
-  const sellEl   = document.getElementById('sell-sec');
-  const sellT    = document.getElementById('sell-sec-title');
-  if(buyEl){
-    buyEl.style.display  = needBuy  ? '' : 'none';
-    buyT.style.display   = needBuy  ? '' : 'none';
-  }
-  if(sellEl){
-    sellEl.style.display = needSell ? '' : 'none';
-    sellT.style.display  = needSell ? '' : 'none';
-  }
+  var needBuy  = tp==='採購' || tp==='採購+銷售(三角貿易)';
+  var needSell = tp==='銷售' || tp==='採購+銷售(三角貿易)';
+  var isSellOnly = tp==='銷售';
+  var buyEl  = document.getElementById('buy-sec');
+  var buyT   = document.getElementById('buy-sec-title');
+  var sellEl = document.getElementById('sell-sec');
+  var sellT  = document.getElementById('sell-sec-title');
+  if(buyEl){ buyEl.style.display=needBuy?'':'none'; buyT.style.display=needBuy?'':'none'; }
+  if(sellEl){ sellEl.style.display=needSell?'':'none'; sellT.style.display=needSell?'':'none'; }
+
+  // 銷售單純案件：顯示成本費用欄位（讓業務填成本）
+  var costSec = document.getElementById('sell-cost-sec');
+  if(costSec) costSec.style.display = isSellOnly ? '' : 'none';
+
+  // 重新計算毛利率
+  setTimeout(calcProfit, 50);
 }
 
 // ── 費用加總 ──
@@ -500,27 +519,66 @@ function calcCostTotal(){
 
 // ── 毛利計算 ──
 function calcProfit(){
-  const bA=numV('buy-amt'), sA=numV('sell-amt');
-  const bC=v('buy-cur')||'TWD', sC=v('sell-cur')||'USD';
-  const fees=calcCostTotal();
-  if(!bA||!sA) return;
-  const bN=bA*(RATE[bC]||1), sN=sA*(RATE[sC]||1);
-  const p=sN-bN-fees;
-  // Page 2 preview
-  document.getElementById('c-cost').textContent='NTD '+fmt(bN);
-  document.getElementById('c-rev').textContent='NTD '+fmt(sN);
-  const el=document.getElementById('c-profit');
-  el.textContent='NTD '+fmt(sN-bN); // page2 不含費用
-  el.style.color=(sN-bN)>=0?'#0284c7':'#dc2626';
-  // Page 3 final
-  document.getElementById('c-cost2').textContent='NTD '+fmt(bN);
-  document.getElementById('c-rev2').textContent='NTD '+fmt(sN);
-  document.getElementById('c-fees').textContent='NTD '+fmt(fees);
-  const el2=document.getElementById('c-profit2');
-  el2.textContent='NTD '+fmt(p);
-  el2.style.color=p>=0?'#0284c7':'#dc2626';
-}
+  var caseType = fd.type || '';
+  var isPurchaseOnly = caseType==='採購';
+  var isSellOnly = caseType==='銷售';
 
+  // 從分期計算總金額
+  var buyPeriods  = (typeof getPeriods==='function') ? getPeriods('buy')  : [];
+  var sellPeriods = (typeof getPeriods==='function') ? getPeriods('sell') : [];
+  var bC = buyPeriods.length  ? buyPeriods[0].cur  : (v('buy-cur')||'TWD');
+  var sC = sellPeriods.length ? sellPeriods[0].cur : (v('sell-cur')||'USD');
+  var bA = buyPeriods.reduce(function(s,p){ return s+(p.cur===bC?parseFloat(p.amt)||0:0); },0);
+  var sA = sellPeriods.reduce(function(s,p){ return s+(p.cur===sC?parseFloat(p.amt)||0:0); },0);
+
+  // 純銷售案件：成本從 sell-cost-sec 欄位讀取
+  if(isSellOnly && !bA){
+    var sbC = v('sell-buy-cur')||'TWD';
+    var sbEl = document.getElementById('sell-buy-amt');
+    var sbA  = sbEl ? parseFloat(sbEl.value)||0 : 0;
+    if(sbA>0){ bC=sbC; bA=sbA; }
+  }
+
+  var fees = calcCostTotal();
+  var bN = bA*(RATE[bC]||1);
+  var sN = sA*(RATE[sC]||1);
+  var p  = sN - bN - fees;
+
+  // 採購單純案件：毛利率 = 0
+  if(isPurchaseOnly){
+    var c2=document.getElementById('c-cost2');
+    var r2=document.getElementById('c-rev2');
+    var f2=document.getElementById('c-fees');
+    var p2=document.getElementById('c-profit2');
+    var el=document.getElementById('c-profit');
+    if(c2)c2.textContent='NTD '+fmt(bN);
+    if(r2)r2.textContent='—';
+    if(f2)f2.textContent='NTD '+fmt(fees);
+    if(p2){p2.textContent='NTD 0（純採購案件）';p2.style.color='#64748b';}
+    if(el){el.textContent='NTD 0（純採購案件）';el.style.color='#64748b';}
+    return;
+  }
+
+  // 銷售 or 三角貿易：正常計算毛利率
+  var pRate = sN>0 ? Math.round((p/sN)*1000)/10 : 0;
+  var cc=document.getElementById('c-cost');
+  var cr=document.getElementById('c-rev');
+  var cel=document.getElementById('c-profit');
+  if(cc)cc.textContent='NTD '+fmt(bN);
+  if(cr)cr.textContent='NTD '+fmt(sN);
+  if(cel){cel.textContent='NTD '+fmt(sN-bN);cel.style.color=(sN-bN)>=0?'#0284c7':'#dc2626';}
+  var c2=document.getElementById('c-cost2');
+  var r2=document.getElementById('c-rev2');
+  var f2=document.getElementById('c-fees');
+  var p2=document.getElementById('c-profit2');
+  if(c2)c2.textContent='NTD '+fmt(bN);
+  if(r2)r2.textContent='NTD '+fmt(sN);
+  if(f2)f2.textContent='NTD '+fmt(fees);
+  if(p2){
+    p2.textContent='NTD '+fmt(p)+' （毛利率 '+pRate+'%）';
+    p2.style.color=p>=0?'#0284c7':'#dc2626';
+  }
+}
 // ── 收集資料 ──
 function collect(n){
   if(n===1){
@@ -537,6 +595,14 @@ function collect(n){
     fd.sellNote  = v('sell-note');
     fd.buyPeriods  = getPeriods('buy');
     fd.sellPeriods = getPeriods('sell');
+    // 純銷售案件：從成本欄位讀取
+    if((fd.type||'')==='銷售' && !fd.buyPeriods.length){
+      var sbC = v('sell-buy-cur')||'TWD';
+      var sbA = parseFloat(document.getElementById('sell-buy-amt')?document.getElementById('sell-buy-amt').value:0)||0;
+      if(sbA>0){
+        fd.buyPeriods=[{n:1,name:'成本',amt:sbA,cur:sbC,date:fd.sellPeriods[0]?fd.sellPeriods[0].date:'',note:''}];
+      }
+    }
     // 代表值（主表用第一期）
     fd.buyCur  = fd.buyPeriods.length  ? fd.buyPeriods[0].cur  : 'TWD';
     fd.buyAmt  = fd.buyPeriods.reduce(function(s,p){ return s+(p.cur===fd.buyCur?parseFloat(p.amt)||0:0); },0);
