@@ -1418,9 +1418,9 @@ function doApp(rowNum,status){
 function doAccountingConfirm(rowNum){
   var r=rows.find(function(x){return x._row===rowNum;});
   if(!r){ toast('找不到案件','#dc2626'); return; }
-  var formId   = g(r,'formId');
-  var caseName = g(r,'name');
-  var staff    = g(r,'staff');
+  var formId   = g(r,F.formId)||g(r,'表單編號')||'';
+  var caseName = g(r,F.name)||'';
+  var staff    = g(r,F.staff)||'';
   // 從 Payments 查是否已有資料（重複確認防呆）
   toast('轉入款項中...','#0369a1');
   fetch(SCRIPT,{
@@ -1451,13 +1451,13 @@ function doAccountingConfirm(rowNum){
 // 從案件列資料建立 periods
 function buildPeriodsFromRow(r){
   var periods=[];
-  var buyCur=(g(r,'buyCur')||'TWD').toUpperCase();
-  var buyAmt=parseFloat(g(r,'buyAmt'))||0;
-  var buyDate=g(r,'buyDate')||'';
-  var sellCur=(g(r,'sellCur')||'TWD').toUpperCase();
-  var sellAmt=parseFloat(g(r,'sellAmt'))||0;
-  var sellDate=g(r,'sellDate')||'';
-  if(buyAmt>0)  periods.push({type:'採購',name:'付款',cur:buyCur,amt:buyAmt,date:buyDate,note:''});
+  var buyCur  = (g(r,F.buyCur) ||'TWD').toUpperCase();
+  var buyAmt  = parseFloat(g(r,F.buyAmt)) ||0;
+  var buyDate = g(r,F.buyDate) ||'';
+  var sellCur = (g(r,F.sellCur)||'TWD').toUpperCase();
+  var sellAmt = parseFloat(g(r,F.sellAmt))||0;
+  var sellDate= g(r,F.sellDate)||'';
+  if(buyAmt>0)  periods.push({type:'採購',name:'付款',cur:buyCur, amt:buyAmt, date:buyDate, note:''});
   if(sellAmt>0) periods.push({type:'銷售',name:'收款',cur:sellCur,amt:sellAmt,date:sellDate,note:''});
   return periods;
 }
@@ -1465,8 +1465,8 @@ function buildPeriodsFromRow(r){
 // 通知老闆：案件被修改
 function notifyBossEdit(r, editorName, changes){
   if(!r) return;
-  var caseName = g(r,'name');
-  var formId   = g(r,'formId');
+  var caseName = g(r,F.name)||'';
+  var formId   = g(r,F.formId)||g(r,'表單編號')||'';
   var payload  = {
     action:    'notifyEdit',
     caseName:  caseName,
@@ -1848,10 +1848,15 @@ function renderPayments(){
   // ── 待轉入 Payments（已簽核但未轉入）──────────────────
   var payFormIds = allPayments.map(function(p){ return p['表單編號']; });
   var pendingApproved = rows.filter(function(r){
-    var status = g(r,'status')||g(r,'老闆已同意')||'';
+    // 使用正確欄位名稱（F.status = '老闆已同意'）
+    var status = g(r,F.status)||'';
+    var acct   = g(r,F.acct)||'';
     var approved = status==='是'||status.indexOf('同意')>=0;
-    var alreadyIn = payFormIds.indexOf(g(r,'formId'))>=0;
-    return approved && !alreadyIn && g(r,'formId');
+    // 會計已確認就不再顯示
+    var acctDone = acct==='是';
+    var formId   = g(r,F.formId)||g(r,'表單編號')||'';
+    var alreadyIn = payFormIds.indexOf(formId)>=0;
+    return approved && !acctDone && !alreadyIn && formId;
   });
 
   var pendingEl = document.getElementById('pay-pending');
@@ -1865,15 +1870,15 @@ function renderPayments(){
         +'<div style="font-size:12px;color:#78350f;margin-bottom:10px;">老闆已同意，請確認後轉入 Payments 分頁</div>'
         + pendingApproved.map(function(r){
           var rowNum   = r._row;
-          var caseName = g(r,'name');
-          var formId   = g(r,'formId');
-          var staff    = g(r,'staff');
-          var buyCur   = (g(r,'buyCur')||'TWD').toUpperCase();
-          var buyAmt   = parseFloat(g(r,'buyAmt'))||0;
-          var buyDate  = g(r,'buyDate')||'—';
-          var sellCur  = (g(r,'sellCur')||'TWD').toUpperCase();
-          var sellAmt  = parseFloat(g(r,'sellAmt'))||0;
-          var sellDate = g(r,'sellDate')||'—';
+          var caseName = g(r,F.name)||'';
+          var formId   = g(r,F.formId)||g(r,'表單編號')||'';
+          var staff    = g(r,F.staff)||'';
+          var buyCur   = (g(r,F.buyCur)||'TWD').toUpperCase();
+          var buyAmt   = parseFloat(g(r,F.buyAmt))||0;
+          var buyDate  = g(r,F.buyDate)||'—';
+          var sellCur  = (g(r,F.sellCur)||'TWD').toUpperCase();
+          var sellAmt  = parseFloat(g(r,F.sellAmt))||0;
+          var sellDate = g(r,F.sellDate)||'—';
           return '<div style="background:#fff;border:0.5px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
             +'<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:4px;">'+caseName+'</div>'
             +'<div style="font-size:11px;color:#64748b;margin-bottom:8px;">'+formId+' · '+staff+'</div>'
