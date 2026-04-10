@@ -711,6 +711,8 @@ function buildNav(){
     ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件總表'},{i:'daily',l:'📅 每日彙整'},{i:'log',l:'🔍 Log'},{i:'admin',l:'⚙️ 後台'}]
     :role==='staff'
     ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 我的案件'},{i:'profile',l:'🔑 我的帳號'}]
+    :role==='finance'
+    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'payments',l:'💳 款項管理'},{i:'daily',l:'📅 每日彙整'},{i:'log',l:'🔍 Log'}]
     :[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'daily',l:'📅 每日彙整'},{i:'log',l:'🔍 Log'}];
   document.getElementById('ntabs').innerHTML=tabs.map(function(t){
     return '<div class="nav-tab'+(t.i==='dash'?' on':'')+'" id="nt-'+t.i+'" data-tabid="'+t.i+'" onclick="goTabEl(this)">'
