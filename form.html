@@ -724,7 +724,9 @@ async function submitForm(){
     tax:       fd.tax||0,            // AD
     insure:    fd.insure||0,         // AE
     comm:      fd.comm||0,           // AF
-    formId:    fd.formId,
+    formId:      fd.formId,
+    sellCostAmt: fd.sellCostAmt||0,   // 銷售案件成本（僅用於毛利計算）
+    sellCostCur: fd.sellCostCur||'TWD',
     // 分期付款資料
     periods:   (fd.buyPeriods||[]).map(function(p){return Object.assign({type:'採購'},p);})
                .concat((fd.sellPeriods||[]).map(function(p){return Object.assign({type:'銷售'},p);})),

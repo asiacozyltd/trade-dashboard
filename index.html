@@ -635,9 +635,18 @@ function isAppr(r){var s=g(r,'status');return s==='是'||s.includes('同意');}
 // ★ 修正毛利率計算：統一轉 NTD 再計算
 function calcNTD(amt, cur){ return pf(amt)*(RATE[cur.toUpperCase()]||1); }
 function calcMargin(r){
-  var buyNTD  = calcNTD(g(r,'buyAmt'),  g(r,'buyCur')||'TWD');
-  var sellNTD = calcNTD(g(r,'sellAmt'), g(r,'sellCur')||'TWD');
+  var caseType = g(r,F.type)||'';
+  var buyNTD   = calcNTD(g(r,F.buyAmt),  g(r,F.buyCur) ||'TWD');
+  var sellNTD  = calcNTD(g(r,F.sellAmt), g(r,F.sellCur)||'TWD');
+  // 純銷售案件：buyNTD 改用獨立成本欄位
+  if(caseType==='銷售' && buyNTD===0){
+    var costAmt = pf(g(r,F.sellCostAmt)||g(r,'銷售成本金額'));
+    var costCur = g(r,F.sellCostCur)||g(r,'銷售成本幣別')||'TWD';
+    buyNTD = calcNTD(costAmt, costCur);
+  }
   var fees = pf(g(r,'extra'))+pf(g(r,'freight'))+pf(g(r,'tax'))+pf(g(r,'insure'))+pf(g(r,'comm'));
+  // 純採購：毛利=0
+  if(caseType==='採購'){ return {buyNTD:buyNTD,sellNTD:0,profitNTD:0,margin:'0.0'}; }
   var profitNTD = sellNTD - buyNTD - fees;
   var margin = sellNTD>0 ? (profitNTD/sellNTD*100).toFixed(1) : '—';
   return {buyNTD:buyNTD,sellNTD:sellNTD,profitNTD:profitNTD,margin:margin};
@@ -1300,11 +1309,33 @@ function showD(rowNum){
     h+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;"><b style="color:#14532d;">💰 會計：</b>'+g(r,'acct')+(cv(g(r,'acctNote'))?' — '+g(r,'acctNote'):'')+'</div>';
 
   // 毛利
-  h+='<div class="pbar"><span style="font-size:12px;color:var(--jade);font-weight:700;">預估毛利潤（NTD）</span>'
-    +'<div style="text-align:right;">'
-    +'<span style="font-size:18px;font-weight:700;color:'+(m.profitNTD>=0?'var(--jade)':'var(--coral)')+';font-family:monospace;">NT$'+fmtN(m.profitNTD)+'</span>'
-    +'<span style="font-size:12px;color:var(--muted);margin-left:6px;">'+m.margin+'%</span>'
-    +'</div></div>';
+  var cType2 = g(r,F.type)||'';
+  var isPurchOnly = cType2==='採購';
+  var isSellOnly2 = cType2==='銷售';
+  var sellCostAmt2 = pf(g(r,F.sellCostAmt)||g(r,'銷售成本金額'));
+  var sellCostCur2 = g(r,F.sellCostCur)||g(r,'銷售成本幣別')||'TWD';
+  var pColor = m.profitNTD>=0?'var(--jade)':'var(--coral)';
+  var pBg    = m.profitNTD>=0?'#f0fdf4':'#fef2f2';
+  h+='<div class="pbar" style="background:'+pBg+';">';
+  if(isSellOnly2 && sellCostAmt2>0){
+    h+='<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">'
+      +'<span style="color:var(--muted);">銷售成本（'+sellCostCur2+'）</span>'
+      +'<span style="color:var(--coral);font-weight:700;">'+sellCostCur2+' '+fmtN(sellCostAmt2)+'</span>'
+      +'</div>';
+  }
+  if(isPurchOnly){
+    h+='<span style="font-size:12px;color:var(--muted);font-weight:700;">預估毛利潤（純採購案件）</span>'
+      +'<div style="text-align:right;">'
+      +'<span style="font-size:18px;font-weight:700;color:var(--muted);font-family:monospace;">NT$0</span>'
+      +'</div>';
+  } else {
+    h+='<span style="font-size:12px;color:'+pColor+';font-weight:700;">預估毛利潤（NTD）</span>'
+      +'<div style="text-align:right;">'
+      +'<span style="font-size:18px;font-weight:700;color:'+pColor+';font-family:monospace;">NT$'+fmtN(m.profitNTD)+'</span>'
+      +'<span style="font-size:12px;color:var(--muted);margin-left:6px;">'+m.margin+'%</span>'
+      +'</div>';
+  }
+  h+='</div>';
 
   // 董事長簽核區
   if(curUser&&(curUser.role==='boss'||curUser.role==='admin')&&isPend(r)){
