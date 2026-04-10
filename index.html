@@ -2024,7 +2024,15 @@ function goTab(id){
   if(t)t.classList.add('on');
   if(id==='admin')renderAdmin();
   if(id==='log')renderLog();
-  if(id==='daily'){renderDaily();if(allPayments.length===0)loadPayments();}
+  if(id==='daily'){
+    if(PAYMENTS_CACHE.length===0||ACTUAL_PAYMENTS_CACHE.length===0){
+      loadPayments(function(){
+        loadActualPayments(renderDaily);
+      });
+    } else {
+      renderDaily();
+    }
+  }
   if(id==='profile')initProfile();
   if(id==='payments'){loadPayments();}
   if(id==='records'){document.getElementById('rc').textContent='共 '+filtered.length+' 筆';renderCards(filtered,'records-cards',true);}
