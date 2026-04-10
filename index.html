@@ -182,6 +182,23 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 .loading{display:flex;flex-direction:column;align-items:center;padding:60px 20px;gap:12px;color:var(--muted);font-size:13px;}
 .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:13px;}
 .eico{font-size:40px;display:block;margin-bottom:10px;opacity:.4;}
+.pay-filter-btn{padding:7px 14px;border-radius:20px;border:0.5px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+.pay-filter-btn.on{background:var(--sea);color:#fff;border-color:var(--sea);}
+.pay-card{background:var(--card);border:0.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+.pay-card.overdue{border-color:var(--coral);border-left:3px solid var(--coral);}
+.pay-card.done{opacity:.7;}
+.pay-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+.pay-case{font-size:13px;font-weight:700;color:var(--ink);}
+.pay-period{font-size:11px;color:var(--muted);margin-top:2px;}
+.pay-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
+.pay-cell{background:#f8fafc;border-radius:7px;padding:7px 10px;}
+.pay-cell-l{font-size:10px;color:var(--muted);margin-bottom:2px;}
+.pay-cell-v{font-size:12px;font-weight:700;font-family:'DM Mono',monospace;}
+.actual-input-row{display:flex;gap:8px;align-items:center;border-top:0.5px solid var(--border);padding-top:10px;}
+.actual-input-row input{flex:1;background:#f8fafc;border:1.5px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;outline:none;font-family:inherit;}
+.actual-input-row input:focus{border-color:var(--sea);}
+.btn-mark-paid{padding:8px 14px;border-radius:8px;background:var(--jade);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;}
+.btn-mark-unpaid{padding:8px 14px;border-radius:8px;background:#f1f5f9;color:var(--muted);font-size:12px;font-weight:700;border:0.5px solid var(--border);cursor:pointer;white-space:nowrap;}
 #toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.2);}
 #toast.show{opacity:1;}
 .sec-lbl{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
@@ -279,20 +296,34 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
     </div>
   </div>
 
+  <!-- 逾期明細 -->
+  <div id="daily-overdue" style="margin-bottom:16px;display:none;">
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;overflow:hidden;">
+      <div style="padding:12px 16px;border-bottom:1px solid #fca5a5;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:14px;font-weight:700;color:var(--coral);">⚠️ 逾期未付/收明細</span>
+      </div>
+      <div id="daily-overdue-list" style="padding:12px 16px;"></div>
+    </div>
+  </div>
+
   <!-- 月小計 -->
   <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
     <div style="padding:14px 20px;border-bottom:1px solid var(--border);">
       <div style="font-size:14px;font-weight:700;">本月原幣彙整</div>
       <div style="font-size:12px;color:var(--muted);margin-top:2px;">依幣別分別加總，顯示原始金額</div>
     </div>
-    <table style="width:100%;border-collapse:collapse;">
-      <thead><tr>
-        <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:left;">幣別</th>
-        <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--jade);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">應收合計</th>
-        <th style="padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--coral);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">應付合計</th>
-      </tr></thead>
-      <tbody id="summary-body"></tbody>
-    </table>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;min-width:500px;">
+        <thead><tr>
+          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:left;">幣別</th>
+          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--jade);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">預估應收</th>
+          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">實際已收</th>
+          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--coral);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">預估應付</th>
+          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">實際已付</th>
+        </tr></thead>
+        <tbody id="summary-body"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 <div class="scr" id="s-log">
@@ -332,6 +363,26 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
     </div>
   </div>
 </div>
+<div class="scr" id="s-payments">
+  <!-- 統計卡片 -->
+  <div class="sg" style="margin-bottom:16px;" id="pay-stats"></div>
+  <!-- 篩選 -->
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <button class="pay-filter-btn on" data-f="all"    onclick="filterPayments('all',this)">全部</button>
+    <button class="pay-filter-btn"    data-f="unpaid" onclick="filterPayments('unpaid',this)">未付款</button>
+    <button class="pay-filter-btn"    data-f="uncoll" onclick="filterPayments('uncoll',this)">未收款</button>
+    <button class="pay-filter-btn"    data-f="overdue"onclick="filterPayments('overdue',this)" style="color:var(--coral);">逾期</button>
+    <button class="pay-filter-btn"    data-f="done"   onclick="filterPayments('done',this)">已完成</button>
+  </div>
+  <!-- 款項列表 -->
+  <div id="pay-list"></div>
+  <!-- 逾期明細 -->
+  <div id="overdue-section" style="margin-top:20px;display:none;">
+    <div class="sec-lbl" style="color:var(--coral);margin-bottom:10px;">⚠️ 逾期未付/收明細</div>
+    <div id="overdue-list"></div>
+  </div>
+</div>
+
 <div class="scr" id="s-admin">
   <div class="asec"><div class="asec-t">⚙️ 系統帳號管理</div><div class="asec-s">修改各角色的顯示名稱與密碼，設定後立即生效。</div>
     <div class="ugrid" id="ug"></div></div>
@@ -396,6 +447,7 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 <script>
 var SCRIPT='https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
 var CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?gid=357150087&single=true&output=csv';
+var API_TOKEN='TradeDaiyu2026!@#'; // 需與 Apps Script CONFIG.API_SECRET 一致
 // ★ 匯率換算：預設值，啟動後自動從免費 API 更新
 var RATE={TWD:1,USD:30.5,JPY:0.205,EUR:33.5};
 
@@ -455,9 +507,30 @@ var DEFAULT_STAFF=[
 // 從 Sheets 載入的帳號（跨裝置同步）
 var CLOUD_ACCOUNTS = null;
 
+// 執行登入後初始化
+function doLogin(u){
+  curUser = u;
+  addLog('登入', u.name, '', '');
+  document.getElementById('L').style.display = 'none';
+  document.getElementById('A').style.display = 'block';
+  var bd = document.getElementById('rbdg');
+  var roleIco = u.role==='boss'?'👑 ':u.role==='admin'?'🔧 ':u.role==='finance'?'💰 ':'👤 ';
+  bd.textContent = roleIco + u.name;
+  bd.className = 'rbadge ' + (u.role==='boss'||u.role==='admin' ? 'rb1' : 'rb2');
+  document.getElementById('hsub').textContent =
+    u.role==='boss'    ? '董事長即時看板' :
+    u.role==='admin'   ? '管理員後台'     :
+    u.role==='finance' ? '財務放款管理'   : '業務員系統';
+  buildNav();
+  load();
+  fetchRates();
+  setInterval(load, 60000);
+  setInterval(fetchRates, 1800000);
+}
+
 // 載入雲端帳號（Apps Script Sheets）
 function fetchAccounts(callback){
-  fetch(SCRIPT+'?action=getAccounts&_='+Date.now())
+  fetch(SCRIPT+'?action=getAccounts&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok'&&d.accounts&&d.accounts.length>0){
@@ -550,34 +623,21 @@ function login(){
   var p    = document.getElementById('lpwd').value;
   var role = document.querySelector('.rtab.on').dataset.role;
   var btn  = document.querySelector('.lbtn');
+  if(!p){ document.getElementById('lerr').textContent='請輸入密碼'; return; }
   if(btn){ btn.disabled=true; btn.textContent='驗證中...'; }
-  // 先從雲端更新帳號再登入
+
+  // 先取得最新帳號，再本地比對
   fetchAccounts(function(){
+    if(btn){ btn.disabled=false; btn.textContent='登入'; }
     CU = loadU();
+    // 先用 role+pwd 找，找不到就只用 pwd 找
     var u = CU.find(function(x){ return x.role===role && x.pwd===p; });
     if(!u) u = CU.find(function(x){ return x.pwd===p; });
-    if(btn){ btn.disabled=false; btn.textContent='登入'; }
     if(u){
-      curUser = u;
-      addLog('登入', u.name, '', '');
-      document.getElementById('L').style.display = 'none';
-      document.getElementById('A').style.display = 'block';
-      var bd = document.getElementById('rbdg');
-      var roleIco = u.role==='boss'?'👑 ':u.role==='admin'?'🔧 ':u.role==='finance'?'💰 ':'👤 ';
-      bd.textContent = roleIco + u.name;
-      bd.className = 'rbadge ' + (u.role==='boss'||u.role==='admin' ? 'rb1' : 'rb2');
-      document.getElementById('hsub').textContent =
-        u.role==='boss'    ? '董事長即時看板' :
-        u.role==='admin'   ? '管理員後台'     :
-        u.role==='finance' ? '財務放款管理'   : '業務員系統';
-      buildNav();
-      load();
-      fetchRates();
-      setInterval(load, 60000);
-      setInterval(fetchRates, 1800000);
+      doLogin(u);
     } else {
-      document.getElementById('lerr').textContent = '密碼錯誤';
-      document.getElementById('lpwd').value = '';
+      document.getElementById('lerr').textContent='密碼錯誤';
+      document.getElementById('lpwd').value='';
     }
   });
 }
@@ -607,7 +667,7 @@ function buildNav(){
 // 資料讀取
 function load(){
   document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
-  fetch(SCRIPT+'?action=getData&_='+Date.now())
+  fetch(SCRIPT+'?action=getData&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok'&&d.rows&&d.rows.length>0){
@@ -780,167 +840,318 @@ function clearSearch(){
 
 // 每日彙整
 var viewYear  = new Date().getFullYear();
-var viewMonth = new Date().getMonth(); // 0-based
+var viewMonth = new Date().getMonth();
+var PAYMENTS_CACHE = [];        // 從 Payments 分頁載入（預估）
+var ACTUAL_PAYMENTS_CACHE = []; // 從外部財務試算表載入（實際）
+
+// 載入外部財務試算表實際付款
+function loadActualPayments(cb){
+  fetch(SCRIPT+'?action=getActualPayments&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==='ok') ACTUAL_PAYMENTS_CACHE = d.payments||[];
+      if(cb) cb();
+    })
+    .catch(function(){ if(cb) cb(); });
+}
 
 function changeMonth(delta){
   viewMonth += delta;
-  if(viewMonth > 11){ viewMonth = 0; viewYear++; }
-  if(viewMonth < 0) { viewMonth = 11; viewYear--; }
+  if(viewMonth > 11){ viewMonth=0; viewYear++; }
+  if(viewMonth < 0) { viewMonth=11; viewYear--; }
   renderDaily();
 }
 
+// 載入 Payments 分頁資料
+function loadPayments(cb){
+  fetch(SCRIPT+'?action=getAllPayments&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==='ok') PAYMENTS_CACHE=d.payments||[];
+      if(cb) cb();
+    })
+    .catch(function(){ if(cb) cb(); });
+}
+
 function renderDaily(){
-  var yr    = viewYear;
-  var mo    = viewMonth;
-  var moStr = (mo+1) < 10 ? '0'+(mo+1) : String(mo+1);
-  var prefix = yr+'/'+moStr;
+  var yr  = viewYear;
+  var mo  = viewMonth;
+  var moStr = (mo+1)<10?'0'+(mo+1):String(mo+1);
+  var prefix= yr+'/'+moStr;
   var today = new Date();
+  var todayDate = today.getDate();
+  var daysInMonth = new Date(yr,mo+1,0).getDate();
 
-  // 依「預計付款日」和「預計收款日」分配到日曆（原幣，不換算）
-  var map = {};
-  function addToMap(day, type, cur, amt){
-    if(!day || day<1 || day>daysInMonth) return;
-    if(!map[day]) map[day] = {sell:[],buy:[],rows:[]};
-    if(type==='buy' && amt>0){
-      var found=false;
-      map[day].buy.forEach(function(b){if(b.cur===cur){b.amt+=amt;found=true;}});
-      if(!found) map[day].buy.push({cur:cur,amt:amt});
-    }
-    if(type==='sell' && amt>0){
-      var found2=false;
-      map[day].sell.forEach(function(s){if(s.cur===cur){s.amt+=amt;found2=true;}});
-      if(!found2) map[day].sell.push({cur:cur,amt:amt});
-    }
+  // ── 建立預估 map（來自 FormResponses）──
+  var estMap={};
+  function addEst(day,type,cur,amt){
+    if(!day||day<1||day>daysInMonth)return;
+    if(!estMap[day])estMap[day]={buy:[],sell:[],rows:[]};
+    var list=type==='buy'?estMap[day].buy:estMap[day].sell;
+    var found=false;
+    list.forEach(function(i){if(i.cur===cur){i.amt+=amt;found=true;}});
+    if(!found)list.push({cur:cur,amt:amt});
   }
-
   rows.forEach(function(r){
-    var buyCur  = (g(r,'buyCur')||'TWD').toUpperCase();
-    var buyAmt  = pf(g(r,'buyAmt'));
-    var sellCur = (g(r,'sellCur')||'TWD').toUpperCase();
-    var sellAmt = pf(g(r,'sellAmt'));
-
-    // 預計付款日 → 應付欄
-    var buyDate = g(r,'buyDate'); // "yyyy/MM/dd" 或 "yyyy/M/d"
-    if(buyDate && buyAmt>0){
-      var bd = buyDate.replace(/\//g,'-');
-      var bdObj = new Date(bd);
-      if(!isNaN(bdObj) && bdObj.getFullYear()===yr && bdObj.getMonth()===mo){
-        var day = bdObj.getDate();
-        if(!map[day]) map[day] = {sell:[],buy:[],rows:[]};
-        addToMap(day,'buy',buyCur,buyAmt);
-        if(map[day].rows.indexOf(r._row)<0) map[day].rows.push(r._row);
+    var buyCur=(g(r,'buyCur')||'TWD').toUpperCase();
+    var buyAmt=pf(g(r,'buyAmt'));
+    var sellCur=(g(r,'sellCur')||'TWD').toUpperCase();
+    var sellAmt=pf(g(r,'sellAmt'));
+    var bd=(g(r,'buyDate')||'').replace(/\//g,'-');
+    var sd=(g(r,'sellDate')||'').replace(/\//g,'-');
+    if(bd&&buyAmt>0){
+      var bdObj=new Date(bd);
+      if(!isNaN(bdObj)&&bdObj.getFullYear()===yr&&bdObj.getMonth()===mo){
+        var day=bdObj.getDate();
+        addEst(day,'buy',buyCur,buyAmt);
+        if(!estMap[day])estMap[day]={buy:[],sell:[],rows:[]};
+        if(estMap[day].rows.indexOf(r._row)<0)estMap[day].rows.push(r._row);
       }
     }
-
-    // 預計收款日 → 應收欄
-    var sellDate = g(r,'sellDate');
-    if(sellDate && sellAmt>0){
-      var sd = sellDate.replace(/\//g,'-');
-      var sdObj = new Date(sd);
-      if(!isNaN(sdObj) && sdObj.getFullYear()===yr && sdObj.getMonth()===mo){
-        var day2 = sdObj.getDate();
-        if(!map[day2]) map[day2] = {sell:[],buy:[],rows:[]};
-        addToMap(day2,'sell',sellCur,sellAmt);
-        if(map[day2].rows.indexOf(r._row)<0) map[day2].rows.push(r._row);
+    if(sd&&sellAmt>0){
+      var sdObj=new Date(sd);
+      if(!isNaN(sdObj)&&sdObj.getFullYear()===yr&&sdObj.getMonth()===mo){
+        var day2=sdObj.getDate();
+        addEst(day2,'sell',sellCur,sellAmt);
+        if(!estMap[day2])estMap[day2]={buy:[],sell:[],rows:[]};
+        if(estMap[day2].rows.indexOf(r._row)<0)estMap[day2].rows.push(r._row);
       }
     }
+  });
+
+  // ── 建立實際 map（來自外部財務試算表）──
+  // 外部欄位：部門、狀態、付款日、類別、備註、NTD、USD、JPY、EUR、ZAR、表單編號
+  var actMap={};
+  function addActual(dateStr, type, ntd, usd, jpy, eur){
+    if(!dateStr)return;
+    var aDate=dateStr.toString().replace(/\//g,'-').replace(/年/,'-').replace(/月/,'-').replace(/日/,'');
+    var aObj=new Date(aDate);
+    if(isNaN(aObj)||aObj.getFullYear()!==yr||aObj.getMonth()!==mo)return;
+    var day=aObj.getDate();
+    if(!actMap[day])actMap[day]={buy:[],sell:[]};
+    var list=type==='buy'?actMap[day].buy:actMap[day].sell;
+    // 各幣別分別加入
+    var currencies=[{cur:'NTD',amt:parseFloat(ntd)||0},{cur:'USD',amt:parseFloat(usd)||0},
+                    {cur:'JPY',amt:parseFloat(jpy)||0},{cur:'EUR',amt:parseFloat(eur)||0}];
+    currencies.forEach(function(c){
+      if(!c.amt)return;
+      var found=false;
+      list.forEach(function(i){if(i.cur===c.cur){i.amt+=c.amt;found=true;}});
+      if(!found)list.push({cur:c.cur,amt:c.amt});
+    });
+  }
+  ACTUAL_PAYMENTS_CACHE.forEach(function(p){
+    var cat=(p['類別']||'').toString();
+    var type=cat.indexOf('採購')>=0?'buy':'sell';
+    addActual(p['付款日'],type,p['NTD'],p['USD'],p['JPY'],p['EUR']);
+  });
+  // 也從 Payments 分頁補充（已標記已付收的）
+  PAYMENTS_CACHE.forEach(function(p){
+    if(p['已付收']!=='是')return;
+    var aDate=(p['實際日期']||'').replace(/\//g,'-');
+    if(!aDate)return;
+    var aObj=new Date(aDate);
+    if(isNaN(aObj)||aObj.getFullYear()!==yr||aObj.getMonth()!==mo)return;
+    var day=aObj.getDate();
+    if(!actMap[day])actMap[day]={buy:[],sell:[]};
+    var cur=(p['幣別']||'TWD').toUpperCase();
+    var amt=parseFloat(p['金額'])||0;
+    var type=p['類型']==='採購'?'buy':'sell';
+    var list=type==='buy'?actMap[day].buy:actMap[day].sell;
+    var found=false;
+    list.forEach(function(i){if(i.cur===cur){i.amt+=amt;found=true;}});
+    if(!found)list.push({cur:cur,amt:amt});
   });
 
   // 更新月份標題
-  document.getElementById('daily-month').textContent = yr+'年'+(mo+1)+'月 應收/應付日曆';
+  document.getElementById('daily-month').textContent = yr+'年'+(mo+1)+'月 應收／應付日曆';
 
-  // 建立日曆
-  var daysInMonth = new Date(yr,mo+1,0).getDate();
-  var firstDay    = new Date(yr,mo,1).getDay(); // 0=Sun
-  var todayDate   = today.getDate();
-
-  var cal = '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
-  // 星期標題
-  cal += '<thead><tr>';
+  // ── 建立日曆 ──
+  var firstDay=new Date(yr,mo,1).getDay();
+  var cal='<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+  cal+='<thead><tr>';
   ['日','一','二','三','四','五','六'].forEach(function(d){
-    cal += '<th style="padding:8px 4px;font-size:11px;font-weight:700;color:var(--muted);text-align:center;border-bottom:1px solid var(--border);letter-spacing:.04em;">'+d+'</th>';
+    cal+='<th style="padding:7px 3px;font-size:11px;font-weight:500;color:var(--muted);text-align:center;border-bottom:1px solid var(--border);">'+d+'</th>';
   });
-  cal += '</tr></thead><tbody>';
+  cal+='</tr></thead><tbody>';
 
-  var day = 1;
-  var rows2 = Math.ceil((daysInMonth + firstDay) / 7);
-  for(var w=0; w<rows2; w++){
-    cal += '<tr>';
-    for(var d=0; d<7; d++){
-      var cellDay = w*7 + d - firstDay + 1;
-      if(cellDay < 1 || cellDay > daysInMonth){
-        cal += '<td style="background:#fafafa;border:0.5px solid var(--border);height:90px;"></td>';
+  var day=1;
+  var weeks=Math.ceil((daysInMonth+firstDay)/7);
+  for(var w=0;w<weeks;w++){
+    cal+='<tr>';
+    for(var d=0;d<7;d++){
+      var cellDay=w*7+d-firstDay+1;
+      if(cellDay<1||cellDay>daysInMonth){
+        cal+='<td style="background:#fafafa;border:0.5px solid var(--border);height:88px;"></td>';
       } else {
-        var isToday = cellDay === todayDate && yr === today.getFullYear() && mo === today.getMonth();
-        var data    = map[cellDay];
-        var bg      = isToday ? '#eff6ff' : '#fff';
-        var border  = isToday ? '1.5px solid #0369a1' : '0.5px solid var(--border)';
-        var dayColor= isToday ? '#0369a1' : (d===0?'#dc2626':d===6?'#0369a1':'var(--ink)');
-        var fullDate = yr+'/'+(mo+1<10?'0'+(mo+1):String(mo+1))+'/'+(cellDay<10?'0'+cellDay:String(cellDay));
-        var clickAttr = data ? ' onclick="showDayDetail(this.dataset.date)" data-date="'+fullDate+'" style="cursor:pointer;' : ' style="';
-        cal += '<td'+clickAttr+'background:'+bg+';border:'+border+';height:90px;padding:5px 6px;vertical-align:top;">';
-        cal += '<div style="font-size:12px;font-weight:700;color:'+dayColor+';margin-bottom:4px;">'+cellDay+(isToday?'<span style="font-size:9px;font-weight:400;color:#0369a1;margin-left:3px;">今</span>':'')+'</div>';
+        var isToday=cellDay===todayDate&&yr===today.getFullYear()&&mo===today.getMonth();
+        var bg=isToday?'#eff6ff':'#fff';
+        var border=isToday?'1.5px solid #0369a1':'0.5px solid var(--border)';
+        var dayColor=isToday?'#0369a1':(d===0?'#dc2626':d===6?'#0369a1':'var(--ink)');
+        var fullDate=yr+'/'+(mo+1<10?'0'+(mo+1):String(mo+1))+'/'+(cellDay<10?'0'+cellDay:String(cellDay));
+        var hasData=(estMap[cellDay]||actMap[cellDay]);
+        var clickAttr=hasData?' onclick="showDayDetail(this)" data-date="'+fullDate+'" style="cursor:pointer;':' style="';
 
-        if(data){
-          data.sell.forEach(function(s){
-            cal += '<div style="font-size:10px;color:#16a34a;line-height:1.4;white-space:nowrap;overflow:hidden;">↑'+s.cur+' '+fmtK(s.amt)+'</div>';
-          });
-          data.buy.forEach(function(b){
-            cal += '<div style="font-size:10px;color:#dc2626;line-height:1.4;white-space:nowrap;overflow:hidden;">↓'+b.cur+' '+fmtK(b.amt)+'</div>';
-          });
-          cal += '<div style="font-size:9px;color:var(--muted);margin-top:2px;text-decoration:underline;text-decoration-color:#94a3b8;">'+data.cnt+'筆 →</div>';
+        cal+='<td'+clickAttr+'background:'+bg+';border:'+border+';height:88px;padding:5px;vertical-align:top;">';
+        cal+='<div style="font-size:11px;font-weight:700;color:'+dayColor+';margin-bottom:3px;">'+cellDay+(isToday?'<span style="font-size:9px;font-weight:400;color:#0369a1;margin-left:3px;">今</span>':'')+'</div>';
+
+        // ── 預估（灰色，上層）──
+        var est=estMap[cellDay];
+        if(est){
+          var estLines=[];
+          est.buy.forEach(function(b){ estLines.push('<div style="font-size:9px;color:#dc2626;line-height:1.5;overflow:hidden;white-space:nowrap;">↓'+b.cur+' '+fmtN(b.amt)+'</div>'); });
+          est.sell.forEach(function(s){ estLines.push('<div style="font-size:9px;color:#16a34a;line-height:1.5;overflow:hidden;white-space:nowrap;">↑'+s.cur+' '+fmtN(s.amt)+'</div>'); });
+          if(estLines.length){
+            cal+='<div style="background:#f8fafc;border-radius:3px;padding:2px 3px;margin-bottom:2px;">'
+              +'<div style="font-size:8px;color:#94a3b8;font-weight:700;letter-spacing:.03em;">預估</div>'
+              +estLines.join('')+'</div>';
+          }
         }
-        cal += '</td>';
+
+        // ── 實際（綠色，下層）──
+        var act=actMap[cellDay];
+        if(act){
+          var actLines=[];
+          act.buy.forEach(function(b){ actLines.push('<div style="font-size:9px;color:#15803d;line-height:1.5;overflow:hidden;white-space:nowrap;">↓'+b.cur+' '+fmtN(b.amt)+'</div>'); });
+          act.sell.forEach(function(s){ actLines.push('<div style="font-size:9px;color:#065f46;line-height:1.5;overflow:hidden;white-space:nowrap;">↑'+s.cur+' '+fmtN(s.amt)+'</div>'); });
+          if(actLines.length){
+            cal+='<div style="background:#f0fdf4;border-radius:3px;padding:2px 3px;">'
+              +'<div style="font-size:8px;color:#16a34a;font-weight:700;letter-spacing:.03em;">實際</div>'
+              +actLines.join('')+'</div>';
+          }
+        }
+        cal+='</td>';
       }
     }
-    cal += '</tr>';
-    if(day > daysInMonth) break;
-    day += 7;
+    cal+='</tr>';
   }
-  cal += '</tbody></table>';
+  cal+='</tbody></table>';
+  document.getElementById('cal-body').innerHTML=cal;
 
-  document.getElementById('cal-body').innerHTML = cal;
-
-  // 月小計表格（依付款日/收款日落在當月的案件，原幣彙整）
-  var totalByCur = {};
-  rows.forEach(function(r){
-    var buyCur=  (g(r,'buyCur')||'TWD').toUpperCase();
-    var buyAmt=  pf(g(r,'buyAmt'));
-    var sellCur= (g(r,'sellCur')||'TWD').toUpperCase();
-    var sellAmt= pf(g(r,'sellAmt'));
-    // 付款日在當月 → 計入應付
-    var bd = (g(r,'buyDate')||'').replace(/\//g,'-');
-    if(bd && buyAmt>0){
-      var bdObj=new Date(bd);
-      if(!isNaN(bdObj) && bdObj.getFullYear()===yr && bdObj.getMonth()===mo){
-        if(!totalByCur[buyCur]) totalByCur[buyCur]={sell:0,buy:0};
-        totalByCur[buyCur].buy += buyAmt;
+  // ── 逾期未付款（預計日 < 今天 且未標記）──
+  var overdueEl=document.getElementById('overdue-section');
+  var role=curUser?curUser.role:'';
+  var canSeeOverdue=(role==='boss'||role==='finance'||role==='admin');
+  if(overdueEl){
+    if(!canSeeOverdue){ overdueEl.style.display='none'; }
+    else {
+      var todayStr=today.getFullYear()+'/'
+        +(today.getMonth()+1<10?'0'+(today.getMonth()+1):today.getMonth()+1)+'/'
+        +(today.getDate()<10?'0'+today.getDate():today.getDate());
+      var overdue=PAYMENTS_CACHE.filter(function(p){
+        if(p['已付收']==='是')return false;
+        var pd=(p['預計日期']||'').replace(/-/g,'/');
+        return pd && pd < todayStr;
+      });
+      overdue.sort(function(a,b){
+        return (a['預計日期']||'') < (b['預計日期']||'')?-1:1;
+      });
+      if(!overdue.length){
+        overdueEl.style.display='none';
+      } else {
+        overdueEl.style.display='block';
+        var html='<div style="background:var(--card);border:1px solid #fca5a5;border-radius:12px;overflow:hidden;margin-bottom:16px;">'
+          +'<div style="background:#fef2f2;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #fca5a5;">'
+          +'<div style="font-size:14px;font-weight:700;color:#991b1b;">逾期未完成款項</div>'
+          +'<div style="background:#dc2626;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">'+overdue.length+' 筆</div>'
+          +'</div>';
+        overdue.forEach(function(p){
+          var pd=(p['預計日期']||'').replace(/-/g,'/');
+          var diffDays=Math.floor((today-new Date(pd.replace(/\//g,'-')))/86400000);
+          var isBuy=p['類型']==='採購';
+          var tagBg=isBuy?'#fee2e2':'#fef9c3';
+          var tagColor=isBuy?'#991b1b':'#854d0e';
+          var tagText=isBuy?'應付未付':'應收未收';
+          var amtColor=isBuy?'#dc2626':'#d97706';
+          html+='<div style="padding:12px 16px;border-bottom:0.5px solid #fde8e8;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
+            +'<div style="flex:1;min-width:0;">'
+            +'<div style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+p['案件名稱']+'</div>'
+            +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+p['表單編號']+' · '+p['業務名稱']+' · '+(p['類型']||'')+'：'+p['期別名稱']+'</div>'
+            +'<div style="font-size:11px;color:#dc2626;margin-top:3px;">預計日：<b>'+pd+'</b></div>'
+            +'</div>'
+            +'<div style="text-align:right;flex-shrink:0;">'
+            +'<div style="font-size:13px;font-weight:700;color:'+amtColor+';font-family:monospace;">'+(p['幣別']||'')+' '+fmtN(parseFloat(p['金額'])||0)+'</div>'
+            +'<div style="font-size:10px;color:#dc2626;margin-top:2px;">逾期 '+diffDays+' 天</div>'
+            +'<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:'+tagBg+';color:'+tagColor+';margin-top:3px;">'+tagText+'</span>'
+            +'</div>'
+            +'</div>';
+        });
+        html+='</div>';
+        overdueEl.innerHTML=html;
       }
     }
-    // 收款日在當月 → 計入應收
-    var sd = (g(r,'sellDate')||'').replace(/\//g,'-');
-    if(sd && sellAmt>0){
-      var sdObj=new Date(sd);
-      if(!isNaN(sdObj) && sdObj.getFullYear()===yr && sdObj.getMonth()===mo){
-        if(!totalByCur[sellCur]) totalByCur[sellCur]={sell:0,buy:0};
-        totalByCur[sellCur].sell += sellAmt;
+  }
+
+  // ── 月小計表（預估 vs 實際）──
+  var estTotals={},actTotals={};
+  rows.forEach(function(r){
+    var buyCur=(g(r,'buyCur')||'TWD').toUpperCase();
+    var buyAmt=pf(g(r,'buyAmt'));
+    var sellCur=(g(r,'sellCur')||'TWD').toUpperCase();
+    var sellAmt=pf(g(r,'sellAmt'));
+    var bd=(g(r,'buyDate')||'').replace(/\//g,'-');
+    var sd=(g(r,'sellDate')||'').replace(/\//g,'-');
+    if(bd&&buyAmt>0){
+      var o=new Date(bd);
+      if(!isNaN(o)&&o.getFullYear()===yr&&o.getMonth()===mo){
+        if(!estTotals[buyCur])estTotals[buyCur]={sell:0,buy:0};
+        estTotals[buyCur].buy+=buyAmt;
+      }
+    }
+    if(sd&&sellAmt>0){
+      var o2=new Date(sd);
+      if(!isNaN(o2)&&o2.getFullYear()===yr&&o2.getMonth()===mo){
+        if(!estTotals[sellCur])estTotals[sellCur]={sell:0,buy:0};
+        estTotals[sellCur].sell+=sellAmt;
       }
     }
   });
+  // 外部試算表實際付款加入月小計
+  ACTUAL_PAYMENTS_CACHE.forEach(function(p){
+    var cat=(p['類別']||'').toString();
+    var type=cat.indexOf('採購')>=0?'buy':'sell';
+    var pd=(p['付款日']||'').toString().replace(/\//g,'-');
+    if(!pd)return;
+    var pObj=new Date(pd);
+    if(isNaN(pObj)||pObj.getFullYear()!==yr||pObj.getMonth()!==mo)return;
+    var currencies=[{cur:'NTD',amt:parseFloat(p['NTD'])||0},{cur:'USD',amt:parseFloat(p['USD'])||0},
+                    {cur:'JPY',amt:parseFloat(p['JPY'])||0},{cur:'EUR',amt:parseFloat(p['EUR'])||0}];
+    currencies.forEach(function(c){
+      if(!c.amt)return;
+      if(!actTotals[c.cur])actTotals[c.cur]={sell:0,buy:0};
+      if(type==='buy')actTotals[c.cur].buy+=c.amt;
+      else actTotals[c.cur].sell+=c.amt;
+    });
+  });
+  // Payments 分頁已標記的也加入
+  PAYMENTS_CACHE.forEach(function(p){
+    if(p['已付收']!=='是')return;
+    var aDate=(p['實際日期']||'').replace(/\//g,'-');
+    if(!aDate)return;
+    var aObj=new Date(aDate);
+    if(isNaN(aObj)||aObj.getFullYear()!==yr||aObj.getMonth()!==mo)return;
+    var cur=(p['幣別']||'TWD').toUpperCase();
+    var amt=parseFloat(p['金額'])||0;
+    if(!actTotals[cur])actTotals[cur]={sell:0,buy:0};
+    if(p['類型']==='採購')actTotals[cur].buy+=amt;
+    else actTotals[cur].sell+=amt;
+  });
 
-  var summaryHtml = '';
-  Object.keys(totalByCur).sort().forEach(function(cur){
-    var d = totalByCur[cur];
-    if(d.sell===0 && d.buy===0) return;
-    summaryHtml +=
-      '<tr style="border-top:0.5px solid var(--border);">'
+  var allCurs=[...new Set(Object.keys(estTotals).concat(Object.keys(actTotals)))].sort();
+  var sumHtml='';
+  allCurs.forEach(function(cur){
+    var e=estTotals[cur]||{sell:0,buy:0};
+    var a=actTotals[cur]||{sell:0,buy:0};
+    sumHtml+='<tr style="border-top:0.5px solid var(--border);">'
       +'<td style="padding:9px 14px;font-weight:700;color:var(--ink);">'+cur+'</td>'
-      +'<td style="padding:9px 14px;text-align:right;color:var(--jade);font-weight:500;">'+(d.sell>0?fmtN(d.sell):'—')+'</td>'
-      +'<td style="padding:9px 14px;text-align:right;color:var(--coral);font-weight:500;">'+(d.buy>0?fmtN(d.buy):'—')+'</td>'
+      +'<td style="padding:9px 14px;text-align:right;color:var(--jade);">'+(e.sell?fmtN(e.sell):'—')+'</td>'
+      +'<td style="padding:9px 14px;text-align:right;color:#065f46;font-weight:700;">'+(a.sell?fmtN(a.sell):'—')+'</td>'
+      +'<td style="padding:9px 14px;text-align:right;color:var(--coral);">'+(e.buy?fmtN(e.buy):'—')+'</td>'
+      +'<td style="padding:9px 14px;text-align:right;color:#991b1b;font-weight:700;">'+(a.buy?fmtN(a.buy):'—')+'</td>'
       +'</tr>';
   });
-  document.getElementById('summary-body').innerHTML = summaryHtml ||
-    '<tr><td colspan="3" style="text-align:center;color:#94a3b8;padding:20px;">本月尚無資料</td></tr>';
+  var sb=document.getElementById('summary-body');
+  if(sb)sb.innerHTML=sumHtml||'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">本月尚無資料</td></tr>';
 }
 
 // 點擊日曆格子 → 顯示當日案件明細
@@ -1199,7 +1410,7 @@ function doApp(rowNum,status){
   if(b2)b2.disabled=true;
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({action:'approve',row:rowNum,status:status,note:note,approver:curUser.name,time:now()}),
+    body:JSON.stringify({token:API_TOKEN,action:'approve',row:rowNum,status:status,note:note,approver:curUser.name,time:now()}),
     mode:'no-cors'
   }).finally(function(){
     if(r){r[F.status]=status;r[F.bossNote]=note;}
@@ -1271,7 +1482,7 @@ function doEdit(rowNum){
 
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({action:'update',row:rowNum,fields:fields,editor:curUser.name}),
+    body:JSON.stringify({token:API_TOKEN,action:'update',row:rowNum,fields:fields,editor:curUser.name}),
     mode:'no-cors'
   }).finally(function(){
     if(r) Object.keys(fields).forEach(function(k){r[k]=fields[k];});
@@ -1302,7 +1513,7 @@ function confirmDel(rowNum){
 function doDelete(rowNum,name){
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({action:'delete',row:rowNum,editor:curUser.name}),
+    body:JSON.stringify({token:API_TOKEN,action:'delete',row:rowNum,editor:curUser.name}),
     mode:'no-cors'
   }).finally(function(){
     rows=rows.filter(function(r){return r._row!==rowNum;});
@@ -1380,7 +1591,7 @@ function saveU2(id){
   // 同步更新到 Google Sheets（跨裝置）
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({action:'updateAccount',id:id,name:name,pwd:pwd||undefined}),
+    body:JSON.stringify({token:API_TOKEN,action:'updateAccount',id:id,name:name,pwd:pwd||undefined}),
     mode:'no-cors'
   }).finally(function(){
     // 更新本地雲端快取
@@ -1470,7 +1681,7 @@ function saveStaffUser(elOrId){
   // 同步更新到 Google Sheets（跨裝置）
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({action:'updateAccount',id:id,name:name,pwd:pwd||undefined,staffName:staffName}),
+    body:JSON.stringify({token:API_TOKEN,action:'updateAccount',id:id,name:name,pwd:pwd||undefined,staffName:staffName}),
     mode:'no-cors'
   }).finally(function(){
     fetchAccounts(function(){
@@ -1556,7 +1767,7 @@ function changePwd(){
   // 同步更新到 Google Sheets（跨裝置）
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({action:'updateAccount',id:curUser.id,pwd:newP}),
+    body:JSON.stringify({token:API_TOKEN,action:'updateAccount',id:curUser.id,pwd:newP}),
     mode:'no-cors'
   }).finally(function(){
     curUser.pwd=newP;
@@ -1569,6 +1780,188 @@ function changePwd(){
   });
 }
 
+// ══ 款項管理 ══════════════════════════════════════════
+var allPayments = [];
+var payFilter   = 'all';
+
+function loadPayments(){
+  fetch(SCRIPT+'?action=getAllPayments&_='+Date.now())
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==='ok'){ allPayments=d.payments||[]; renderPayments(); }
+    })
+    .catch(function(){ renderPayments(); });
+}
+
+function filterPayments(f, el){
+  payFilter = f;
+  document.querySelectorAll('.pay-filter-btn').forEach(function(b){b.classList.remove('on');});
+  if(el) el.classList.add('on');
+  renderPayments();
+}
+
+function renderPayments(){
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  // 統計
+  var stats = {unpaid:0,uncoll:0,paid:0,coll:0,overdue:0,
+    unpaidAmt:{},uncollAmt:{},overdueAmt:{}};
+  allPayments.forEach(function(p){
+    var isPaid  = p['已付收']==='是';
+    var isBuy   = p['類型']==='採購';
+    var cur     = p['幣別']||'TWD';
+    var amt     = parseFloat(p['金額'])||0;
+    var dueDate = p['預計日期']?new Date(p['預計日期'].replace(/\//g,'-')):null;
+    var isOverdue = !isPaid && dueDate && dueDate < today;
+    if(isOverdue) stats.overdue++;
+    if(isBuy && !isPaid){ stats.unpaid++; stats.unpaidAmt[cur]=(stats.unpaidAmt[cur]||0)+amt; }
+    if(!isBuy && !isPaid){ stats.uncoll++; stats.uncollAmt[cur]=(stats.uncollAmt[cur]||0)+amt; }
+    if(isBuy  && isPaid) stats.paid++;
+    if(!isBuy && isPaid) stats.coll++;
+    if(isOverdue){ stats.overdueAmt[cur]=(stats.overdueAmt[cur]||0)+amt; }
+  });
+
+  var fmtCurs = function(obj){
+    var keys=Object.keys(obj);
+    if(!keys.length)return '—';
+    return keys.map(function(c){return c+' '+fmtN(obj[c]);}).join(' / ');
+  };
+
+  var statsEl = document.getElementById('pay-stats');
+  if(statsEl){
+    statsEl.innerHTML =
+      '<div class="st s4"><div class="stlbl">待付款</div><div class="stval v4" style="font-size:14px;">'+fmtCurs(stats.unpaidAmt)+'</div><div class="stsub">'+stats.unpaid+' 筆</div></div>'
+      +'<div class="st s2"><div class="stlbl">待收款</div><div class="stval v2" style="font-size:14px;">'+fmtCurs(stats.uncollAmt)+'</div><div class="stsub">'+stats.uncoll+' 筆</div></div>'
+      +'<div class="st s1"><div class="stlbl">已付完成</div><div class="stval v1">'+stats.paid+'</div><div class="stsub">筆</div></div>'
+      +'<div class="st s3"><div class="stlbl">已收完成</div><div class="stval v3">'+stats.coll+'</div><div class="stsub">筆</div></div>';
+  }
+
+  // 篩選
+  var filtered = allPayments.filter(function(p){
+    var isPaid  = p['已付收']==='是';
+    var isBuy   = p['類型']==='採購';
+    var dueDate = p['預計日期']?new Date(p['預計日期'].replace(/\//g,'-')):null;
+    var isOverdue = !isPaid && dueDate && dueDate < today;
+    if(payFilter==='unpaid')  return isBuy  && !isPaid;
+    if(payFilter==='uncoll')  return !isBuy && !isPaid;
+    if(payFilter==='overdue') return isOverdue;
+    if(payFilter==='done')    return isPaid;
+    return true;
+  });
+
+  var list = document.getElementById('pay-list');
+  if(!list) return;
+  if(!filtered.length){
+    list.innerHTML='<div class="empty"><span class="eico">💳</span>查無款項記錄</div>';
+  } else {
+    list.innerHTML = filtered.map(function(p){ return makePayCard(p, today); }).join('');
+  }
+
+  // 逾期明細
+  var overdueSec  = document.getElementById('overdue-section');
+  var overdueList = document.getElementById('overdue-list');
+  var overdueItems = allPayments.filter(function(p){
+    var isPaid  = p['已付收']==='是';
+    var dueDate = p['預計日期']?new Date(p['預計日期'].replace(/\//g,'-')):null;
+    return !isPaid && dueDate && dueDate < today;
+  });
+  if(overdueSec){
+    overdueSec.style.display = overdueItems.length ? 'block' : 'none';
+    if(overdueList){
+      overdueList.innerHTML = overdueItems.map(function(p){ return makePayCard(p, today); }).join('');
+    }
+  }
+}
+
+function makePayCard(p, today){
+  var isPaid   = p['已付收']==='是';
+  var isBuy    = p['類型']==='採購';
+  var cur      = p['幣別']||'TWD';
+  var amt      = parseFloat(p['金額'])||0;
+  var curSym   = {TWD:'NT$',USD:'US$',JPY:'¥',EUR:'€'}[cur]||cur;
+  var dueDate  = p['預計日期']?new Date(p['預計日期'].replace(/\//g,'-')):null;
+  var isOverdue= !isPaid && dueDate && dueDate < today;
+  var rowNum   = p._row || 0;
+
+  var badgeType= isBuy
+    ? '<span class="bdg" style="background:#fee2e2;color:#991b1b;border:0.5px solid #fca5a5;">應付</span>'
+    : '<span class="bdg" style="background:#dcfce7;color:#14532d;border:0.5px solid #86efac;">應收</span>';
+  var badgeSt  = isPaid
+    ? '<span class="bdg ba">已完成</span>'
+    : isOverdue
+    ? '<span class="bdg br">逾期</span>'
+    : '<span class="bdg bp">待處理</span>';
+
+  var actualDateVal = p['實際日期']||'';
+  var html = '<div class="pay-card'+(isOverdue?' overdue':'')+(isPaid?' done':'')+'">'
+    +'<div class="pay-hd"><div>'
+    +'<div class="pay-case">'+(p['案件名稱']||'')+'</div>'
+    +'<div class="pay-period">'+p['表單編號']+'　'+p['業務名稱']+'　'+p['期別名稱']+'</div>'
+    +'</div><div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">'+badgeType+badgeSt+'</div></div>'
+    +'<div class="pay-grid">'
+    +'<div class="pay-cell"><div class="pay-cell-l">預估金額</div><div class="pay-cell-v" style="color:'+(isBuy?'var(--coral)':'var(--jade)')+';">'+curSym+fmtN(amt)+'</div></div>'
+    +'<div class="pay-cell"><div class="pay-cell-l">預計日期</div><div class="pay-cell-v" style="color:'+(isOverdue?'var(--coral)':'inherit')+';">'+(p['預計日期']||'—')+'</div></div>'
+    +'<div class="pay-cell"><div class="pay-cell-l">實際日期</div><div class="pay-cell-v" style="color:var(--jade);">'+(p['實際日期']||'—')+'</div></div>'
+    +'</div>';
+
+  if(!isPaid){
+    html += '<div class="actual-input-row">'
+      +'<input type="number" id="act-amt-'+rowNum+'" placeholder="實際金額（選填）" style="max-width:140px;" value="'+(p['實際金額']||'')+'">'
+      +'<input type="date" id="act-date-'+rowNum+'" value="'+actualDateVal+'">'
+      +'<button class="btn-mark-paid" data-row="'+rowNum+'" onclick="markPaid(this.dataset.row,true)">✓ '+(isBuy?'已付':'已收')+'</button>'
+      +'</div>';
+  } else {
+    html += '<div style="display:flex;justify-content:flex-end;border-top:0.5px solid var(--border);padding-top:8px;">'
+      +'<button class="btn-mark-unpaid" data-row="'+rowNum+'" onclick="markPaid(this.dataset.row,false)">↩ 取消</button>'
+      +'</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function markPaid(rowNum, paid){
+  var dateEl   = document.getElementById('act-date-'+rowNum);
+  var amtEl    = document.getElementById('act-amt-'+rowNum);
+  var actualDate = dateEl ? dateEl.value : '';
+  var actualAmt  = amtEl  ? amtEl.value  : '';
+  if(paid && !actualDate){ actualDate = new Date().toISOString().slice(0,10); }
+
+  fetch(SCRIPT,{
+    method:'POST',
+    body:JSON.stringify({action:'updatePaymentStatus',row:parseInt(rowNum),
+      paid:paid, actualDate:actualDate, actualAmt:actualAmt}),
+    mode:'no-cors'
+  }).finally(function(){
+    // 更新本地資料
+    var p = allPayments.find(function(x){ return x._row==rowNum; });
+    if(p){
+      p['已付收']    = paid?'是':'否';
+      p['實際日期']  = paid?actualDate:'';
+    }
+    renderPayments();
+    toast(paid?'✅ 已標記完成':'↩ 已取消',paid?'#16a34a':'#64748b');
+  });
+}
+
+// ══ 日曆整合：預估+實際雙行 ════════════════════════════
+
+function getPaymentsByDate(){
+  // 回傳以日期為 key 的 payments map
+  var map = {};
+  allPayments.forEach(function(p){
+    var date = p['預計日期']||'';
+    if(!date) return;
+    if(!map[date]) map[date]={est:[],actual:[]};
+    map[date].est.push(p);
+    if(p['實際日期']){
+      var ad = p['實際日期'];
+      if(!map[ad]) map[ad]={est:[],actual:[]};
+      map[ad].actual.push(p);
+    }
+  });
+  return map;
+}
+
 function goTabEl(el){goTab(el.dataset.tabid);}
 function goTab(id){
   document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
@@ -1578,8 +1971,9 @@ function goTab(id){
   if(t)t.classList.add('on');
   if(id==='admin')renderAdmin();
   if(id==='log')renderLog();
-  if(id==='daily')renderDaily();
+  if(id==='daily'){renderDaily();if(allPayments.length===0)loadPayments();}
   if(id==='profile')initProfile();
+  if(id==='payments'){loadPayments();}
   if(id==='records'){document.getElementById('rc').textContent='共 '+filtered.length+' 筆';renderCards(filtered,'records-cards',true);}
 }
 
