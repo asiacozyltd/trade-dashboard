@@ -457,6 +457,11 @@ function validate(n){
           if(!sps[j].amt || parseFloat(sps[j].amt)<=0) return '請填入第'+(j+1)+'期銷售金額';
           if(!sps[j].date) return '請填入第'+(j+1)+'期預計收款日';
         }
+        // 純銷售案件需填成本才能估算毛利率
+        if((fd.type||'')==='銷售'){
+          var sbEl=document.getElementById('sell-buy-amt');
+          if(!sbEl||!parseFloat(sbEl.value)) return '請填入採購成本金額（用於計算毛利率）';
+        }
       }
       return null;
     },
@@ -595,13 +600,13 @@ function collect(n){
     fd.sellNote  = v('sell-note');
     fd.buyPeriods  = getPeriods('buy');
     fd.sellPeriods = getPeriods('sell');
-    // 純銷售案件：從成本欄位讀取
-    if((fd.type||'')==='銷售' && !fd.buyPeriods.length){
+    // 純銷售案件：成本只用於毛利計算，不加入付款期數
+    if((fd.type||'')==='銷售'){
       var sbC = v('sell-buy-cur')||'TWD';
-      var sbA = parseFloat(document.getElementById('sell-buy-amt')?document.getElementById('sell-buy-amt').value:0)||0;
-      if(sbA>0){
-        fd.buyPeriods=[{n:1,name:'成本',amt:sbA,cur:sbC,date:fd.sellPeriods[0]?fd.sellPeriods[0].date:'',note:''}];
-      }
+      var sbEl = document.getElementById('sell-buy-amt');
+      fd.sellCostAmt = sbEl ? parseFloat(sbEl.value)||0 : 0;
+      fd.sellCostCur = sbC;
+      // buyPeriods 維持空白，不帶入 Payments
     }
     // 代表值（主表用第一期）
     fd.buyCur  = fd.buyPeriods.length  ? fd.buyPeriods[0].cur  : 'TWD';
