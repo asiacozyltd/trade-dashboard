@@ -364,6 +364,8 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
   </div>
 </div>
 <div class="scr" id="s-payments">
+  <!-- 待轉入 -->
+  <div id="pay-pending"></div>
   <!-- 統計卡片 -->
   <div class="sg" style="margin-bottom:16px;" id="pay-stats"></div>
   <!-- 篩選 -->
@@ -453,38 +455,53 @@ var RATE={TWD:1,USD:30.5,JPY:0.205,EUR:33.5};
 
 function fetchRates(){
   var el=document.getElementById('rate-info');
-  if(el)el.textContent='載入匯率中...';
-  // 直接從前端呼叫免費匯率 API（無需 API key）
-  fetch('https://open.er-api.com/v6/latest/TWD')
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d&&d.rates){
-        if(d.rates.USD>0) RATE.USD=Math.round((1/d.rates.USD)*100)/100;
-        if(d.rates.JPY>0) RATE.JPY=Math.round((1/d.rates.JPY)*1000)/1000;
-        if(d.rates.EUR>0) RATE.EUR=Math.round((1/d.rates.EUR)*100)/100;
-        var updated=d.time_last_update_utc?new Date(d.time_last_update_utc).toLocaleDateString('zh-TW'):'';
-        if(el)el.textContent='即時匯率 '+updated
-          +' | USD '+RATE.USD.toFixed(2)
-          +' JPY '+RATE.JPY.toFixed(3)
-          +' EUR '+RATE.EUR.toFixed(2);
-        if(rows.length>0)onLoad();
-      }
+  if(el)el.textContent='載入台灣銀行匯率中...';
+
+  // 台灣銀行即期匯率 API（透過 CORS proxy）
+  var tbUrl='https://api.allorigins.win/raw?url='+encodeURIComponent('https://rate.bot.com.tw/xrt/flcsv/0/day');
+  fetch(tbUrl)
+    .then(function(r){ return r.text(); })
+    .then(function(txt){
+      // 解析台灣銀行 CSV
+      // 格式：幣別,現金買入,現金賣出,即期買入,即期賣出,...
+      var lines = txt.split('\n');
+      var updated = new Date().toLocaleDateString('zh-TW');
+      lines.forEach(function(line){
+        var cols = line.split(',');
+        if(!cols[0]) return;
+        var cur  = cols[0].trim().toUpperCase();
+        // 即期賣出 = col[4]（買外幣用賣出匯率）
+        var sell = parseFloat(cols[4]);
+        if(!sell || sell<=0) return;
+        if(cur==='USD') RATE.USD = Math.round(sell*100)/100;
+        if(cur==='JPY') RATE.JPY = Math.round(sell*1000)/1000;
+        if(cur==='EUR') RATE.EUR = Math.round(sell*100)/100;
+      });
+      if(el)el.textContent='台灣銀行即期匯率 '+updated
+        +' | USD '+RATE.USD.toFixed(2)
+        +' JPY '+RATE.JPY.toFixed(3)
+        +' EUR '+RATE.EUR.toFixed(2);
+      if(rows.length>0)onLoad();
     })
     .catch(function(){
-      // 備用：換另一個免費 API
-      fetch('https://api.exchangerate-api.com/v4/latest/TWD')
+      // 備用：open.er-api.com
+      fetch('https://open.er-api.com/v6/latest/TWD')
         .then(function(r){return r.json();})
         .then(function(d){
           if(d&&d.rates){
             if(d.rates.USD>0) RATE.USD=Math.round((1/d.rates.USD)*100)/100;
             if(d.rates.JPY>0) RATE.JPY=Math.round((1/d.rates.JPY)*1000)/1000;
             if(d.rates.EUR>0) RATE.EUR=Math.round((1/d.rates.EUR)*100)/100;
-            if(el)el.textContent='即時匯率 | USD '+RATE.USD.toFixed(2)+' JPY '+RATE.JPY.toFixed(3)+' EUR '+RATE.EUR.toFixed(2);
+            var updated=d.time_last_update_utc?new Date(d.time_last_update_utc).toLocaleDateString('zh-TW'):'';
+            if(el)el.textContent='即期匯率（備用）'+updated
+              +' | USD '+RATE.USD.toFixed(2)
+              +' JPY '+RATE.JPY.toFixed(3)
+              +' EUR '+RATE.EUR.toFixed(2);
             if(rows.length>0)onLoad();
           }
         })
         .catch(function(){
-          if(el)el.textContent='匯率載入失敗，使用預設值 USD 30.5 / JPY 0.205 / EUR 33.5';
+          if(el)el.textContent='匯率載入失敗，使用預設值 USD '+RATE.USD+' / JPY '+RATE.JPY+' / EUR '+RATE.EUR;
         });
     });
 }
@@ -1385,9 +1402,64 @@ function doApp(rowNum,status){
   }).finally(function(){
     if(r){r[F.status]=status;r[F.bossNote]=note;}
     addLog(status==='是'?'同意簽核':'退回修改',curUser.name,name,note);
+    // 老闆同意後，顯示會計確認按鈕（不自動轉入Payments）
+    if(status==='是'){
+      toast('✅ 已簽核！等待會計確認轉入款項','#16a34a');
+      // 標記此案件待會計確認
+      if(r) r['_pendingPayment']=true;
+    } else {
+      toast('❌ 已退回','#dc2626');
+    }
     closeD();onLoad();
-    toast(status==='是'?'✅ 已簽核！':'❌ 已退回',status==='是'?'#16a34a':'#dc2626');
   });
+}
+
+// 會計確認轉入 Payments
+function doAccountingConfirm(rowNum){
+  var r=rows.find(function(x){return x._row===rowNum;});
+  if(!r){ toast('找不到案件','#dc2626'); return; }
+  var formId   = g(r,'formId');
+  var caseName = g(r,'name');
+  var staff    = g(r,'staff');
+  // 從 Payments 查是否已有資料（重複確認防呆）
+  toast('轉入款項中...','#0369a1');
+  fetch(SCRIPT,{
+    method:'POST',
+    body:JSON.stringify({
+      action:'savePayments',
+      formId:formId,
+      caseName:caseName,
+      staffName:staff,
+      periods:buildPeriodsFromRow(r)
+    }),
+    mode:'no-cors'
+  }).finally(function(){
+    addLog('會計確認轉入',curUser.name,caseName,'');
+    toast('✅ 款項已轉入 Payments 分頁','#16a34a');
+    // 更新會計審核欄位
+    fetch(SCRIPT,{
+      method:'POST',
+      body:JSON.stringify({action:'update',row:rowNum,
+        fields:{'會計審核':'是','會計審核時間':now()},
+        editor:curUser.name}),
+      mode:'no-cors'
+    });
+    onLoad();
+  });
+}
+
+// 從案件列資料建立 periods
+function buildPeriodsFromRow(r){
+  var periods=[];
+  var buyCur=(g(r,'buyCur')||'TWD').toUpperCase();
+  var buyAmt=parseFloat(g(r,'buyAmt'))||0;
+  var buyDate=g(r,'buyDate')||'';
+  var sellCur=(g(r,'sellCur')||'TWD').toUpperCase();
+  var sellAmt=parseFloat(g(r,'sellAmt'))||0;
+  var sellDate=g(r,'sellDate')||'';
+  if(buyAmt>0)  periods.push({type:'採購',name:'付款',cur:buyCur,amt:buyAmt,date:buyDate,note:''});
+  if(sellAmt>0) periods.push({type:'銷售',name:'收款',cur:sellCur,amt:sellAmt,date:sellDate,note:''});
+  return periods;
 }
 
 // 通知老闆：案件被修改
@@ -1772,6 +1844,49 @@ function filterPayments(f, el){
 
 function renderPayments(){
   var today = new Date(); today.setHours(0,0,0,0);
+
+  // ── 待轉入 Payments（已簽核但未轉入）──────────────────
+  var payFormIds = allPayments.map(function(p){ return p['表單編號']; });
+  var pendingApproved = rows.filter(function(r){
+    var status = g(r,'status')||g(r,'老闆已同意')||'';
+    var approved = status==='是'||status.indexOf('同意')>=0;
+    var alreadyIn = payFormIds.indexOf(g(r,'formId'))>=0;
+    return approved && !alreadyIn && g(r,'formId');
+  });
+
+  var pendingEl = document.getElementById('pay-pending');
+  if(pendingEl){
+    if(!pendingApproved.length){
+      pendingEl.style.display='none';
+    } else {
+      pendingEl.style.display='block';
+      pendingEl.innerHTML = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:16px;">'
+        +'<div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:10px;">⏳ 已簽核待轉入款項（'+pendingApproved.length+'筆）</div>'
+        +'<div style="font-size:12px;color:#78350f;margin-bottom:10px;">老闆已同意，請確認後轉入 Payments 分頁</div>'
+        + pendingApproved.map(function(r){
+          var rowNum   = r._row;
+          var caseName = g(r,'name');
+          var formId   = g(r,'formId');
+          var staff    = g(r,'staff');
+          var buyCur   = (g(r,'buyCur')||'TWD').toUpperCase();
+          var buyAmt   = parseFloat(g(r,'buyAmt'))||0;
+          var buyDate  = g(r,'buyDate')||'—';
+          var sellCur  = (g(r,'sellCur')||'TWD').toUpperCase();
+          var sellAmt  = parseFloat(g(r,'sellAmt'))||0;
+          var sellDate = g(r,'sellDate')||'—';
+          return '<div style="background:#fff;border:0.5px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
+            +'<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:4px;">'+caseName+'</div>'
+            +'<div style="font-size:11px;color:#64748b;margin-bottom:8px;">'+formId+' · '+staff+'</div>'
+            +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;margin-bottom:10px;">'
+            +(buyAmt?'<div style="background:#fef2f2;border-radius:6px;padding:6px 8px;"><div style="color:#991b1b;font-size:10px;">應付</div><div style="font-weight:700;color:#dc2626;">'+buyCur+' '+fmtN(buyAmt)+'</div><div style="color:#64748b;">預計：'+buyDate+'</div></div>':'')
+            +(sellAmt?'<div style="background:#f0fdf4;border-radius:6px;padding:6px 8px;"><div style="color:#14532d;font-size:10px;">應收</div><div style="font-weight:700;color:#16a34a;">'+sellCur+' '+fmtN(sellAmt)+'</div><div style="color:#64748b;">預計：'+sellDate+'</div></div>':'')
+            +'</div>'
+            +'<button onclick="doAccountingConfirm('+rowNum+')" style="width:100%;padding:9px;border-radius:8px;background:#0369a1;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;">✅ 確認轉入 Payments</button>'
+            +'</div>';
+        }).join('')
+        +'</div>';
+    }
+  }
 
   // 統計
   var stats = {unpaid:0,uncoll:0,paid:0,coll:0,overdue:0,
