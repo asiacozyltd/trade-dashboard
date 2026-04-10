@@ -660,13 +660,13 @@ function isAppr(r){var s=g(r,'status');return s==='是'||s.includes('同意');}
 // ★ 修正毛利率計算：統一轉 NTD 再計算
 function calcNTD(amt, cur){ return pf(amt)*(RATE[cur.toUpperCase()]||1); }
 function calcMargin(r){
-  var caseType = g(r,F.type)||'';
-  var buyNTD   = calcNTD(g(r,F.buyAmt),  g(r,F.buyCur) ||'TWD');
-  var sellNTD  = calcNTD(g(r,F.sellAmt), g(r,F.sellCur)||'TWD');
+  var caseType = (r[F.type]||'')||'';
+  var buyNTD   = calcNTD((r[F.buyAmt]||''),  (r[F.buyCur]||'') ||'TWD');
+  var sellNTD  = calcNTD((r[F.sellAmt]||''), (r[F.sellCur]||'')||'TWD');
   // 純銷售案件：buyNTD 改用獨立成本欄位
   if(caseType==='銷售' && buyNTD===0){
-    var costAmt = pf(g(r,F.sellCostAmt)||g(r,'銷售成本金額'));
-    var costCur = g(r,F.sellCostCur)||g(r,'銷售成本幣別')||'TWD';
+    var costAmt = pf((r[F.sellCostAmt]||'')||g(r,'銷售成本金額'));
+    var costCur = (r[F.sellCostCur]||'')||g(r,'銷售成本幣別')||'TWD';
     buyNTD = calcNTD(costAmt, costCur);
   }
   var fees = pf(g(r,'extra'))+pf(g(r,'freight'))+pf(g(r,'tax'))+pf(g(r,'insure'))+pf(g(r,'comm'));
@@ -1298,60 +1298,60 @@ function showD(rowNum){
 
   var m=calcMargin(r);
   var h='';
-  var caseType3 = g(r,F.type)||'';
+  var caseType3 = (r[F.type]||'')||'';
   var isPurchOnly3 = caseType3==='採購';
   var isSellOnly3  = caseType3==='銷售';
 
   // 採購
   if(!isSellOnly3){
     h+='<div class="dsec"><div class="dsec-t tb">　採購（賣方）</div><div class="dgrid">'
-      +dr('供應商',     g(r,F.supp))
-      +dr('採購幣別',   g(r,F.buyCur))
-      +dr('應付總金額', fmtAmt(g(r,F.buyAmt),g(r,F.buyCur)))
+      +dr('供應商',     (r[F.supp]||''))
+      +dr('採購幣別',   (r[F.buyCur]||''))
+      +dr('應付總金額', fmtAmt((r[F.buyAmt]||''),(r[F.buyCur]||'')))
       +dr('折合NTD',   'NT$'+fmtN(m.buyNTD))
-      +dr('預計付款日', g(r,F.buyDate))
-      +dr('付款條件',   g(r,F.buyPay))
-      +dr('賣方合約',   g(r,F.buyCon))
-      +(cv(g(r,F.buyRem))?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:#7f1d1d;">'+g(r,F.buyRem)+'</div></div>':'')
+      +dr('預計付款日', (r[F.buyDate]||''))
+      +dr('付款條件',   (r[F.buyPay]||''))
+      +dr('賣方合約',   (r[F.buyCon]||''))
+      +(cv((r[F.buyRem]||''))?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:#7f1d1d;">'+(r[F.buyRem]||'')+'</div></div>':'')
       +'</div></div>';
   }
 
   // 銷售
   if(!isPurchOnly3){
     h+='<div class="dsec"><div class="dsec-t ts">　銷售（買方）</div><div class="dgrid">'
-      +dr('客戶名稱',   g(r,F.buyer))
-      +dr('銷售幣別',   g(r,F.sellCur))
-      +dr('應收總金額', fmtAmt(g(r,F.sellAmt),g(r,F.sellCur)))
+      +dr('客戶名稱',   (r[F.buyer]||''))
+      +dr('銷售幣別',   (r[F.sellCur]||''))
+      +dr('應收總金額', fmtAmt((r[F.sellAmt]||''),(r[F.sellCur]||'')))
       +dr('折合NTD',   'NT$'+fmtN(m.sellNTD))
-      +dr('預計收款日', g(r,F.sellDate))
-      +dr('收款條件',   g(r,F.sellPay))
-      +dr('買方合約',   g(r,F.sellCon))
-      +(isSellOnly3 && m.buyNTD>0?dr('銷售成本',g(r,F.sellCostCur)+' '+fmtN(g(r,F.sellCostAmt))):'')
-      +(cv(g(r,F.sellRem))?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:#14532d;">'+g(r,F.sellRem)+'</div></div>':'')
+      +dr('預計收款日', (r[F.sellDate]||''))
+      +dr('收款條件',   (r[F.sellPay]||''))
+      +dr('買方合約',   (r[F.sellCon]||''))
+      +(isSellOnly3 && m.buyNTD>0?dr('銷售成本',(r[F.sellCostCur]||'')+' '+fmtN((r[F.sellCostAmt]||''))):'')
+      +(cv((r[F.sellRem]||''))?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:#14532d;">'+(r[F.sellRem]||'')+'</div></div>':'')
       +'</div></div>';
   }
 
   // 物流/貿易
   h+='<div class="dsec"><div class="dsec-t">　物流 / 貿易</div><div class="dgrid">'
-    +dr('案件屬性', g(r,F.type))
-    +dr('運費',     fmtAmt(g(r,F.freight),'TWD'))
-    +dr('保險費',   fmtAmt(g(r,F.insure),'TWD'))
-    +dr('規費',     fmtAmt(g(r,F.tax),'TWD'))
-    +dr('佣金',     fmtAmt(g(r,F.comm),'TWD'))
-    +dr('其他費用', fmtAmt(g(r,F.extra),'TWD'))
-    +dr('貿易條件', g(r,F.trade))
-    +dr('ETD/卸魚日',g(r,F.etd))
-    +dr('ETA/到貨日',g(r,F.eta))
-    +dr('出貨地',   g(r,F.origin))
-    +dr('目的地',   g(r,F.dest))
-    +dr('承辦業助', g(r,F.asst))
+    +dr('案件屬性', (r[F.type]||''))
+    +dr('運費',     fmtAmt((r[F.freight]||''),'TWD'))
+    +dr('保險費',   fmtAmt((r[F.insure]||''),'TWD'))
+    +dr('規費',     fmtAmt((r[F.tax]||''),'TWD'))
+    +dr('佣金',     fmtAmt((r[F.comm]||''),'TWD'))
+    +dr('其他費用', fmtAmt((r[F.extra]||''),'TWD'))
+    +dr('貿易條件', (r[F.trade]||''))
+    +dr('ETD/卸魚日',(r[F.etd]||''))
+    +dr('ETA/到貨日',(r[F.eta]||''))
+    +dr('出貨地',   (r[F.origin]||''))
+    +dr('目的地',   (r[F.dest]||''))
+    +dr('承辦業助', (r[F.asst]||''))
     +'</div></div>';
 
   // 毛利
   var pColor3 = m.profitNTD>=0?'var(--jade)':'var(--coral)';
   var pBg3    = m.profitNTD>=0?'#f0fdf4':'#fef2f2';
-  var costAmt3= parseFloat(g(r,F.sellCostAmt))||0;
-  var costCur3= g(r,F.sellCostCur)||'TWD';
+  var costAmt3= parseFloat((r[F.sellCostAmt]||''))||0;
+  var costCur3= (r[F.sellCostCur]||'')||'TWD';
   h+='<div class="pbar" style="background:'+pBg3+';">';
   if(isSellOnly3 && costAmt3>0){
     h+='<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">'
@@ -1487,9 +1487,9 @@ function doApp(rowNum,status){
 function doAccountingConfirm(rowNum){
   var r=rows.find(function(x){return x._row===rowNum;});
   if(!r){ toast('找不到案件','#dc2626'); return; }
-  var formId   = g(r,F.formId)||g(r,'表單編號')||'';
-  var caseName = g(r,F.name)||'';
-  var staff    = g(r,F.staff)||'';
+  var formId   = (r[F.formId]||'')||g(r,'表單編號')||'';
+  var caseName = (r[F.name]||'')||'';
+  var staff    = (r[F.staff]||'')||'';
   // 從 Payments 查是否已有資料（重複確認防呆）
   toast('轉入款項中...','#0369a1');
   fetch(SCRIPT,{
@@ -1520,12 +1520,12 @@ function doAccountingConfirm(rowNum){
 // 從案件列資料建立 periods
 function buildPeriodsFromRow(r){
   var periods=[];
-  var buyCur  = (g(r,F.buyCur) ||'TWD').toUpperCase();
-  var buyAmt  = parseFloat(g(r,F.buyAmt)) ||0;
-  var buyDate = g(r,F.buyDate) ||'';
-  var sellCur = (g(r,F.sellCur)||'TWD').toUpperCase();
-  var sellAmt = parseFloat(g(r,F.sellAmt))||0;
-  var sellDate= g(r,F.sellDate)||'';
+  var buyCur  = ((r[F.buyCur]||'') ||'TWD').toUpperCase();
+  var buyAmt  = parseFloat((r[F.buyAmt]||'')) ||0;
+  var buyDate = (r[F.buyDate]||'') ||'';
+  var sellCur = ((r[F.sellCur]||'')||'TWD').toUpperCase();
+  var sellAmt = parseFloat((r[F.sellAmt]||''))||0;
+  var sellDate= (r[F.sellDate]||'')||'';
   if(buyAmt>0)  periods.push({type:'採購',name:'付款',cur:buyCur, amt:buyAmt, date:buyDate, note:''});
   if(sellAmt>0) periods.push({type:'銷售',name:'收款',cur:sellCur,amt:sellAmt,date:sellDate,note:''});
   return periods;
@@ -1534,22 +1534,22 @@ function buildPeriodsFromRow(r){
 // 通知老闆：案件被修改
 function notifyBossEdit(r, editorName, changes){
   if(!r) return;
-  var caseName = g(r,F.name)||'';
-  var formId   = g(r,F.formId)||g(r,'表單編號')||'';
+  var caseName = (r[F.name]||'')||'';
+  var formId   = (r[F.formId]||'')||g(r,'表單編號')||'';
   var payload  = {
     action:    'notifyEdit',
     caseName:  caseName,
     formId:    formId,
     editor:    editorName,
     changes:   changes.join(' / '),
-    staff:     g(r,F.staff),
-    buyAmt:    g(r,F.buyAmt),
-    buyCur:    g(r,F.buyCur),
-    sellAmt:   g(r,F.sellAmt),
-    sellCur:   g(r,F.sellCur),
-    buyDate:   g(r,F.buyDate),
-    sellDate:  g(r,F.sellDate),
-    profit:    g(r,F.profit),
+    staff:     (r[F.staff]||''),
+    buyAmt:    (r[F.buyAmt]||''),
+    buyCur:    (r[F.buyCur]||''),
+    sellAmt:   (r[F.sellAmt]||''),
+    sellCur:   (r[F.sellCur]||''),
+    buyDate:   (r[F.buyDate]||''),
+    sellDate:  (r[F.sellDate]||''),
+    profit:    (r[F.profit]||''),
   };
   fetch(SCRIPT,{
     method:'POST',
@@ -1919,12 +1919,12 @@ function renderPayments(){
   var payFormIds = allPayments.map(function(p){ return p['表單編號']; });
   var pendingApproved = rows.filter(function(r){
     // 使用正確欄位名稱（F.status = '老闆已同意'）
-    var status = g(r,F.status)||'';
-    var acct   = g(r,F.acct)||'';
+    var status = (r[F.status]||'')||'';
+    var acct   = (r[F.acct]||'')||'';
     var approved = status==='是'||status.indexOf('同意')>=0;
     // 會計已確認就不再顯示
     var acctDone = acct==='是';
-    var formId   = g(r,F.formId)||g(r,'表單編號')||'';
+    var formId   = (r[F.formId]||'')||g(r,'表單編號')||'';
     var alreadyIn = payFormIds.indexOf(formId)>=0;
     return approved && !acctDone && !alreadyIn && formId;
   });
@@ -1940,15 +1940,15 @@ function renderPayments(){
         +'<div style="font-size:12px;color:#78350f;margin-bottom:10px;">老闆已同意，請確認後轉入 Payments 分頁</div>'
         + pendingApproved.map(function(r){
           var rowNum   = r._row;
-          var caseName = g(r,F.name)||'';
-          var formId   = g(r,F.formId)||g(r,'表單編號')||'';
-          var staff    = g(r,F.staff)||'';
-          var buyCur   = (g(r,F.buyCur)||'TWD').toUpperCase();
-          var buyAmt   = parseFloat(g(r,F.buyAmt))||0;
-          var buyDate  = g(r,F.buyDate)||'—';
-          var sellCur  = (g(r,F.sellCur)||'TWD').toUpperCase();
-          var sellAmt  = parseFloat(g(r,F.sellAmt))||0;
-          var sellDate = g(r,F.sellDate)||'—';
+          var caseName = (r[F.name]||'')||'';
+          var formId   = (r[F.formId]||'')||g(r,'表單編號')||'';
+          var staff    = (r[F.staff]||'')||'';
+          var buyCur   = ((r[F.buyCur]||'')||'TWD').toUpperCase();
+          var buyAmt   = parseFloat((r[F.buyAmt]||''))||0;
+          var buyDate  = (r[F.buyDate]||'')||'—';
+          var sellCur  = ((r[F.sellCur]||'')||'TWD').toUpperCase();
+          var sellAmt  = parseFloat((r[F.sellAmt]||''))||0;
+          var sellDate = (r[F.sellDate]||'')||'—';
           return '<div style="background:#fff;border:0.5px solid #fde68a;border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
             +'<div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:4px;">'+caseName+'</div>'
             +'<div style="font-size:11px;color:#64748b;margin-bottom:8px;">'+formId+' · '+staff+'</div>'
