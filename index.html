@@ -550,23 +550,37 @@ function fetchAccounts(callback){
     });
 }
 function loadU(){
-  // 優先使用雲端帳號（跨裝置同步）
-  if(CLOUD_ACCOUNTS && CLOUD_ACCOUNTS.length > 0){
-    return CLOUD_ACCOUNTS.concat(getCU());
+  var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
+  // 雲端帳號：補上本地密碼（若雲端沒有回傳密碼）
+  function mergeWithLocal(cloudAccounts){
+    return cloudAccounts.map(function(u){
+      if(u.pwd) return u; // 有密碼直接用
+      var local = allLocal.find(function(l){ return l.id===u.id; });
+      // 補上本地密碼
+      return Object.assign({}, u, { pwd: local ? local.pwd : '' });
+    }).concat(getCU());
   }
-  // 備用：本地 localStorage
+
+  // 優先使用雲端帳號
+  if(CLOUD_ACCOUNTS && CLOUD_ACCOUNTS.length > 0){
+    return mergeWithLocal(CLOUD_ACCOUNTS);
+  }
+  // 備用：本地快取
   try{
     var c=localStorage.getItem('cloudAccounts');
-    if(c){var ca=JSON.parse(c);if(ca&&ca.length>0)return ca.concat(getCU());}
+    if(c){
+      var ca=JSON.parse(c);
+      if(ca&&ca.length>0) return mergeWithLocal(ca);
+    }
+    // 最後備用：純本地
     var s=localStorage.getItem('tu');
     var saved=s?JSON.parse(s):[];
-    var allBase=BASE_USERS.concat(DEFAULT_STAFF);
-    var base=allBase.map(function(u){
+    var base=allLocal.map(function(u){
       var ov=saved.find(function(x){return x.id===u.id;});
       return ov?Object.assign({},u,ov):u;
     });
     return base.concat(getCU());
-  }catch(e){return BASE_USERS.concat(DEFAULT_STAFF);}
+  }catch(e){ return allLocal.slice(); }
 }
 function saveU(arr){
   try{
