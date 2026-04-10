@@ -640,20 +640,43 @@ function login(){
   if(!p){ document.getElementById('lerr').textContent='請輸入密碼'; return; }
   if(btn){ btn.disabled=true; btn.textContent='驗證中...'; }
 
-  // 先取得最新帳號，再本地比對
-  fetchAccounts(function(){
-    if(btn){ btn.disabled=false; btn.textContent='登入'; }
-    CU = loadU();
-    // 先用 role+pwd 找，找不到就只用 pwd 找
-    var u = CU.find(function(x){ return x.role===role && x.pwd===p; });
-    if(!u) u = CU.find(function(x){ return x.pwd===p; });
-    if(u){
-      doLogin(u);
-    } else {
-      document.getElementById('lerr').textContent='密碼錯誤';
-      document.getElementById('lpwd').value='';
-    }
-  });
+  // 先嘗試從雲端取得帳號（含密碼），再本地比對
+  fetch(SCRIPT+'?action=getAccounts&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(btn){ btn.disabled=false; btn.textContent='登入'; }
+      var accounts = (d.status==='ok' && d.accounts) ? d.accounts : [];
+      // 雲端帳號補上本地密碼
+      var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
+      var merged = accounts.map(function(u){
+        if(u.pwd) return u;
+        var local = allLocal.find(function(l){ return l.id===u.id; });
+        return Object.assign({}, u, { pwd: local ? local.pwd : '' });
+      });
+      // 若雲端空的，用本地
+      if(!merged.length) merged = allLocal.slice();
+      var u = merged.find(function(x){ return x.role===role && x.pwd===p; });
+      if(!u) u = merged.find(function(x){ return x.pwd===p; });
+      if(u){
+        CLOUD_ACCOUNTS = merged; // 更新快取
+        doLogin(u);
+      } else {
+        document.getElementById('lerr').textContent='密碼錯誤';
+        document.getElementById('lpwd').value='';
+      }
+    })
+    .catch(function(){
+      // 網路失敗：純本地模式
+      if(btn){ btn.disabled=false; btn.textContent='登入'; }
+      var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
+      var u = allLocal.find(function(x){ return x.role===role && x.pwd===p; });
+      if(!u) u = allLocal.find(function(x){ return x.pwd===p; });
+      if(u){ doLogin(u); }
+      else {
+        document.getElementById('lerr').textContent='密碼錯誤';
+        document.getElementById('lpwd').value='';
+      }
+    });
 }
 function logout(){
   addLog('登出',curUser.name,'','');
@@ -936,17 +959,26 @@ function renderDaily(){
   // ── 建立實際 map（來自外部財務試算表）──
   // 外部欄位：部門、狀態、付款日、類別、備註、NTD、USD、JPY、EUR、ZAR、表單編號
   var actMap={};
-  function addActual(dateStr, type, ntd, usd, jpy, eur){
+  // 清除金額字串中的貨幣符號和逗號，取得純數字
+  function parseAmt(v){
+    if(!v) return 0;
+    return parseFloat(v.toString().replace(/[^0-9.-]/g,''))||0;
+  }
+  function addActual(dateStr, type, ntd, usd, jpy, eur, zar){
     if(!dateStr)return;
-    var aDate=dateStr.toString().replace(/\//g,'-').replace(/年/,'-').replace(/月/,'-').replace(/日/,'');
+    var aDate=dateStr.toString().replace(/\//g,'-').replace(/年/g,'-').replace(/月/g,'-').replace(/日/g,'');
     var aObj=new Date(aDate);
     if(isNaN(aObj)||aObj.getFullYear()!==yr||aObj.getMonth()!==mo)return;
     var day=aObj.getDate();
     if(!actMap[day])actMap[day]={buy:[],sell:[]};
     var list=type==='buy'?actMap[day].buy:actMap[day].sell;
-    // 各幣別分別加入
-    var currencies=[{cur:'NTD',amt:parseFloat(ntd)||0},{cur:'USD',amt:parseFloat(usd)||0},
-                    {cur:'JPY',amt:parseFloat(jpy)||0},{cur:'EUR',amt:parseFloat(eur)||0}];
+    var currencies=[
+      {cur:'NTD',amt:parseAmt(ntd)},
+      {cur:'USD',amt:parseAmt(usd)},
+      {cur:'JPY',amt:parseAmt(jpy)},
+      {cur:'EUR',amt:parseAmt(eur)},
+      {cur:'ZAR',amt:parseAmt(zar)},
+    ];
     currencies.forEach(function(c){
       if(!c.amt)return;
       var found=false;
@@ -956,8 +988,11 @@ function renderDaily(){
   }
   ACTUAL_PAYMENTS_CACHE.forEach(function(p){
     var cat=(p['類別']||'').toString();
-    var type=cat.indexOf('採購')>=0?'buy':'sell';
-    addActual(p['付款日'],type,p['NTD'],p['USD'],p['JPY'],p['EUR']);
+    var status=(p['狀態']||'').toString();
+    // 外部試算表：類別為補給/代理/費用/油款/支票兌現 等都算應付
+    // 有「收」字的算應收，其他預設應付
+    var type=cat.indexOf('銷售')>=0||cat.indexOf('收款')>=0?'sell':'buy';
+    addActual(p['付款日'],type,p['NTD'],p['USD'],p['JPY'],p['EUR'],p['ZAR']);
   });
   // 也從 Payments 分頁補充（已標記已付收的）
   PAYMENTS_CACHE.forEach(function(p){
@@ -1128,8 +1163,12 @@ function renderDaily(){
     if(!pd)return;
     var pObj=new Date(pd);
     if(isNaN(pObj)||pObj.getFullYear()!==yr||pObj.getMonth()!==mo)return;
-    var currencies=[{cur:'NTD',amt:parseFloat(p['NTD'])||0},{cur:'USD',amt:parseFloat(p['USD'])||0},
-                    {cur:'JPY',amt:parseFloat(p['JPY'])||0},{cur:'EUR',amt:parseFloat(p['EUR'])||0}];
+    function pAmt(v){ return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0; }
+    var currencies=[
+      {cur:'NTD',amt:pAmt(p['NTD'])},{cur:'USD',amt:pAmt(p['USD'])},
+      {cur:'JPY',amt:pAmt(p['JPY'])},{cur:'EUR',amt:pAmt(p['EUR'])},
+      {cur:'ZAR',amt:pAmt(p['ZAR'])},
+    ];
     currencies.forEach(function(c){
       if(!c.amt)return;
       if(!actTotals[c.cur])actTotals[c.cur]={sell:0,buy:0};
