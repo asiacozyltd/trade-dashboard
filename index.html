@@ -305,26 +305,6 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
       <div id="daily-overdue-list" style="padding:12px 16px;"></div>
     </div>
   </div>
-
-  <!-- 月小計 -->
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-    <div style="padding:14px 20px;border-bottom:1px solid var(--border);">
-      <div style="font-size:14px;font-weight:700;">本月原幣彙整</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px;">依幣別分別加總，顯示原始金額</div>
-    </div>
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;min-width:500px;">
-        <thead><tr>
-          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:left;">幣別</th>
-          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--jade);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">預估應收</th>
-          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">實際已收</th>
-          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:var(--coral);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">預估應付</th>
-          <th style="padding:10px 14px;background:#f8fafc;font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:right;">實際已付</th>
-        </tr></thead>
-        <tbody id="summary-body"></tbody>
-      </table>
-    </div>
-  </div>
 </div>
 <div class="scr" id="s-log">
   <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
@@ -660,21 +640,31 @@ function isAppr(r){var s=g(r,'status');return s==='是'||s.includes('同意');}
 // ★ 修正毛利率計算：統一轉 NTD 再計算
 function calcNTD(amt, cur){ return pf(amt)*(RATE[cur.toUpperCase()]||1); }
 function calcMargin(r){
-  var caseType = (r[F.type]||'')||'';
-  var buyNTD   = calcNTD((r[F.buyAmt]||''),  (r[F.buyCur]||'') ||'TWD');
-  var sellNTD  = calcNTD((r[F.sellAmt]||''), (r[F.sellCur]||'')||'TWD');
-  // 純銷售案件：buyNTD 改用獨立成本欄位
-  if(caseType==='銷售' && buyNTD===0){
-    var costAmt = pf((r[F.sellCostAmt]||'')||g(r,'銷售成本金額'));
-    var costCur = (r[F.sellCostCur]||'')||g(r,'銷售成本幣別')||'TWD';
-    buyNTD = calcNTD(costAmt, costCur);
+  var caseType = (r[F.type]||'').toString().trim();
+  var sellNTD  = calcNTD(r[F.sellAmt], r[F.sellCur]||'TWD');
+  var buyNTD   = calcNTD(r[F.buyAmt],  r[F.buyCur] ||'TWD');
+
+  // 1. 純採購：不顯示毛利率
+  if(caseType==='採購'){
+    return {buyNTD:buyNTD, sellNTD:0, profitNTD:0, margin:'—', isPurchOnly:true};
   }
-  var fees = pf(g(r,'extra'))+pf(g(r,'freight'))+pf(g(r,'tax'))+pf(g(r,'insure'))+pf(g(r,'comm'));
-  // 純採購：毛利=0
-  if(caseType==='採購'){ return {buyNTD:buyNTD,sellNTD:0,profitNTD:0,margin:'0.0'}; }
-  var profitNTD = sellNTD - buyNTD - fees;
-  var margin = sellNTD>0 ? (profitNTD/sellNTD*100).toFixed(1) : '—';
-  return {buyNTD:buyNTD,sellNTD:sellNTD,profitNTD:profitNTD,margin:margin};
+
+  // 2. 純銷售：用銷售金額 - 銷售成本金額
+  if(caseType==='銷售'){
+    var costAmt = parseFloat(r[F.sellCostAmt])||0;
+    var costCur = (r[F.sellCostCur]||'TWD').toString();
+    var costNTD = calcNTD(costAmt, costCur);
+    var fees    = pf(r[F.extra])+pf(r[F.freight])+pf(r[F.tax])+pf(r[F.insure])+pf(r[F.comm]);
+    var profit  = sellNTD - costNTD - fees;
+    var margin  = sellNTD>0 ? (profit/sellNTD*100).toFixed(1) : '—';
+    return {buyNTD:costNTD, sellNTD:sellNTD, profitNTD:profit, margin:margin, isSellOnly:true};
+  }
+
+  // 3. 採購+銷售：用銷售金額 - 採購金額
+  var fees2   = pf(r[F.extra])+pf(r[F.freight])+pf(r[F.tax])+pf(r[F.insure])+pf(r[F.comm]);
+  var profit2 = sellNTD - buyNTD - fees2;
+  var margin2 = sellNTD>0 ? (profit2/sellNTD*100).toFixed(1) : '—';
+  return {buyNTD:buyNTD, sellNTD:sellNTD, profitNTD:profit2, margin:margin2};
 }
 
 // 登入
@@ -860,7 +850,7 @@ function makeCard(r,showApprove){
   var bc=pend?'bp':appr?'ba':'br';
   var sl=pend?'待審核':appr?'已同意':'退回';
   var m=calcMargin(r);
-  var mgStr=m.margin!=='—'?m.margin+'%':'—';
+  var mgStr=m.isPurchOnly?'—':(m.margin!=='—'?m.margin+'%':'—');
   var rowNum=r._row;
   return '<div class="cc '+sc2+'" onclick="showD('+rowNum+')">'
     +'<div class="cc-top"><div>'
@@ -1160,21 +1150,7 @@ function renderDaily(){
     else actTotals[cur].sell+=amt;
   });
 
-  var allCurs=[...new Set(Object.keys(estTotals).concat(Object.keys(actTotals)))].sort();
-  var sumHtml='';
-  allCurs.forEach(function(cur){
-    var e=estTotals[cur]||{sell:0,buy:0};
-    var a=actTotals[cur]||{sell:0,buy:0};
-    sumHtml+='<tr style="border-top:0.5px solid var(--border);">'
-      +'<td style="padding:9px 14px;font-weight:700;color:var(--ink);">'+cur+'</td>'
-      +'<td style="padding:9px 14px;text-align:right;color:var(--jade);">'+(e.sell?fmtN(e.sell):'—')+'</td>'
-      +'<td style="padding:9px 14px;text-align:right;color:#065f46;font-weight:700;">'+(a.sell?fmtN(a.sell):'—')+'</td>'
-      +'<td style="padding:9px 14px;text-align:right;color:var(--coral);">'+(e.buy?fmtN(e.buy):'—')+'</td>'
-      +'<td style="padding:9px 14px;text-align:right;color:#991b1b;font-weight:700;">'+(a.buy?fmtN(a.buy):'—')+'</td>'
-      +'</tr>';
-  });
-  var sb=document.getElementById('summary-body');
-  if(sb)sb.innerHTML=sumHtml||'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">本月尚無資料</td></tr>';
+  // 月小計已移除
 }
 
 // 點擊日曆格子 → 顯示當日案件明細
@@ -1896,13 +1872,21 @@ function changePwd(){
 var allPayments = [];
 var payFilter   = 'all';
 
-function loadPayments(){
+function loadPayments(cb){
   fetch(SCRIPT+'?action=getAllPayments&_='+Date.now())
     .then(function(r){return r.json();})
     .then(function(d){
-      if(d.status==='ok'){ allPayments=d.payments||[]; renderPayments(); }
+      if(d.status==='ok'&&d.payments){
+        allPayments    = d.payments;
+        PAYMENTS_CACHE = d.payments; // 同步給日曆用
+      }
+      if(cb) cb();
+      else renderPayments();
     })
-    .catch(function(){ renderPayments(); });
+    .catch(function(){
+      if(cb) cb();
+      else renderPayments();
+    });
 }
 
 function filterPayments(f, el){
@@ -2132,8 +2116,7 @@ function goTab(id){
   if(id==='admin')renderAdmin();
   if(id==='log')renderLog();
   if(id==='daily'){
-    if(PAYMENTS_CACHE.length===0){ loadPayments(renderDaily); }
-    else { renderDaily(); }
+    loadPayments(renderDaily); // 每次進入都重新載入最新資料
   }
   if(id==='profile')initProfile();
   if(id==='payments'){loadPayments();}
