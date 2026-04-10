@@ -447,7 +447,7 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 <script>
 var SCRIPT='https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
 var CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?gid=357150087&single=true&output=csv';
-var API_TOKEN='TradeDaiyu2026!@#'; // 需與 Apps Script CONFIG.API_SECRET 一致
+
 // ★ 匯率換算：預設值，啟動後自動從免費 API 更新
 var RATE={TWD:1,USD:30.5,JPY:0.205,EUR:33.5};
 
@@ -530,7 +530,7 @@ function doLogin(u){
 
 // 載入雲端帳號（Apps Script Sheets）
 function fetchAccounts(callback){
-  fetch(SCRIPT+'?action=getAccounts&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
+  fetch(SCRIPT+'?action=getAccounts&_='+Date.now())
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok'&&d.accounts&&d.accounts.length>0){
@@ -641,7 +641,7 @@ function login(){
   if(btn){ btn.disabled=true; btn.textContent='驗證中...'; }
 
   // 先嘗試從雲端取得帳號（含密碼），再本地比對
-  fetch(SCRIPT+'?action=getAccounts&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
+  fetch(SCRIPT+'?action=getAccounts&_='+Date.now())
     .then(function(r){ return r.json(); })
     .then(function(d){
       if(btn){ btn.disabled=false; btn.textContent='登入'; }
@@ -704,7 +704,7 @@ function buildNav(){
 // 資料讀取
 function load(){
   document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
-  fetch(SCRIPT+'?action=getData&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
+  fetch(SCRIPT+'?action=getData&_='+Date.now())
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok'&&d.rows&&d.rows.length>0){
@@ -879,18 +879,7 @@ function clearSearch(){
 var viewYear  = new Date().getFullYear();
 var viewMonth = new Date().getMonth();
 var PAYMENTS_CACHE = [];        // 從 Payments 分頁載入（預估）
-var ACTUAL_PAYMENTS_CACHE = []; // 從外部財務試算表載入（實際）
-
-// 載入外部財務試算表實際付款
-function loadActualPayments(cb){
-  fetch(SCRIPT+'?action=getActualPayments&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.status==='ok') ACTUAL_PAYMENTS_CACHE = d.payments||[];
-      if(cb) cb();
-    })
-    .catch(function(){ if(cb) cb(); });
-}
+var ACTUAL_PAYMENTS_CACHE = [];
 
 function changeMonth(delta){
   viewMonth += delta;
@@ -901,7 +890,7 @@ function changeMonth(delta){
 
 // 載入 Payments 分頁資料
 function loadPayments(cb){
-  fetch(SCRIPT+'?action=getAllPayments&token='+encodeURIComponent(API_TOKEN)+'&_='+Date.now())
+  fetch(SCRIPT+'?action=getAllPayments&_='+Date.now())
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok') PAYMENTS_CACHE=d.payments||[];
@@ -956,45 +945,8 @@ function renderDaily(){
     }
   });
 
-  // ── 建立實際 map（來自外部財務試算表）──
-  // 外部欄位：部門、狀態、付款日、類別、備註、NTD、USD、JPY、EUR、ZAR、表單編號
+  // ── 建立實際 map（來自 Payments 分頁已標記已付收）──
   var actMap={};
-  // 清除金額字串中的貨幣符號和逗號，取得純數字
-  function parseAmt(v){
-    if(!v) return 0;
-    return parseFloat(v.toString().replace(/[^0-9.-]/g,''))||0;
-  }
-  function addActual(dateStr, type, ntd, usd, jpy, eur, zar){
-    if(!dateStr)return;
-    var aDate=dateStr.toString().replace(/\//g,'-').replace(/年/g,'-').replace(/月/g,'-').replace(/日/g,'');
-    var aObj=new Date(aDate);
-    if(isNaN(aObj)||aObj.getFullYear()!==yr||aObj.getMonth()!==mo)return;
-    var day=aObj.getDate();
-    if(!actMap[day])actMap[day]={buy:[],sell:[]};
-    var list=type==='buy'?actMap[day].buy:actMap[day].sell;
-    var currencies=[
-      {cur:'NTD',amt:parseAmt(ntd)},
-      {cur:'USD',amt:parseAmt(usd)},
-      {cur:'JPY',amt:parseAmt(jpy)},
-      {cur:'EUR',amt:parseAmt(eur)},
-      {cur:'ZAR',amt:parseAmt(zar)},
-    ];
-    currencies.forEach(function(c){
-      if(!c.amt)return;
-      var found=false;
-      list.forEach(function(i){if(i.cur===c.cur){i.amt+=c.amt;found=true;}});
-      if(!found)list.push({cur:c.cur,amt:c.amt});
-    });
-  }
-  ACTUAL_PAYMENTS_CACHE.forEach(function(p){
-    var cat=(p['類別']||'').toString();
-    var status=(p['狀態']||'').toString();
-    // 外部試算表：類別為補給/代理/費用/油款/支票兌現 等都算應付
-    // 有「收」字的算應收，其他預設應付
-    var type=cat.indexOf('銷售')>=0||cat.indexOf('收款')>=0?'sell':'buy';
-    addActual(p['付款日'],type,p['NTD'],p['USD'],p['JPY'],p['EUR'],p['ZAR']);
-  });
-  // 也從 Payments 分頁補充（已標記已付收的）
   PAYMENTS_CACHE.forEach(function(p){
     if(p['已付收']!=='是')return;
     var aDate=(p['實際日期']||'').replace(/\//g,'-');
@@ -1155,28 +1107,7 @@ function renderDaily(){
       }
     }
   });
-  // 外部試算表實際付款加入月小計
-  ACTUAL_PAYMENTS_CACHE.forEach(function(p){
-    var cat=(p['類別']||'').toString();
-    var type=cat.indexOf('採購')>=0?'buy':'sell';
-    var pd=(p['付款日']||'').toString().replace(/\//g,'-');
-    if(!pd)return;
-    var pObj=new Date(pd);
-    if(isNaN(pObj)||pObj.getFullYear()!==yr||pObj.getMonth()!==mo)return;
-    function pAmt(v){ return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0; }
-    var currencies=[
-      {cur:'NTD',amt:pAmt(p['NTD'])},{cur:'USD',amt:pAmt(p['USD'])},
-      {cur:'JPY',amt:pAmt(p['JPY'])},{cur:'EUR',amt:pAmt(p['EUR'])},
-      {cur:'ZAR',amt:pAmt(p['ZAR'])},
-    ];
-    currencies.forEach(function(c){
-      if(!c.amt)return;
-      if(!actTotals[c.cur])actTotals[c.cur]={sell:0,buy:0};
-      if(type==='buy')actTotals[c.cur].buy+=c.amt;
-      else actTotals[c.cur].sell+=c.amt;
-    });
-  });
-  // Payments 分頁已標記的也加入
+  // Payments 分頁已標記的加入月小計
   PAYMENTS_CACHE.forEach(function(p){
     if(p['已付收']!=='是')return;
     var aDate=(p['實際日期']||'').replace(/\//g,'-');
@@ -1463,7 +1394,7 @@ function doApp(rowNum,status){
   if(b2)b2.disabled=true;
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({token:API_TOKEN,action:'approve',row:rowNum,status:status,note:note,approver:curUser.name,time:now()}),
+    body:JSON.stringify({action:'approve',row:rowNum,status:status,note:note,approver:curUser.name,time:now()}),
     mode:'no-cors'
   }).finally(function(){
     if(r){r[F.status]=status;r[F.bossNote]=note;}
@@ -1535,7 +1466,7 @@ function doEdit(rowNum){
 
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({token:API_TOKEN,action:'update',row:rowNum,fields:fields,editor:curUser.name}),
+    body:JSON.stringify({action:'update',row:rowNum,fields:fields,editor:curUser.name}),
     mode:'no-cors'
   }).finally(function(){
     if(r) Object.keys(fields).forEach(function(k){r[k]=fields[k];});
@@ -1566,7 +1497,7 @@ function confirmDel(rowNum){
 function doDelete(rowNum,name){
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({token:API_TOKEN,action:'delete',row:rowNum,editor:curUser.name}),
+    body:JSON.stringify({action:'delete',row:rowNum,editor:curUser.name}),
     mode:'no-cors'
   }).finally(function(){
     rows=rows.filter(function(r){return r._row!==rowNum;});
@@ -1644,7 +1575,7 @@ function saveU2(id){
   // 同步更新到 Google Sheets（跨裝置）
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({token:API_TOKEN,action:'updateAccount',id:id,name:name,pwd:pwd||undefined}),
+    body:JSON.stringify({action:'updateAccount',id:id,name:name,pwd:pwd||undefined}),
     mode:'no-cors'
   }).finally(function(){
     // 更新本地雲端快取
@@ -1734,7 +1665,7 @@ function saveStaffUser(elOrId){
   // 同步更新到 Google Sheets（跨裝置）
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({token:API_TOKEN,action:'updateAccount',id:id,name:name,pwd:pwd||undefined,staffName:staffName}),
+    body:JSON.stringify({action:'updateAccount',id:id,name:name,pwd:pwd||undefined,staffName:staffName}),
     mode:'no-cors'
   }).finally(function(){
     fetchAccounts(function(){
@@ -1820,7 +1751,7 @@ function changePwd(){
   // 同步更新到 Google Sheets（跨裝置）
   fetch(SCRIPT,{
     method:'POST',
-    body:JSON.stringify({token:API_TOKEN,action:'updateAccount',id:curUser.id,pwd:newP}),
+    body:JSON.stringify({action:'updateAccount',id:curUser.id,pwd:newP}),
     mode:'no-cors'
   }).finally(function(){
     curUser.pwd=newP;
@@ -2025,13 +1956,8 @@ function goTab(id){
   if(id==='admin')renderAdmin();
   if(id==='log')renderLog();
   if(id==='daily'){
-    if(PAYMENTS_CACHE.length===0||ACTUAL_PAYMENTS_CACHE.length===0){
-      loadPayments(function(){
-        loadActualPayments(renderDaily);
-      });
-    } else {
-      renderDaily();
-    }
+    if(PAYMENTS_CACHE.length===0){ loadPayments(renderDaily); }
+    else { renderDaily(); }
   }
   if(id==='profile')initProfile();
   if(id==='payments'){loadPayments();}
