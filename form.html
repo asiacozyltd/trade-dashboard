@@ -390,17 +390,26 @@ textarea{height:72px;resize:none;line-height:1.6;}
     <div style="font-size:12px;color:#64748b;margin-bottom:12px;">若採購與銷售由不同業務負責，可在此選擇銷售業務員，對方將收到 Email 通知後登入系統補填銷售內容。</div>
     <div class="field" style="margin-bottom:0;">
       <div class="lbl">銷售業務員 <span class="opt">選填</span></div>
-      <select id="transfer-to" style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-family:inherit;font-size:13px;background:#fff;">
+      <select id="transfer-to" onchange="onTransferChange()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-family:inherit;font-size:13px;background:#fff;">
         <option value="">— 不轉交，由我自己完成全部填寫 —</option>
-        <option value="黃啟靖">黃啟靖</option>
-        <option value="楊正國">楊正國</option>
-        <option value="朱嬿琳">朱嬿琳</option>
-        <option value="呂建宏">呂建宏</option>
-        <option value="呂紀萱">呂紀萱</option>
-        <option value="陳彥竹">陳彥竹</option>
-        <option value="SHERRY">SHERRY</option>
+        <option value="黃啟靖" data-email="FILL_HCJ">黃啟靖</option>
+        <option value="楊正國" data-email="FILL_CZK">楊正國</option>
+        <option value="朱嬿琳" data-email="FILL_JYL">朱嬿琳</option>
+        <option value="呂建宏" data-email="FILL_LCH">呂建宏</option>
+        <option value="呂紀萱" data-email="FILL_LJX">呂紀萱</option>
+        <option value="陳彥竹" data-email="FILL_CYC">陳彥竹</option>
+        <option value="SHERRY"  data-email="FILL_SHERRY">SHERRY</option>
+        <option value="其他">其他業務員（手動輸入）</option>
       </select>
     </div>
+
+    <!-- 顯示對應信箱 / 手填信箱 -->
+    <div id="transfer-email-row" style="display:none;margin-top:8px;">
+      <div class="lbl">通知信箱</div>
+      <div id="transfer-email-display" style="display:none;padding:9px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bae6fd;font-size:13px;color:#1e40af;font-weight:700;"></div>
+      <input type="email" id="transfer-email-input" style="display:none;width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;" placeholder="請輸入對方的 Email 地址">
+    </div>
+
     <div id="transfer-note" style="display:none;margin-top:10px;">
       <div class="lbl">備註給對方 <span class="opt">選填</span></div>
       <textarea id="transfer-msg" placeholder="可填寫給銷售業務員的說明..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;font-family:inherit;resize:vertical;min-height:70px;"></textarea>
@@ -424,6 +433,8 @@ textarea{height:72px;resize:none;line-height:1.6;}
 </div>
 
 <script>
+var VERSION="form-002"; // 2026/04/11
+
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
 const RATE = { USD:30.5, JPY:0.205, EUR:33.5, TWD:1 };
 const fd = {};
@@ -752,6 +763,15 @@ async function submitForm(){
     sellCostAmt: fd.sellCostAmt||0,
     sellCostCur: fd.sellCostCur||'TWD',
     transferTo:  (function(){ var el=document.getElementById('transfer-to'); return el?el.value:''; })(),
+    transferEmail:(function(){
+      var sel=document.getElementById('transfer-to');
+      var val=sel?sel.value:'';
+      if(!val||val==='其他'){
+        var inp=document.getElementById('transfer-email-input');
+        return inp?inp.value.trim():'';
+      }
+      return STAFF_EMAILS[val]||'';
+    })(),
     transferMsg: (function(){ var el=document.getElementById('transfer-msg'); return el?el.value:''; })(),
     // 分期付款資料
     periods:   (fd.buyPeriods||[]).map(function(p){return Object.assign({type:'採購'},p);})
@@ -777,22 +797,61 @@ function resetForm(){
 
 function fmt(n){ return Math.round(n||0).toLocaleString('zh-TW'); }
 
-// 轉交功能
+// 業務員信箱對照表（請填入真實 Email）
+var STAFF_EMAILS = {
+  '黃啟靖': '',  // ← 填入黃啟靖的 Email
+  '楊正國': '',  // ← 填入楊正國的 Email
+  '朱嬿琳': '',  // ← 填入朱嬿琳的 Email
+  '呂建宏': '',  // ← 填入呂建宏的 Email
+  '呂紀萱': '',  // ← 填入呂紀萱的 Email
+  '陳彥竹': '',  // ← 填入陳彥竹的 Email
+  'SHERRY':  '',  // ← 填入 SHERRY 的 Email
+};
+
+function onTransferChange(){
+  var sel      = document.getElementById('transfer-to');
+  var emailRow = document.getElementById('transfer-email-row');
+  var emailDisp= document.getElementById('transfer-email-display');
+  var emailInp = document.getElementById('transfer-email-input');
+  var note     = document.getElementById('transfer-note');
+  var btn      = document.getElementById('submit-btn');
+  var val      = sel ? sel.value : '';
+
+  if(!val){
+    // 不轉交
+    emailRow.style.display='none';
+    note.style.display='none';
+    btn.textContent='📤 送出回報（通知老闆審核）';
+    btn.style.background='';
+    return;
+  }
+
+  emailRow.style.display='block';
+  note.style.display='block';
+  btn.style.background='#4f46e5';
+
+  if(val==='其他'){
+    // 手動輸入信箱
+    emailDisp.style.display='none';
+    emailInp.style.display='block';
+    emailInp.value='';
+    btn.textContent='📤 送出並通知對方填寫銷售';
+  } else {
+    // 顯示對應信箱
+    var email = STAFF_EMAILS[val]||'（尚未設定信箱）';
+    emailDisp.style.display='block';
+    emailDisp.textContent='📧 ' + email;
+    emailInp.style.display='none';
+    btn.textContent='📤 送出並通知 '+val+' 填寫銷售';
+  }
+}
+
 function initTransfer(){
+  // 更新 select option 的 data-email
   var sel = document.getElementById('transfer-to');
   if(!sel) return;
-  sel.addEventListener('change', function(){
-    var note = document.getElementById('transfer-note');
-    var btn  = document.getElementById('submit-btn');
-    if(this.value){
-      note.style.display='block';
-      btn.textContent='📤 送出並通知 '+this.value+' 填寫銷售';
-      btn.style.background='#4f46e5';
-    } else {
-      note.style.display='none';
-      btn.textContent='📤 送出回報（通知老闆審核）';
-      btn.style.background='';
-    }
+  Array.from(sel.options).forEach(function(opt){
+    if(STAFF_EMAILS[opt.value]) opt.setAttribute('data-email', STAFF_EMAILS[opt.value]);
   });
 }
 
@@ -914,10 +973,6 @@ function initPeriods(){
     addPeriod('sell');
   }
 }
-</script>
-</body>
-</html>
-
 // ── 補填銷售模式 ──────────────────────────────────────
 var FILL_MODE   = false;
 var FILL_FORMID = '';
@@ -1030,3 +1085,7 @@ function submitSellPart(){
   });
 }
 
+
+</script>
+</body>
+</html>
