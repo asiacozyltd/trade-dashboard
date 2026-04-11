@@ -1014,6 +1014,90 @@ function initPeriods(){
 var FILL_MODE   = false;
 var FILL_FORMID = '';
 
+// ── 補填模式：回填表單欄位 ────────────────────────────
+function fillFieldIfExists(id, val){
+  if(!val || !val.toString().trim()) return;
+  var el = document.getElementById(id);
+  if(el) el.value = val.toString().trim();
+}
+
+function fillPeriodsFromSheets(type, row){
+  // 從 Sheets 讀取期數資料（FormResponses 欄位：付款條件/收款條件不含期數，
+  // 期數存在 Payments 分頁，這裡用單筆總金額 + 日期回填第1期作為參考）
+  var container = document.getElementById(type+'-periods');
+  if(!container) return;
+
+  var hasData = false;
+  if(type==='sell'){
+    var amt  = parseFloat(row['應收總金額'])||0;
+    var cur  = (row['銷售幣別']||'TWD').trim().toUpperCase();
+    var date = (row['預計收款日']||'').trim();
+    // 只有當金額 > 0 才回填
+    if(amt > 0){
+      hasData = true;
+      if(!container.querySelector('.period-card')) addPeriod('sell');
+      var card = container.querySelector('.period-card');
+      if(card){
+        var nameEl = card.querySelector('.period-name');
+        var amtEl  = card.querySelector('.period-amt');
+        var curEl  = card.querySelector('.period-cur');
+        var dateEl = card.querySelector('.period-date');
+        if(nameEl && !nameEl.value) nameEl.value = '收款';
+        if(amtEl)  amtEl.value  = amt;
+        if(curEl)  curEl.value  = cur;
+        if(dateEl && date) dateEl.value = date.substring(0,10).replace(/\//g,'-');
+        calcPeriodTotal('sell');
+      }
+    }
+  } else {
+    var bAmt  = parseFloat(row['應付總金額'])||0;
+    var bCur  = (row['採購幣別']||'TWD').trim().toUpperCase();
+    var bDate = (row['預計付款日期']||'').trim();
+    if(bAmt > 0){
+      hasData = true;
+      if(!container.querySelector('.period-card')) addPeriod('buy');
+      var bCard = container.querySelector('.period-card');
+      if(bCard){
+        var bNameEl = bCard.querySelector('.period-name');
+        var bAmtEl  = bCard.querySelector('.period-amt');
+        var bCurEl  = bCard.querySelector('.period-cur');
+        var bDateEl = bCard.querySelector('.period-date');
+        if(bNameEl && !bNameEl.value) bNameEl.value = '付款';
+        if(bAmtEl)  bAmtEl.value  = bAmt;
+        if(bCurEl)  bCurEl.value  = bCur;
+        if(bDateEl && bDate) bDateEl.value = bDate.substring(0,10).replace(/\//g,'-');
+        calcPeriodTotal('buy');
+      }
+    }
+  }
+
+  // 如果有回填資料，在表單頂部顯示提示
+  if(hasData){
+    var hint = document.createElement('div');
+    hint.style.cssText = 'background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e;font-weight:700;';
+    hint.textContent = '📋 已自動帶入上次填寫的資料，請確認後修改或直接送出';
+    container.parentNode.insertBefore(hint, container);
+  }
+}
+
+function showFillDone(fillId, caseName, banner, msg){
+  if(banner){ banner.style.background='#15803d'; banner.textContent='✅ '+msg; }
+  document.querySelectorAll('.pg').forEach(function(p){ p.style.display='none'; });
+  var doneDiv=document.createElement('div');
+  doneDiv.style.cssText='max-width:480px;margin:40px auto;background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:28px 24px;text-align:center;';
+  doneDiv.innerHTML='<div style="font-size:40px;margin-bottom:12px;">✅</div>'
+    +'<div style="font-weight:700;color:#15803d;font-size:18px;margin-bottom:8px;">此案件已補填完成</div>'
+    +'<div style="color:#374151;margin-bottom:6px;">案件編號：<b>'+fillId+'</b></div>'
+    +'<div style="color:#374151;">案件名稱：<b>'+caseName+'</b></div>'
+    +'<div style="color:#64748b;font-size:13px;margin-top:16px;">若需修改，請聯繫系統管理員</div>';
+  document.body.appendChild(doneDiv);
+}
+
+function clearLocalAndContinue(fillId){
+  try{ localStorage.removeItem('fill_submitted_'+fillId); }catch(e){}
+  location.reload();
+}
+
 function checkFillMode(){
   var params = new URLSearchParams(window.location.search);
   var fillId = params.get('fill');
@@ -1036,20 +1120,34 @@ function checkFillMode(){
     });
     if(!row){ banner.textContent='❌ 找不到案件 '+fillId+'，請確認連結是否正確'; return; }
 
-    // ── 防重複：檢查是否已補填完成 ──
+    // ── 防重複：Sheets 狀態檢查（已完成）──
     var fillStat = (row['銷售補填狀態']||'').trim();
     if(fillStat === '已完成'){
-      banner.style.background = '#15803d';
-      banner.textContent = '✅ 此案件（'+fillId+'）已補填完成！';
+      showFillDone(fillId, row['案件名稱']||'', banner, '此案件已補填完成，資料已送出。');
+      return;
+    }
+
+    // ── 防重複：localStorage 本機已送出記錄 ──
+    var localKey = 'fill_submitted_' + fillId;
+    var localRecord = null;
+    try { localRecord = JSON.parse(localStorage.getItem(localKey)||'null'); } catch(e){}
+    if(localRecord && localRecord.submitted){
+      // 本機記錄有送出，但 Sheets 尚未更新（可能還在處理）
+      // 顯示警告讓使用者確認，而不是直接阻擋
+      banner.style.background = '#b45309';
+      banner.textContent = '⚠️ 偵測到本機記錄：此案件已在 '+localRecord.time+' 送出過，請勿重複填寫！';
       document.querySelectorAll('.pg').forEach(function(p){ p.style.display='none'; });
-      var doneDiv = document.createElement('div');
-      doneDiv.style.cssText = 'max-width:480px;margin:40px auto;background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:28px 24px;text-align:center;';
-      doneDiv.innerHTML = '<div style="font-size:40px;margin-bottom:12px;">✅</div>'
-        + '<div style="font-weight:700;color:#15803d;font-size:18px;margin-bottom:8px;">此案件已補填完成</div>'
+      var warnDiv = document.createElement('div');
+      warnDiv.style.cssText = 'max-width:480px;margin:40px auto;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:14px;padding:28px 24px;text-align:center;';
+      warnDiv.innerHTML = '<div style="font-size:40px;margin-bottom:12px;">⚠️</div>'
+        + '<div style="font-weight:700;color:#92400e;font-size:18px;margin-bottom:8px;">您已填寫並送出此案件</div>'
         + '<div style="color:#374151;margin-bottom:6px;">案件編號：<b>'+fillId+'</b></div>'
-        + '<div style="color:#374151;">案件名稱：<b>'+(row['案件名稱']||'')+'</b></div>'
-        + '<div style="color:#64748b;font-size:13px;margin-top:16px;">若需修改，請聯繫系統管理員</div>';
-      document.body.appendChild(doneDiv);
+        + '<div style="color:#374151;margin-bottom:6px;">案件名稱：<b>'+(row['案件名稱']||'')+'</b></div>'
+        + '<div style="color:#92400e;font-size:13px;margin-bottom:16px;">送出時間：'+localRecord.time+'</div>'
+        + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button data-fid="'+fillId+'" onclick="clearLocalAndContinue(this.dataset.fid)" style="padding:10px 20px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">忽略警告，重新填寫</button>'
+        + '</div>'
+        + '<div style="color:#64748b;font-size:12px;margin-top:12px;">如確認已送出，請關閉此頁面即可</div>';
+      document.body.appendChild(warnDiv);
       return;
     }
 
@@ -1121,6 +1219,11 @@ function checkFillMode(){
       if(buyT)   buyT.style.display='none';
       var sellSec=document.getElementById('sell-sec');
       if(sellSec) sellSec.parentNode.insertBefore(infoDiv, sellSec);
+      // 回填銷售欄位（若 Sheets 已有資料）
+      fillFieldIfExists('buyer',    row['客戶名稱（買方）']);
+      fillFieldIfExists('sell-pay', row['收款條件']);
+      fillFieldIfExists('sell-note',row['備註（銷售）']);
+      fillPeriodsFromSheets('sell', row);
       if(!document.getElementById('sell-periods').querySelector('.period-card')) addPeriod('sell');
     } else {
       // 補填採購：隱藏銷售區塊，顯示採購
@@ -1132,6 +1235,11 @@ function checkFillMode(){
       if(sellCostSec) sellCostSec.style.display='none';
       var buySec2=document.getElementById('buy-sec');
       if(buySec2) buySec2.parentNode.insertBefore(infoDiv, buySec2);
+      // 回填採購欄位（若 Sheets 已有資料）
+      fillFieldIfExists('supplier', row['供應商名稱（賣方）']);
+      fillFieldIfExists('buy-pay',  row['付款條件']);
+      fillFieldIfExists('buy-note', row['備註（採購）']);
+      fillPeriodsFromSheets('buy', row);
       if(!document.getElementById('buy-periods').querySelector('.period-card')) addPeriod('buy');
     }
 
@@ -1298,8 +1406,11 @@ function submitSellPart(){
     body: JSON.stringify(payload),
     mode:'no-cors'
   }).finally(function(){
-    // no-cors 無法讀回應，直接跳成功頁
-    // 後端有防重複保護，若已完成則不會重複寫入
+    // 送出成功後記錄到 localStorage，防止重複送出
+    try{
+      var now = new Date().toLocaleString('zh-TW',{hour12:false});
+      localStorage.setItem('fill_submitted_'+FILL_FORMID, JSON.stringify({submitted:true, time:now}));
+    }catch(e){}
     showPage('success');
     var t=document.querySelector('.st2'); if(t) t.textContent='內容已送出！';
     var s=document.querySelector('.ss2'); if(s) s.textContent='老闆將收到審核通知，感謝您的填寫。';
