@@ -1306,8 +1306,9 @@ function checkFillMode(){
       if(nextBtn2){
         nextBtn2.textContent = '下一步：交易細節 →';
         nextBtn2.style.background = fillColor;
-        // 覆寫 goNext 驗證，補填模式只驗證有填的那一半
-        nextBtn2.onclick = function(){ fillGoNext2(); };
+        // ★ 必須用 removeAttribute + setAttribute 才能覆蓋 HTML 的 onclick
+        nextBtn2.removeAttribute('onclick');
+        nextBtn2.setAttribute('onclick', 'fillGoNext2()');
       }
     }
 
@@ -1318,7 +1319,9 @@ function checkFillMode(){
       if(nextBtn3){
         nextBtn3.textContent = '送出補填內容（通知老闆審核）';
         nextBtn3.style.cssText += ';background:'+fillColor+';';
-        nextBtn3.onclick = function(){ fillGoSubmit(); };
+        // ★ 必須用 removeAttribute + setAttribute 才能覆蓋 HTML 的 onclick
+        nextBtn3.removeAttribute('onclick');
+        nextBtn3.setAttribute('onclick', 'fillGoSubmit()');
       }
     }
 
