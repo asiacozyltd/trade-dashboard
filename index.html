@@ -433,6 +433,33 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 var SCRIPT='https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
 var CSV='https://docs.google.com/spreadsheets/d/e/2PACX-1vTJ6nBKr5P1RFidrD6V_7MRLRraKBrrf3CmT8StmKm4uPYL19HCE0zYHjJmY1E0TI-NYWR7AvJFu8RQ/pub?gid=357150087&single=true&output=csv';
 
+// ── JSONP 通用工具（繞過 CORS）────────────────────────
+function jsonpGet(url, cb){
+  var cbName='_jcb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
+  var script=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return; done=true;
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    cb(null,'timeout');
+  },12000);
+  window[cbName]=function(d){
+    clearTimeout(timer); done=true;
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    cb(d,null);
+  };
+  script.src=url+(url.indexOf('?')>=0?'&':'?')+'callback='+cbName+'&_='+Date.now();
+  script.onerror=function(){
+    clearTimeout(timer); done=true;
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    cb(null,'script error');
+  };
+  document.head.appendChild(script);
+}
+
 // ★ 匯率換算：預設值，啟動後自動從免費 API 更新
 var RATE={TWD:1,USD:30.5,JPY:0.205,EUR:33.5};
 
@@ -528,26 +555,21 @@ function doLogin(u){
   setInterval(fetchRates, 1800000);
 }
 
-// 載入雲端帳號（Apps Script Sheets）
+// 載入雲端帳號（Apps Script Sheets — JSONP 模式）
 function fetchAccounts(callback){
-  fetch(SCRIPT+'?action=getAccounts&_='+Date.now(),{redirect:'follow'})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.status==='ok'&&d.accounts&&d.accounts.length>0){
-        CLOUD_ACCOUNTS = d.accounts;
-        // 更新本地備用
-        try{localStorage.setItem('cloudAccounts', JSON.stringify(CLOUD_ACCOUNTS));}catch(e){}
-      }
-      if(callback) callback();
-    })
-    .catch(function(){
-      // 網路失敗：從本地快取讀
+  jsonpGet(SCRIPT+'?action=getAccounts', function(d, err){
+    if(d && d.status==='ok' && d.accounts && d.accounts.length>0){
+      CLOUD_ACCOUNTS = d.accounts;
+      try{localStorage.setItem('cloudAccounts', JSON.stringify(CLOUD_ACCOUNTS));}catch(e){}
+    } else {
+      // 失敗：從本地快取讀
       try{
         var c=localStorage.getItem('cloudAccounts');
         if(c) CLOUD_ACCOUNTS=JSON.parse(c);
       }catch(e){}
-      if(callback) callback();
-    });
+    }
+    if(callback) callback();
+  });
 }
 function loadU(){
   var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
@@ -685,43 +707,27 @@ function login(){
   if(!p){ document.getElementById('lerr').textContent='請輸入密碼'; return; }
   if(btn){ btn.disabled=true; btn.textContent='驗證中...'; }
 
-  // 先嘗試從雲端取得帳號（含密碼），再本地比對
-  fetch(SCRIPT+'?action=getAccounts&_='+Date.now(),{redirect:'follow'})
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(btn){ btn.disabled=false; btn.textContent='登入'; }
-      var accounts = (d.status==='ok' && d.accounts) ? d.accounts : [];
-      // 雲端帳號補上本地密碼
-      var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
-      var merged = accounts.map(function(u){
-        if(u.pwd) return u;
-        var local = allLocal.find(function(l){ return l.id===u.id; });
-        return Object.assign({}, u, { pwd: local ? local.pwd : '' });
-      });
-      // 若雲端空的，用本地
-      if(!merged.length) merged = allLocal.slice();
-      var u = merged.find(function(x){ return x.role===role && x.pwd===p; });
-      if(!u) u = merged.find(function(x){ return x.pwd===p; });
-      if(u){
-        CLOUD_ACCOUNTS = merged; // 更新快取
-        doLogin(u);
-      } else {
-        document.getElementById('lerr').textContent='密碼錯誤';
-        document.getElementById('lpwd').value='';
-      }
-    })
-    .catch(function(){
-      // 網路失敗：純本地模式
-      if(btn){ btn.disabled=false; btn.textContent='登入'; }
-      var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
-      var u = allLocal.find(function(x){ return x.role===role && x.pwd===p; });
-      if(!u) u = allLocal.find(function(x){ return x.pwd===p; });
-      if(u){ doLogin(u); }
-      else {
-        document.getElementById('lerr').textContent='密碼錯誤';
-        document.getElementById('lpwd').value='';
-      }
+  // 先嘗試從雲端取得帳號（JSONP，繞過 CORS），再本地比對
+  jsonpGet(SCRIPT+'?action=getAccounts', function(d, err){
+    if(btn){ btn.disabled=false; btn.textContent='登入'; }
+    var accounts = (d && d.status==='ok' && d.accounts) ? d.accounts : [];
+    var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
+    var merged = accounts.map(function(u){
+      if(u.pwd) return u;
+      var local = allLocal.find(function(l){ return l.id===u.id; });
+      return Object.assign({}, u, { pwd: local ? local.pwd : '' });
     });
+    if(!merged.length) merged = allLocal.slice();
+    var u = merged.find(function(x){ return x.role===role && x.pwd===p; });
+    if(!u) u = merged.find(function(x){ return x.pwd===p; });
+    if(u){
+      CLOUD_ACCOUNTS = merged;
+      doLogin(u);
+    } else {
+      document.getElementById('lerr').textContent='密碼錯誤';
+      document.getElementById('lpwd').value='';
+    }
+  });
 }
 function logout(){
   addLog('登出',curUser.name,'','');
@@ -748,47 +754,70 @@ function buildNav(){
   }).join('');
 }
 
-// 資料讀取（讀 FormResponses 分頁）
+// 資料讀取（用 JSONP 繞過 CORS，讀 FormResponses 分頁）
+var _loadTimer = null;
 function load(){
   document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
-  fetch(SCRIPT+'?action=getData&_='+Date.now(),{method:'GET',redirect:'follow'})
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
-    })
-    .then(function(d){
-      if(d.status==='ok' && d.rows && d.rows.length>0){
-        rows=d.rows.filter(function(r){return g(r,'staff')!=='';});
-        console.log('✅ getData 成功，共 '+rows.length+' 筆（FormResponses）');
-        onLoad();
-      } else {
-        var reason = d.message || (d.rows && d.rows.length===0 ? '試算表目前沒有資料' : 'API 回傳異常');
-        console.warn('⚠️ getData 回傳空資料：'+reason+' → 改用 CSV 備援');
-        loadCSV(reason);
-      }
-    })
-    .catch(function(err){
-      console.warn('❌ getData 連線失敗：'+err+' → 改用 CSV 備援');
-      loadCSV('API 連線失敗：'+err);
-    });
+  loadViaJSONP();
 }
-function loadCSV(reason){
-  console.log('📄 CSV 備援中… 原因：'+(reason||''));
-  fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(CSV+'&_='+Date.now()))
+function loadViaJSONP(){
+  // 用 JSONP 方式呼叫 Apps Script，完全不受 CORS 限制
+  var cbName = '_cb_'+Date.now();
+  var script = document.createElement('script');
+  var done = false;
+  var timer = setTimeout(function(){
+    if(done) return;
+    done = true;
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    console.warn('⚠️ JSONP 逾時 → 改用 CSV 備援');
+    loadCSV();
+  }, 10000);
+  window[cbName] = function(d){
+    clearTimeout(timer);
+    done = true;
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    if(d && d.status==='ok' && d.rows && d.rows.length>0){
+      rows = d.rows.filter(function(r){return g(r,'staff')!=='';});
+      console.log('✅ JSONP getData 成功，共 '+rows.length+' 筆（FormResponses）');
+      onLoad();
+    } else {
+      console.warn('⚠️ JSONP 回傳空資料 → 改用 CSV 備援');
+      loadCSV();
+    }
+  };
+  script.src = SCRIPT+'?action=getData&callback='+cbName+'&_='+Date.now();
+  document.head.appendChild(script);
+}
+function loadCSV(){
+  // 直接讀 Google Sheets 公開 CSV（不透過 proxy）
+  console.log('📄 改用 CSV 直連備援...');
+  fetch(CSV+'&_='+Date.now())
     .then(function(r){return r.text();})
     .then(function(c){
       var p=parseCSV(c);
-      if(p.length>0){rows=p;console.log('✅ CSV 備援成功，共 '+p.length+' 筆');onLoad();}
-      else showErr('CSV 讀取成功但無資料（請確認 Sheets 已公開發布）');
+      if(p.length>0){
+        rows=p;
+        console.log('✅ CSV 直連成功，共 '+p.length+' 筆');
+        onLoad();
+      } else {
+        showErr('CSV 無資料，請確認 Google Sheets 已設為「任何人都能查看」並已發布');
+      }
     })
-    .catch(function(){
-      fetch(CSV+'&_='+Date.now()).then(function(r){return r.text();})
+    .catch(function(e){
+      // 最後備援：allorigins proxy
+      console.warn('CSV 直連失敗，試 proxy... 錯誤：'+e);
+      fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(CSV+'&_='+Date.now()))
+        .then(function(r){return r.text();})
         .then(function(c){
           var p=parseCSV(c);
-          if(p.length>0){rows=p;console.log('✅ CSV 直連成功，共 '+p.length+' 筆');onLoad();}
-          else showErr('無法讀取資料，請確認：1) Apps Script 已重新部署  2) Google Sheets 已公開發布');
+          if(p.length>0){rows=p;console.log('✅ proxy CSV 成功，共 '+p.length+' 筆');onLoad();}
+          else showErr('所有讀取管道失敗，請確認：<br>1. Google Sheets 已公開發布<br>2. Apps Script 已重新部署');
         })
-        .catch(function(e){showErr('所有讀取管道失敗：'+e);});
+        .catch(function(e2){
+          showErr('所有讀取管道失敗：'+e2+'<br>請確認網路連線及 Google Sheets 設定');
+        });
     });
 }
 function onLoad(){
@@ -1035,13 +1064,10 @@ function loadTransfer(){
 }
 
 function loadPayments(cb){
-  fetch(SCRIPT+'?action=getAllPayments&_='+Date.now(),{redirect:'follow'})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.status==='ok') PAYMENTS_CACHE=d.payments||[];
-      if(cb) cb();
-    })
-    .catch(function(){ if(cb) cb(); });
+  jsonpGet(SCRIPT+'?action=getAllPayments', function(d, err){
+    if(d && d.status==='ok') PAYMENTS_CACHE=d.payments||[];
+    if(cb) cb();
+  });
 }
 
 function renderDaily(){
@@ -2051,20 +2077,14 @@ function loadTransfer(){
 }
 
 function loadPayments(cb){
-  fetch(SCRIPT+'?action=getAllPayments&_='+Date.now(),{redirect:'follow'})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.status==='ok'&&d.payments){
-        allPayments    = d.payments;
-        PAYMENTS_CACHE = d.payments; // 同步給日曆用
-      }
-      if(cb) cb();
-      else renderPayments();
-    })
-    .catch(function(){
-      if(cb) cb();
-      else renderPayments();
-    });
+  jsonpGet(SCRIPT+'?action=getAllPayments', function(d, err){
+    if(d && d.status==='ok' && d.payments){
+      allPayments    = d.payments;
+      PAYMENTS_CACHE = d.payments; // 同步給日曆用
+    }
+    if(cb) cb();
+    else renderPayments();
+  });
 }
 
 function filterPayments(f, el){
