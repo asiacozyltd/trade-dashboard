@@ -770,9 +770,9 @@ function loadViaJSONP(){
     done = true;
     delete window[cbName];
     if(script.parentNode) script.parentNode.removeChild(script);
-    console.warn('⚠️ JSONP 逾時 → 改用 CSV 備援');
+    console.warn('⚠️ JSONP 逾時（5秒）→ 改用 CSV 備援');
     loadCSV();
-  }, 10000);
+  }, 5000);
   window[cbName] = function(d){
     clearTimeout(timer);
     done = true;
@@ -787,7 +787,18 @@ function loadViaJSONP(){
       loadCSV();
     }
   };
-  script.src = SCRIPT+'?action=getData&callback='+cbName+'&_='+Date.now();
+  var jsonpUrl = SCRIPT+'?action=getData&callback='+cbName+'&_='+Date.now();
+  console.log('🚀 JSONP 發出請求：', jsonpUrl);
+  script.src = jsonpUrl;
+  script.onerror = function(){
+    if(done) return;
+    done = true;
+    clearTimeout(timer);
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    console.warn('❌ JSONP script onerror → 改用 CSV 備援');
+    loadCSV();
+  };
   document.head.appendChild(script);
 }
 function loadCSV(){
