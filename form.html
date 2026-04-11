@@ -798,7 +798,7 @@ async function submitForm(){
   };
 
   try{
-    fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify(payload),mode:'no-cors'});
+    fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
     setTimeout(()=>showPage('success'),800);
   }catch(e){showPage('success');}
   btn.disabled=false;
@@ -817,15 +817,27 @@ function resetForm(){
 function fmt(n){ return Math.round(n||0).toLocaleString('zh-TW'); }
 
 // 業務員信箱對照表（請填入真實 Email）
+// ★ 業務員信箱：直接在這裡填入，或到 Google Sheets「Accounts」分頁的「email」欄設定
+// （Accounts 分頁優先，若有設定會自動覆蓋此處的值）
 var STAFF_EMAILS = {
-  '黃啟靖': '',  // ← 填入黃啟靖的 Email
-  '楊正國': '',  // ← 填入楊正國的 Email
-  '朱嬿琳': '',  // ← 填入朱嬿琳的 Email
-  '呂建宏': '',  // ← 填入呂建宏的 Email
-  '呂紀萱': '',  // ← 填入呂紀萱的 Email
-  '陳彥竹': '',  // ← 填入陳彥竹的 Email
-  'SHERRY':  '',  // ← 填入 SHERRY 的 Email
+  '黃啟靖': '',
+  '楊正國': '',
+  '朱嬿琳': '',
+  '呂建宏': '',
+  '呂紀萱': '',
+  '陳彥竹': '',
+  'SHERRY':  '',
 };
+
+// 從雲端帳號同步信箱（若 Accounts 分頁有設定 email 欄）
+function syncStaffEmailsFromCloud(){
+  if(!CLOUD_ACCOUNTS) return;
+  CLOUD_ACCOUNTS.forEach(function(u){
+    if(u.email && u.staffName && STAFF_EMAILS.hasOwnProperty(u.staffName)){
+      STAFF_EMAILS[u.staffName] = u.email;
+    }
+  });
+}
 
 function onTransferChange(){
   var sel      = document.getElementById('transfer-to');
@@ -1021,6 +1033,38 @@ function fillFieldIfExists(id, val){
   if(el) el.value = val.toString().trim();
 }
 
+function fillNumberIfExists(id, val){
+  var n = parseFloat(val);
+  if(!n || n <= 0) return;
+  var el = document.getElementById(id);
+  if(el) el.value = n;
+}
+
+// selR 的 id 版本（radio button 自動選取）
+function selRById(group, val){
+  var containers = {'buyCon':'#page-3', 'sellCon':'#page-3'};
+  var scope = document.querySelector(containers[group] || 'body');
+  if(!scope) return;
+  scope.querySelectorAll('.ri').forEach(function(el){
+    if(el.closest('[data-group="'+group+'"]') || el.parentElement){
+      var span = el.querySelector('span');
+      if(span && span.textContent.trim() === val){
+        // 找到對應的 ri
+        if(el.closest('.rg')){
+          var rg = el.closest('.rg');
+          // 確認這個 rg 是屬於 group 的
+          var onclick = el.getAttribute('onclick');
+          if(onclick && onclick.indexOf("'"+group+"'") >= 0){
+            el.parentElement.querySelectorAll('.ri').forEach(function(i){i.classList.remove('sel');});
+            el.classList.add('sel');
+            fd[group] = val;
+          }
+        }
+      }
+    }
+  });
+}
+
 function fillPeriodsFromSheets(type, row){
   // 從 Sheets 讀取期數資料（FormResponses 欄位：付款條件/收款條件不含期數，
   // 期數存在 Payments 分頁，這裡用單筆總金額 + 日期回填第1期作為參考）
@@ -1193,6 +1237,17 @@ function checkFillMode(){
     banner.style.background = fillColor;
     banner.textContent = '✍️ 補填'+fillPart+'內容｜' + fd.caseName + '（' + fillId + '）由 ' + fd.staff + ' 轉交';
 
+      // 同步業務員信箱（從 Accounts 分頁，讓轉交選單顯示正確信箱）
+      jsonpGet(SCRIPT_URL+'?action=getAccounts', function(accData, accErr){
+        if(accData && accData.status==='ok' && accData.accounts){
+          accData.accounts.forEach(function(u){
+            if(u.email && u.staffName && STAFF_EMAILS.hasOwnProperty(u.staffName)){
+              STAFF_EMAILS[u.staffName] = u.email;
+            }
+          });
+        }
+      });
+
     // 顯示對方已填的資訊摘要
     var refTitle  = fillPart==='銷售' ? '採購' : '銷售';
     var refColor  = fillPart==='銷售' ? '#fef2f2' : '#f0fdf4';
@@ -1261,11 +1316,57 @@ function checkFillMode(){
     if(navbtns3){
       var nextBtn3 = navbtns3.querySelector('.bn');
       if(nextBtn3){
-        nextBtn3.textContent = '📤 送出補填內容（通知老闆審核）';
+        nextBtn3.textContent = '送出補填內容（通知老闆審核）';
         nextBtn3.style.cssText += ';background:'+fillColor+';';
         nextBtn3.onclick = function(){ fillGoSubmit(); };
       }
     }
+
+    // ── page-3 交易細節回填（若 Sheets 已有資料）────────
+    setTimeout(function(){
+      // 合約狀態（radio button）
+      var bCon = row['合約 [賣方合約（採購）]'] || '';
+      var sCon = row['合約 [買方合約（銷售）]'] || '';
+      if(bCon) selRById('buyCon', bCon);
+      if(sCon) selRById('sellCon', sCon);
+      // 貿易條件
+      var trade = row['貿易條件'] || '';
+      if(trade){
+        var trSel = document.getElementById('trade-term');
+        if(trSel){
+          var found = false;
+          for(var oi=0; oi<trSel.options.length; oi++){
+            if(trSel.options[oi].value === trade || trSel.options[oi].text === trade){
+              trSel.value = trSel.options[oi].value;
+              found = true; break;
+            }
+          }
+          if(!found){
+            trSel.value = '其他';
+            fillFieldIfExists('trade-other', trade);
+            var to = document.getElementById('trade-other');
+            if(to) to.classList.add('show');
+          }
+        }
+        fd.trade = trade;
+      }
+      // 日期欄位（需轉成 yyyy-MM-dd 格式給 input[type=date]）
+      var etdVal = (row['ETD/卸魚日']||'').toString().trim();
+      var etaVal = (row['ETA/到貨日']||'').toString().trim();
+      if(etdVal){ var etdEl=document.getElementById('etd'); if(etdEl) etdEl.value=etdVal.substring(0,10).replace(/\//g,'-'); }
+      if(etaVal){ var etaEl=document.getElementById('eta'); if(etaEl) etaEl.value=etaVal.substring(0,10).replace(/\//g,'-'); }
+      // 出貨地/目的地
+      fillFieldIfExists('origin', row['出貨地/發貨港口/出貨地點']);
+      fillFieldIfExists('dest',   row['目的地/收貨港口/收貨地點']);
+      // 費用
+      fillNumberIfExists('cost-extra',   row['其他費用']);
+      fillNumberIfExists('cost-freight', row['運費']);
+      fillNumberIfExists('cost-tax',     row['規費']);
+      fillNumberIfExists('cost-insure',  row['保險費']);
+      fillNumberIfExists('cost-comm',    row['佣金']);
+      calcCostTotal();
+    }, 100);
+
   }); // end jsonpGet
 }
 
@@ -1299,7 +1400,8 @@ function fillGoNext2(){
 
 // 補填模式：page-3 收集交易細節後送出
 function fillGoSubmit(){
-  collect(3);
+  collect(2);  // 先收集 page-2 的欄位（銷售/採購資料）
+  collect(3);  // 再收集 page-3 的交易細節
   submitSellPart();
 }
 
@@ -1314,8 +1416,11 @@ function initFillModeSubmit(){
 }
 
 function submitSellPart(){
-  // ★ 不再呼叫 collect(2)，collect 已在 fillGoNext2/fillGoSubmit 裡執行
-  // 直接從 fd 取資料（checkFillMode 已存入，collect 已更新）
+  console.log('=== submitSellPart 開始 ===');
+  console.log('FILL_MODE:', FILL_MODE, '| FILL_FORMID:', FILL_FORMID);
+  console.log('fd.fillPart:', fd.fillPart, '| fd.buyer:', fd.buyer, '| fd.supplier:', fd.supplier);
+  console.log('fd.sellPeriods:', JSON.stringify(fd.sellPeriods));
+  console.log('fd.buyPeriods:', JSON.stringify(fd.buyPeriods));
 
   var fp = fd.fillPart || '銷售';  // 補填方向
 
@@ -1398,14 +1503,24 @@ function submitSellPart(){
     comm:         fd.comm     ||0,
   };
 
+  console.log('=== payload 內容 ===');
+  console.log('action:', payload.action, '| formId:', payload.formId);
+  console.log('fillPart:', payload.fillPart);
+  console.log('buyer:', payload.buyer, '| sellAmt:', payload.sellAmt);
+  console.log('supplier:', payload.supplier, '| buyAmt:', payload.buyAmt);
+  console.log('sellPeriods:', JSON.stringify(payload.sellPeriods));
+  console.log('buyPeriods:', JSON.stringify(payload.buyPeriods));
+  console.log('SCRIPT_URL:', SCRIPT_URL);
+
   var btn = document.getElementById('fill-submit-btn') || document.getElementById('submit-btn');
   if(btn){ btn.disabled=true; btn.textContent='送出中...'; }
 
   fetch(SCRIPT_URL, {
     method:'POST',
-    body: JSON.stringify(payload),
-    mode:'no-cors'
-  }).finally(function(){
+    mode:'no-cors',
+    body: JSON.stringify(payload)
+  })
+  .finally(function(){
     // 送出成功後記錄到 localStorage，防止重複送出
     try{
       var now = new Date().toLocaleString('zh-TW',{hour12:false});
