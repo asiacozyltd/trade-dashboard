@@ -613,7 +613,7 @@ function saveU(arr){
 function getCU(){try{var s=localStorage.getItem('tcu');return s?JSON.parse(s):[];}catch(e){return[];}}
 function saveCU(a){try{localStorage.setItem('tcu',JSON.stringify(a));}catch(e){}}
 
-var CU=loadU(),curUser=null,rows=[],filtered=[],logs=[];
+var CU=loadU(),curUser=null,rows=[],filtered=[],logs=[],fillPend=false;
 var dailyChart=null;
 
 var F={
@@ -655,6 +655,9 @@ var F={
   formId:      '表單編號',
   sellCostAmt: '銷售成本金額',
   sellCostCur: '銷售成本幣別',
+  transferTo:  '轉交銷售業務',
+  transferMsg: '轉交備註',
+  fillStatus:  '銷售補填狀態',
 };
 function g(r,k){return(r[F[k]]||'').toString().trim();}
 function pf(v){return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0;}
@@ -845,6 +848,10 @@ function onLoad(){
   } else {
     filtered=rows.slice();
   }
+  // 計算是否有待補填案件（業務員用）
+  fillPend = rows.some(function(r){
+    return (r['銷售補填狀態']||r[F.fillStatus]||'')==='待補填';
+  });
   buildStaffFilter();
   renderDash();
   renderCards(filtered,'records-cards',true);
