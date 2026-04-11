@@ -632,31 +632,44 @@ function collect(n){
     fd.asst     = v('asst');
   }
   if(n===2){
-    fd.supplier  = v('supplier');
-    fd.buyPay    = getBuyPay();
-    fd.buyNote   = v('buy-note');
-    fd.buyer     = v('buyer');
-    fd.sellPay   = getSellPay();
-    fd.sellNote  = v('sell-note');
-    fd.buyPeriods  = getPeriods('buy');
-    fd.sellPeriods = getPeriods('sell');
-    // 純銷售案件：成本只用於毛利計算，不加入付款期數
+    // 補填模式：只更新「有顯示」的那一半，另一半保留 fd 原值
+    var buySec = document.getElementById('buy-sec');
+    var sellSec = document.getElementById('sell-sec');
+    var buyVisible  = buySec  && buySec.style.display  !== 'none';
+    var sellVisible = sellSec && sellSec.style.display !== 'none';
+
+    if(buyVisible){
+      fd.supplier  = v('supplier');
+      fd.buyPay    = getBuyPay();
+      fd.buyNote   = v('buy-note');
+      fd.buyPeriods = getPeriods('buy');
+    }
+    if(sellVisible){
+      fd.buyer     = v('buyer');
+      fd.sellPay   = getSellPay();
+      fd.sellNote  = v('sell-note');
+      fd.sellPeriods = getPeriods('sell');
+    }
+    // 純銷售案件：成本
     if((fd.type||'')==='銷售'){
       var sbC = v('sell-buy-cur')||'TWD';
       var sbEl = document.getElementById('sell-buy-amt');
       fd.sellCostAmt = sbEl ? parseFloat(sbEl.value)||0 : 0;
       fd.sellCostCur = sbC;
-      // buyPeriods 維持空白，不帶入 Payments
     }
     // 代表值（主表用第一期）
-    fd.buyCur  = fd.buyPeriods.length  ? fd.buyPeriods[0].cur  : 'TWD';
-    fd.buyAmt  = fd.buyPeriods.reduce(function(s,p){ return s+(p.cur===fd.buyCur?parseFloat(p.amt)||0:0); },0);
-    fd.buyDate = fd.buyPeriods.length  ? fd.buyPeriods[0].date : '';
-    fd.sellCur = fd.sellPeriods.length ? fd.sellPeriods[0].cur : 'TWD';
-    fd.sellAmt = fd.sellPeriods.reduce(function(s,p){ return s+(p.cur===fd.sellCur?parseFloat(p.amt)||0:0); },0);
-    fd.sellDate= fd.sellPeriods.length ? fd.sellPeriods[0].date: '';
-    fd.buyNTD  = fd.buyAmt*(RATE[fd.buyCur]||1);
-    fd.sellNTD = fd.sellAmt*(RATE[fd.sellCur]||1);
+    if(fd.buyPeriods && fd.buyPeriods.length){
+      fd.buyCur  = fd.buyPeriods[0].cur  || 'TWD';
+      fd.buyAmt  = fd.buyPeriods.reduce(function(s,p){ return s+(p.cur===fd.buyCur?parseFloat(p.amt)||0:0); },0);
+      fd.buyDate = fd.buyPeriods[0].date || '';
+    }
+    if(fd.sellPeriods && fd.sellPeriods.length){
+      fd.sellCur  = fd.sellPeriods[0].cur  || 'TWD';
+      fd.sellAmt  = fd.sellPeriods.reduce(function(s,p){ return s+(p.cur===fd.sellCur?parseFloat(p.amt)||0:0); },0);
+      fd.sellDate = fd.sellPeriods[0].date || '';
+    }
+    fd.buyNTD  = (fd.buyAmt||0)*(RATE[fd.buyCur||'TWD']||1);
+    fd.sellNTD = (fd.sellAmt||0)*(RATE[fd.sellCur||'TWD']||1);
   }
   if(n===3){
     fd.buyCon   = fd.buyCon||'未選';
@@ -1175,16 +1188,35 @@ function initFillModeSubmit(){
 }
 
 function submitSellPart(){
-  // 先收集目前畫面上的欄位到 fd
-  collect(2);
+  // ★ 不再呼叫 collect(2)，collect 已在 fillGoNext2/fillGoSubmit 裡執行
+  // 直接從 fd 取資料（checkFillMode 已存入，collect 已更新）
+
+  var fp = fd.fillPart || '銷售';  // 補填方向
+
+  // 依補填方向驗證
+  if(fp === '銷售'){
+    var sellPeriods = getPeriods('sell');
+    if(!sellPeriods.length){ alert('請至少填入一筆收款期數'); return; }
+    if(!fd.buyer){ alert('請填入客戶（買方）名稱'); return; }
+  } else {
+    var buyPeriods2 = getPeriods('buy');
+    if(!buyPeriods2.length){ alert('請至少填入一筆付款期數'); return; }
+    if(!fd.supplier){ alert('請填入供應商名稱'); return; }
+  }
 
   var sellPeriods = getPeriods('sell');
-  if(!sellPeriods.length){ alert('請至少填入一筆收款期數'); return; }
-  if(!fd.buyer){ alert('請填入客戶（買方）名稱'); return; }
+  var buyPeriods  = getPeriods('buy');
 
-  // 計算銷售總金額
-  var sellCur = fd.sellPeriods && fd.sellPeriods.length ? fd.sellPeriods[0].cur : 'TWD';
+  // 計算銷售總金額（從期數加總）
+  var sellCur = fd.sellPeriods && fd.sellPeriods.length ? fd.sellPeriods[0].cur :
+                (sellPeriods.length ? sellPeriods[0].cur : 'TWD');
   var sellAmt = sellPeriods.reduce(function(s,p){ return s+(parseFloat(p.amt)||0); }, 0);
+
+  // 計算採購總金額（從期數加總）
+  var buyCurCalc = fd.buyCur || (buyPeriods.length ? buyPeriods[0].cur : 'TWD');
+  var buyAmtCalc = buyPeriods.length
+    ? buyPeriods.reduce(function(s,p){ return s+(parseFloat(p.amt)||0); }, 0)
+    : (fd.buyAmt || 0);
 
   var staffName = fd.staff || '';
   try{
@@ -1208,14 +1240,14 @@ function submitSellPart(){
     sellPay:      fd.sellPay  ||'',
     sellNote:     fd.sellNote ||'',
     sellPeriods:  sellPeriods,
-    // 採購欄位（補填採購時用）
-    supplier:     fd.supplier ||'',
-    buyCur:       fd.buyCur   ||'TWD',
-    buyAmt:       fd.buyAmt   ||0,
-    buyDate:      fd.buyDate  ||'',
-    buyPay:       fd.buyPay   ||'',
-    buyNote:      fd.buyNote  ||'',
-    buyPeriods:   getPeriods('buy'),
+    // 採購欄位（補填採購時用 / 或從 fd 帶回）
+    supplier:     fd.supplier  ||'',
+    buyCur:       buyCurCalc,
+    buyAmt:       buyAmtCalc,
+    buyDate:      fd.buyDate   ||'',
+    buyPay:       fd.buyPay    ||'',
+    buyNote:      fd.buyNote   ||'',
+    buyPeriods:   buyPeriods,
     // 交易細節（page-3 填的）
     buyCon:       fd.buyCon   ||'',
     sellCon:      fd.sellCon  ||'',
