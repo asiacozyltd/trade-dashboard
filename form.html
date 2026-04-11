@@ -228,7 +228,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
   </div>
   <div class="navbtns">
     <button class="bb" onclick="goBack(2)">← 上一步</button>
-    <button class="bn" onclick="goNext(2)">下一步 →</button>
+    <button class="bn" id="p2-next-btn" onclick="FILL_MODE ? fillGoNext2() : goNext(2)">下一步 →</button>
   </div>
 </div>
 
@@ -356,7 +356,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
 
   <div class="navbtns">
     <button class="bb" onclick="goBack(3)">← 上一步</button>
-    <button class="bn" onclick="goNext(3)">下一步 →</button>
+    <button class="bn" id="p3-next-btn" onclick="FILL_MODE ? fillGoSubmit() : goNext(3)">下一步 →</button>
   </div>
 </div>
 
@@ -1298,31 +1298,16 @@ function checkFillMode(){
       if(!document.getElementById('buy-periods').querySelector('.period-card')) addPeriod('buy');
     }
 
-    // 補填模式：page-2「下一步」改為「→ 下一步（交易細節）」
-    // 讓流程走 page2 → page3 → 送出
-    var navbtns2 = document.querySelector('#page-2 .navbtns');
-    if(navbtns2){
-      var nextBtn2 = navbtns2.querySelector('.bn');
-      if(nextBtn2){
-        nextBtn2.textContent = '下一步：交易細節 →';
-        nextBtn2.style.background = fillColor;
-        // ★ 必須用 removeAttribute + setAttribute 才能覆蓋 HTML 的 onclick
-        nextBtn2.removeAttribute('onclick');
-        nextBtn2.setAttribute('onclick', 'fillGoNext2()');
-      }
+    // 按鈕文字更新（onclick 已直接寫在 HTML 按鈕，FILL_MODE 判斷）
+    var nextBtn2 = document.getElementById('p2-next-btn');
+    if(nextBtn2){
+      nextBtn2.textContent = '下一步：交易細節 →';
+      nextBtn2.style.background = fillColor;
     }
-
-    // page-3 的「下一步」改為「送出簽核」
-    var navbtns3 = document.querySelector('#page-3 .navbtns');
-    if(navbtns3){
-      var nextBtn3 = navbtns3.querySelector('.bn');
-      if(nextBtn3){
-        nextBtn3.textContent = '送出補填內容（通知老闆審核）';
-        nextBtn3.style.cssText += ';background:'+fillColor+';';
-        // ★ 必須用 removeAttribute + setAttribute 才能覆蓋 HTML 的 onclick
-        nextBtn3.removeAttribute('onclick');
-        nextBtn3.setAttribute('onclick', 'fillGoSubmit()');
-      }
+    var nextBtn3 = document.getElementById('p3-next-btn');
+    if(nextBtn3){
+      nextBtn3.textContent = '送出補填內容（通知老闆審核）';
+      nextBtn3.style.background = fillColor;
     }
 
     // ── page-3 交易細節回填（若 Sheets 已有資料）────────
@@ -1375,6 +1360,7 @@ function checkFillMode(){
 
 // 補填模式：page-2 → page-3（只驗證補填的那一半）
 function fillGoNext2(){
+  console.log('=== fillGoNext2 被呼叫 === fillPart:', fd.fillPart);
   var fp = fd.fillPart || '銷售';
   if(fp==='銷售'){
     if(!v('buyer'))   { alert('請填入客戶名稱'); return; }
@@ -1403,8 +1389,11 @@ function fillGoNext2(){
 
 // 補填模式：page-3 收集交易細節後送出
 function fillGoSubmit(){
-  collect(2);  // 先收集 page-2 的欄位（銷售/採購資料）
-  collect(3);  // 再收集 page-3 的交易細節
+  console.log('=== fillGoSubmit 被呼叫 ===');
+  console.log('fd before collect:', JSON.stringify({buyer:fd.buyer, supplier:fd.supplier, fillPart:fd.fillPart, formId:fd.formId}));
+  collect(2);
+  collect(3);
+  console.log('fd after collect:', JSON.stringify({buyer:fd.buyer, supplier:fd.supplier, sellPeriods:(fd.sellPeriods||[]).length, buyPeriods:(fd.buyPeriods||[]).length}));
   submitSellPart();
 }
 
