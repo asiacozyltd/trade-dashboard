@@ -1045,7 +1045,8 @@ function checkFillMode(){
     document.title = '補填'+fillPart+'內容｜貿易大漁';
     fd.type      = '採購+銷售(三角貿易)';
     fd.formId    = fillId;
-    fd.fillPart  = fillPart;  // 記錄補填方向
+    fd.fillPart  = fillPart;   // 記錄補填方向
+    fd.origStaff = row['業務名稱'] || '';  // 原始填單人（存起來，不被覆蓋）
 
     // 從 Sheets 讀出已有的欄位存入 fd
     fd.staff     = row['業務名稱']          ||'';
@@ -1204,34 +1205,43 @@ function submitSellPart(){
     if(!fd.supplier){ alert('請填入供應商名稱'); return; }
   }
 
-  var sellPeriods = getPeriods('sell');
-  var buyPeriods  = getPeriods('buy');
+  // 優先用 fd（collect 已存），DOM 為備援
+  var sellPeriods = (fd.sellPeriods && fd.sellPeriods.length) ? fd.sellPeriods : getPeriods('sell');
+  var buyPeriods  = (fd.buyPeriods  && fd.buyPeriods.length)  ? fd.buyPeriods  : getPeriods('buy');
 
-  // 計算銷售總金額（從期數加總）
-  var sellCur = fd.sellPeriods && fd.sellPeriods.length ? fd.sellPeriods[0].cur :
-                (sellPeriods.length ? sellPeriods[0].cur : 'TWD');
+  console.log('📦 補填送出 fillPart='+fp
+    +' sellPeriods='+sellPeriods.length
+    +' buyPeriods='+buyPeriods.length
+    +' fd.buyer='+fd.buyer+' fd.supplier='+fd.supplier);
+
+  // 計算銷售總金額
+  var sellCur = sellPeriods.length ? sellPeriods[0].cur : (fd.sellCur || 'TWD');
   var sellAmt = sellPeriods.reduce(function(s,p){ return s+(parseFloat(p.amt)||0); }, 0);
 
-  // 計算採購總金額（從期數加總）
-  var buyCurCalc = fd.buyCur || (buyPeriods.length ? buyPeriods[0].cur : 'TWD');
+  // 計算採購總金額
+  var buyCurCalc = buyPeriods.length ? buyPeriods[0].cur : (fd.buyCur || 'TWD');
   var buyAmtCalc = buyPeriods.length
     ? buyPeriods.reduce(function(s,p){ return s+(parseFloat(p.amt)||0); }, 0)
     : (fd.buyAmt || 0);
 
-  var staffName = fd.staff || '';
+  // staffName = 補填人（當前登入者）
+  var staffName = '';
   try{
     var cu = JSON.parse(localStorage.getItem('curUser')||'{}');
-    if(cu.staffName) staffName = cu.staffName;
-    else if(cu.name) staffName = cu.name;
+    staffName = cu.staffName || cu.name || '';
   }catch(e){}
+  if(!staffName) staffName = '補填人';  // 未登入時的備援
+
+  // origStaff = 原始填單人（從 Sheets 讀出）
+  var origStaff = fd.origStaff || fd.staff || '';
 
   var payload = {
     action:       'submitSellPart',
     formId:       FILL_FORMID,
     caseName:     fd.caseName,
-    staff:        fd.staff,
-    sellStaff:    staffName,
-    transferType: fd.fillPart || fd.transferType || '',
+    staff:        origStaff,   // 原始填單人
+    sellStaff:    staffName,   // 補填人（當前登入者）
+    fillPart:     fd.fillPart || '銷售',  // 明確傳補填方向（'銷售' 或 '採購'）
     // 銷售欄位
     buyer:        fd.buyer    ||'',
     sellCur:      sellCur,
