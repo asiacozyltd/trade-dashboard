@@ -366,12 +366,12 @@ textarea{height:72px;resize:none;line-height:1.6;}
   <div class="stitle">確認送出</div>
   <div class="card" id="preview-card"></div>
 
-  <!-- 轉交銷售選項 -->
+  <!-- 轉交選項 -->
   <div class="card" id="transfer-sec" style="margin-top:12px;border:1.5px solid #e0e7ff;background:#f0f4ff;">
-    <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:10px;">🔄 轉交銷售給其他業務員（選填）</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:12px;">若採購與銷售由不同業務負責，可在此選擇銷售業務員，對方將收到 Email 通知後登入系統補填銷售內容。</div>
+    <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:10px;">🔄 轉交給其他業務員補填（選填）</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px;">若採購與銷售由不同業務負責，可選擇對方補填另一半內容，對方收到 Email 通知後登入系統完成填寫。</div>
     <div class="field" style="margin-bottom:0;">
-      <div class="lbl">銷售業務員 <span class="opt">選填</span></div>
+      <div class="lbl" id="transfer-to-lbl">轉交業務員 <span class="opt">選填</span></div>
       <select id="transfer-to" onchange="onTransferChange()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-family:inherit;font-size:13px;background:#fff;">
         <option value="">— 不轉交，由我自己完成全部填寫 —</option>
         <option value="黃啟靖" data-email="FILL_HCJ">黃啟靖</option>
@@ -415,7 +415,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
 </div>
 
 <script>
-var VERSION="form-003"; // 2026/04/11
+var VERSION="form-005"; // 2026/04/11
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
 const RATE = { USD:30.5, JPY:0.205, EUR:33.5, TWD:1 };
@@ -744,7 +744,8 @@ async function submitForm(){
     formId:      fd.formId,
     sellCostAmt: fd.sellCostAmt||0,
     sellCostCur: fd.sellCostCur||'TWD',
-    transferTo:  (function(){ var el=document.getElementById('transfer-to'); return el?el.value:''; })(),
+    transferTo:    (function(){ var el=document.getElementById('transfer-to'); return el?el.value:''; })(),
+    transferType:  fd.type||'',  // 記錄原始案件類型，讓對方知道要補填哪個部分
     transferEmail:(function(){
       var sel=document.getElementById('transfer-to');
       var val=sel?sel.value:'';
@@ -817,24 +818,42 @@ function onTransferChange(){
     emailDisp.style.display='none';
     emailInp.style.display='block';
     emailInp.value='';
-    btn.textContent='📤 送出並通知對方填寫銷售';
+    var ct = fd.type||'';
+    var fw = ct==='銷售'?'採購':'銷售';
+    btn.textContent='📤 送出並通知對方填寫'+fw;
   } else {
     // 顯示對應信箱
     var email = STAFF_EMAILS[val]||'（尚未設定信箱）';
     emailDisp.style.display='block';
     emailDisp.textContent='📧 ' + email;
     emailInp.style.display='none';
-    btn.textContent='📤 送出並通知 '+val+' 填寫銷售';
+    var ct3 = fd.type||'';
+    var fw3 = ct3==='銷售'?'採購':'銷售';
+    btn.textContent='📤 送出並通知 '+val+' 填寫'+fw3;
   }
 }
 
 function initTransfer(){
-  // 更新 select option 的 data-email
   var sel = document.getElementById('transfer-to');
   if(!sel) return;
+  // 更新 email 對應
   Array.from(sel.options).forEach(function(opt){
     if(STAFF_EMAILS[opt.value]) opt.setAttribute('data-email', STAFF_EMAILS[opt.value]);
   });
+  // 依案件屬性動態更新標籤說明
+  var caseType = fd.type || '';
+  var lbl = document.getElementById('transfer-to-lbl');
+  var desc = document.querySelector('#transfer-sec div[style*="color:#64748b"]');
+  if(caseType === '採購'){
+    if(lbl) lbl.innerHTML = '轉交銷售業務員 <span class="opt">選填</span>';
+    if(desc) desc.textContent = '此為純採購案件，可轉交給銷售業務員補填銷售內容後再送審。';
+  } else if(caseType === '銷售'){
+    if(lbl) lbl.innerHTML = '轉交採購業務員 <span class="opt">選填</span>';
+    if(desc) desc.textContent = '此為純銷售案件，可轉交給採購業務員補填採購內容後再送審。';
+  } else {
+    if(lbl) lbl.innerHTML = '轉交業務員 <span class="opt">選填</span>';
+    if(desc) desc.textContent = '若採購與銷售由不同業務負責，可選擇對方補填另一半內容。';
+  }
 }
 
 // ── 分期付款功能 ──
@@ -966,55 +985,87 @@ function checkFillMode(){
 
   FILL_MODE   = true;
   FILL_FORMID = fillId;
-
-  // 修改 UI 提示
-  var title = document.querySelector('.stitle');
-  var header = document.querySelector('header');
   document.title = '補填銷售內容｜貿易大漁';
 
-  // 從 Sheets 讀取採購資料預填
+  // 顯示載入中提示
+  var banner = document.createElement('div');
+  banner.id = 'fill-banner';
+  banner.style.cssText = 'background:#4f46e5;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;text-align:center;position:sticky;top:0;z-index:999;';
+  banner.textContent = '⏳ 載入案件資料中...';
+  document.body.insertBefore(banner, document.body.firstChild);
+
+  // 從 Sheets 讀取原始採購資料
   fetch(SCRIPT_URL + '?action=getData&_='+Date.now())
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if(!d.rows) return;
-      var row = d.rows.find(function(r){ return (r['表單編號']||'')=== fillId; });
-      if(!row) return;
+      if(!d.rows){ banner.textContent='❌ 讀取失敗，請重新開啟連結'; return; }
+      var row = d.rows.find(function(r){
+        return (r['表單編號']||'').trim() === fillId.trim();
+      });
+      if(!row){ banner.textContent='❌ 找不到案件 '+fillId; return; }
 
-      // 預填採購業務名稱
-      fd.staff     = row['業務名稱']||'';
+      // 儲存採購資料到 fd
+      fd.staff     = row['業務名稱']     ||'';
       fd.type      = '採購+銷售(三角貿易)';
-      fd.caseName  = row['案件名稱']||'';
+      fd.caseName  = row['案件名稱']     ||'';
       fd.supplier  = row['供應商名稱（賣方）']||'';
-      fd.buyCur    = row['採購幣別']||'TWD';
+      fd.buyCur    = row['採購幣別']     ||'TWD';
       fd.buyAmt    = parseFloat(row['應付總金額'])||0;
-      fd.buyDate   = row['預計付款日期']||'';
-      fd.buyPay    = row['付款條件']||'';
-      fd.buyNote   = row['備註（採購）']||'';
+      fd.buyDate   = row['預計付款日期'] ||'';
+      fd.buyPay    = row['付款條件']     ||'';
+      fd.buyNote   = row['備註（採購）'] ||'';
       fd.formId    = fillId;
 
-      // 顯示提示橫幅
-      var banner = document.createElement('div');
-      banner.style.cssText = 'background:#4f46e5;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;text-align:center;';
-      banner.textContent = '✍️ 補填銷售模式｜案件：' + fd.caseName + '（' + fillId + '）';
-      document.body.insertBefore(banner, document.body.firstChild);
+      // 更新橫幅
+      banner.textContent = '✍️ 補填銷售內容｜' + fd.caseName + '（' + fillId + '）由 ' + fd.staff + ' 轉交';
 
-      // 跳到銷售填寫步驟（Step 2，只顯示銷售區塊）
-      document.addEventListener('DOMContentLoaded', function(){
-  checkFillMode();
-  
-        showPage(2);
-        updateSections('採購+銷售(三角貿易)');
-        // 隱藏採購區塊，只留銷售
-        var buySec = document.getElementById('buy-sec');
-        var buyT   = document.getElementById('buy-sec-title');
-        if(buySec) buySec.style.display='none';
-        if(buyT)   buyT.style.display='none';
-        // 更新送出按鈕
-        var btn = document.getElementById('submit-btn');
-        if(btn) btn.textContent='📤 送出銷售內容（通知老闆審核）';
-      });
+      // 直接跳到第2步，隱藏採購區塊
+      showPage(2);
+      updateSections('採購+銷售(三角貿易)');
+
+      // 隱藏採購區塊，只顯示銷售
+      var buySec = document.getElementById('buy-sec');
+      var buyT   = document.getElementById('buy-sec-title');
+      if(buySec){ buySec.style.display='none'; }
+      if(buyT)  { buyT.style.display='none';  }
+
+      // 顯示案件摘要（讓續填業務知道採購內容）
+      var infoDiv = document.createElement('div');
+      infoDiv.style.cssText = 'background:#f0f4ff;border:1px solid #c7d2fe;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;';
+      infoDiv.innerHTML = '<div style="font-weight:700;color:#3730a3;margin-bottom:6px;">📋 採購資訊（僅供參考）</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;color:#374151;">'
+        + '<div>供應商：<b>'+fd.supplier+'</b></div>'
+        + '<div>採購金額：<b>'+fd.buyCur+' '+Math.round(fd.buyAmt).toLocaleString()+'</b></div>'
+        + '<div>預計付款日：<b>'+fd.buyDate+'</b></div>'
+        + '<div>付款條件：<b>'+fd.buyPay+'</b></div>'
+        + '</div>';
+      var sellSec = document.getElementById('sell-sec');
+      if(sellSec) sellSec.parentNode.insertBefore(infoDiv, sellSec);
+
+      // 初始化銷售期數
+      if(!document.getElementById('sell-periods').querySelector('.period-card')){
+        addPeriod('sell');
+      }
+
+      // 更新送出按鈕
+      var btn = document.getElementById('submit-btn');
+      if(btn){
+        btn.textContent = '📤 送出銷售內容（通知老闆審核）';
+        btn.style.background = '#4f46e5';
+        btn.onclick = function(){ submitSellPart(); };
+      }
+
+      // 隱藏「下一步」按鈕，只留送出
+      var navbtns = document.querySelector('#page-2 .navbtns');
+      if(navbtns){
+        var nextBtn = navbtns.querySelector('.bn');
+        if(nextBtn) nextBtn.style.display='none';
+      }
     })
-    .catch(function(){ console.log('補填模式讀取失敗'); });
+    .catch(function(e){
+      banner.textContent = '❌ 讀取失敗：' + e.message;
+      console.error('補填模式錯誤：', e);
+    });
 }
 
 // 修改 submitForm 在補填模式下走不同 action
