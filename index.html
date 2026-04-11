@@ -639,7 +639,6 @@ function pf(v){return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0;
 function cv(v){return v&&v.trim()&&v!=='—'&&v!=='0'&&v!=='-'&&v!=='undefined';}
 function isPend(r){var s=g(r,'status');return s===''||s==='否'||s==='待審核'||s==='尚未';}
 function isAppr(r){var s=g(r,'status');return s==='是'||s.includes('同意');}
-function isFillPending(r){return (r[F.fillStatus]||'')==='待補填';}
 
 // ★ 修正毛利率計算：統一轉 NTD 再計算
 function calcNTD(amt, cur){ return pf(amt)*(RATE[cur.toUpperCase()]||1); }
@@ -867,9 +866,7 @@ function makeCard(r,showApprove){
     +'<div><div class="cn-lbl">應付 NTD</div><div class="cn-val cv-r">NT$'+fmtN(m.buyNTD)+'</div></div>'
     +'<div><div class="cn-lbl">毛利率</div><div class="cn-val '+(parseFloat(m.margin)>=0?'cv-g':'cv-r')+'">'+mgStr+'</div></div>'
     +'</div>'
-    +(fillPend && curUser && curUser.staffName && g(r,'transferTo')===curUser.staffName
-      ? '<button class="cc-btn" style="background:#4f46e5;color:#fff;border-color:#4338ca;" onclick="event.stopPropagation();openFillSell('+rowNum+')">✍️ 補填銷售內容</button>'
-      : '<button class="cc-btn" onclick="event.stopPropagation();showD('+rowNum+')">查看詳細 / 操作</button>')
+    +'<button class="cc-btn" onclick="event.stopPropagation();showD('+rowNum+')">查看詳細 / 操作</button>'
     +'</div>';
 }
 
@@ -1532,15 +1529,6 @@ function doApp(rowNum,status){
 }
 
 // 會計確認轉入 Payments
-// 補填銷售內容 - 開啟表單帶入 formId
-function openFillSell(rowNum){
-  var r = rows.find(function(x){ return x._row===rowNum; });
-  if(!r) return;
-  var formId = r[F.formId]||'';
-  var url = 'https://asiacozyltd.github.io/trade-dashboard/form.html?fill='+encodeURIComponent(formId);
-  window.open(url, '_blank');
-}
-
 function doAccountingConfirm(rowNum){
   var r=rows.find(function(x){return x._row===rowNum;});
   if(!r){ toast('找不到案件','#dc2626'); return; }
