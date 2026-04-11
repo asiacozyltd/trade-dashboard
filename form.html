@@ -159,16 +159,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
     </div>
     <div class="field">
       <div class="lbl">付款條件（採購）<span class="req">*</span></div>
-      <select id="buy-pay" onchange="toggleOther('buy-pay','buy-pay-other')">
-        <option value="">請選擇</option>
-        <option>100% TT upon shipping docs before ETA</option>
-        <option>交貨後14天內</option>
-        <option>30天信用狀 L/C 30 days</option>
-        <option>全額L/C at sight</option>
-        <option>50% 訂金 + 50% 出貨前</option>
-        <option value="其他">其他（請填寫）</option>
-      </select>
-      <input type="text" id="buy-pay-other" class="other-input" placeholder="請輸入付款條件">
+      <input type="text" id="buy-pay" placeholder="例：50% 訂金 + 50% 出貨前、全額 L/C at sight…">
     </div>
     <div class="field">
       <div class="lbl">付款期數 <span class="req">*</span><span class="opt" style="margin-left:6px;">最多3期</span></div>
@@ -192,16 +183,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
     </div>
     <div class="field">
       <div class="lbl">收款條件（銷售）<span class="req">*</span></div>
-      <select id="sell-pay" onchange="toggleOther('sell-pay','sell-pay-other')">
-        <option value="">請選擇</option>
-        <option>全額L/C at sight</option>
-        <option>100% TT upon shipping docs before ETA</option>
-        <option>30天信用狀 L/C 30 days</option>
-        <option>交貨後14天內</option>
-        <option>50% 訂金 + 50% 出貨前</option>
-        <option value="其他">其他（請填寫）</option>
-      </select>
-      <input type="text" id="sell-pay-other" class="other-input" placeholder="請輸入收款條件">
+      <input type="text" id="sell-pay" placeholder="例：全額 L/C at sight、交貨後14天內…">
     </div>
     <div class="field">
       <div class="lbl">收款期數 <span class="req">*</span><span class="opt" style="margin-left:6px;">最多3期</span></div>
@@ -433,7 +415,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
 </div>
 
 <script>
-var VERSION="form-002"; // 2026/04/11
+var VERSION="form-003"; // 2026/04/11
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
 const RATE = { USD:30.5, JPY:0.205, EUR:33.5, TWD:1 };
@@ -473,7 +455,7 @@ function validate(n){
       const needSell = tp==='銷售' || tp==='採購+銷售(三角貿易)';
       if(needBuy){
         if(!v('supplier')) return '請填入供應商名稱（採購）';
-        if(!getBuyPay())   return '請選擇付款條件（採購）';
+        if(!getBuyPay())   return '請填入付款條件（採購）';
         var bps = getPeriods('buy');
         if(!bps.length) return '請至少填入一筆採購付款期數';
         for(var i=0;i<bps.length;i++){
@@ -484,7 +466,7 @@ function validate(n){
       }
       if(needSell){
         if(!v('buyer'))   return '請填入客戶名稱（銷售）';
-        if(!getSellPay()) return '請選擇收款條件（銷售）';
+        if(!getSellPay()) return '請填入收款條件（銷售）';
         var sps = getPeriods('sell');
         if(!sps.length) return '請至少填入一筆銷售收款期數';
         for(var j=0;j<sps.length;j++){
