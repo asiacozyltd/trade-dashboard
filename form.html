@@ -1072,19 +1072,20 @@ function checkFillMode(){
         addPeriod('sell');
       }
 
-      // 更新送出按鈕
-      var btn = document.getElementById('submit-btn');
-      if(btn){
-        btn.textContent = '📤 送出銷售內容（通知老闆審核）';
-        btn.style.background = '#4f46e5';
-        btn.onclick = function(){ submitSellPart(); };
-      }
-
-      // 隱藏「下一步」按鈕，只留送出
+      // 補填模式：在 page-2 底部插入送出按鈕，隱藏「下一步」
       var navbtns = document.querySelector('#page-2 .navbtns');
       if(navbtns){
+        // 隱藏下一步
         var nextBtn = navbtns.querySelector('.bn');
         if(nextBtn) nextBtn.style.display='none';
+
+        // 插入送出按鈕（在 navbtns 前）
+        var fillBtn = document.createElement('button');
+        fillBtn.id = 'fill-submit-btn';
+        fillBtn.textContent = '📤 送出銷售內容（通知老闆審核）';
+        fillBtn.style.cssText = 'width:100%;padding:16px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-top:8px;display:block;';
+        fillBtn.onclick = function(){ submitSellPart(); };
+        navbtns.parentNode.insertBefore(fillBtn, navbtns);
       }
   }); // end jsonpGet
 }
@@ -1100,14 +1101,22 @@ function initFillModeSubmit(){
 }
 
 function submitSellPart(){
+  // 先收集目前畫面上的欄位到 fd
+  collect(2);
+
   var sellPeriods = getPeriods('sell');
   if(!sellPeriods.length){ alert('請至少填入一筆收款期數'); return; }
+  if(!fd.buyer){ alert('請填入客戶（買方）名稱'); return; }
+
+  // 計算銷售總金額
+  var sellCur = fd.sellPeriods && fd.sellPeriods.length ? fd.sellPeriods[0].cur : 'TWD';
+  var sellAmt = sellPeriods.reduce(function(s,p){ return s+(parseFloat(p.amt)||0); }, 0);
 
   var staffName = fd.staff || '';
-  // 取得當前登入業務名稱（從 localStorage）
   try{
     var cu = JSON.parse(localStorage.getItem('curUser')||'{}');
-    if(cu.name) staffName = cu.name;
+    if(cu.staffName) staffName = cu.staffName;
+    else if(cu.name) staffName = cu.name;
   }catch(e){}
 
   var payload = {
@@ -1117,15 +1126,16 @@ function submitSellPart(){
     staff:       fd.staff,
     sellStaff:   staffName,
     buyer:       fd.buyer    ||'',
-    sellCur:     fd.sellCur  ||'TWD',
-    sellAmt:     fd.sellAmt  ||0,
+    sellCur:     sellCur,
+    sellAmt:     sellAmt,
     sellDate:    fd.sellDate ||'',
     sellPay:     fd.sellPay  ||'',
     sellNote:    fd.sellNote ||'',
     sellPeriods: sellPeriods,
+    transferType: fd.transferType || '',
   };
 
-  var btn = document.getElementById('submit-btn');
+  var btn = document.getElementById('fill-submit-btn') || document.getElementById('submit-btn');
   if(btn){ btn.disabled=true; btn.textContent='送出中...'; }
 
   fetch(SCRIPT_URL, {
