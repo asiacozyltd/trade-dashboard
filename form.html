@@ -421,6 +421,33 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC6
 const RATE = { USD:30.5, JPY:0.205, EUR:33.5, TWD:1 };
 const fd = {};
 
+// ── JSONP 工具（繞過 CORS）────────────────────────────
+function jsonpGet(url, cb){
+  var cbName='_jcb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
+  var script=document.createElement('script');
+  var done=false;
+  var timer=setTimeout(function(){
+    if(done)return; done=true;
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    cb(null,'timeout');
+  },12000);
+  window[cbName]=function(d){
+    clearTimeout(timer); done=true;
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    cb(d,null);
+  };
+  script.onerror=function(){
+    clearTimeout(timer); done=true;
+    delete window[cbName];
+    if(script.parentNode)script.parentNode.removeChild(script);
+    cb(null,'error');
+  };
+  script.src=url+(url.indexOf('?')>=0?'&':'?')+'callback='+cbName+'&_='+Date.now();
+  document.head.appendChild(script);
+}
+
 // ── 頁面切換 ──
 function goNext(from){
   if(!validate(from)) return;
@@ -994,15 +1021,13 @@ function checkFillMode(){
   banner.textContent = '⏳ 載入案件資料中...';
   document.body.insertBefore(banner, document.body.firstChild);
 
-  // 從 Sheets 讀取原始採購資料
-  fetch(SCRIPT_URL + '?action=getData&_='+Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(!d.rows){ banner.textContent='❌ 讀取失敗，請重新開啟連結'; return; }
+  // 從 Sheets 讀取原始採購資料（JSONP 繞過 CORS）
+  jsonpGet(SCRIPT_URL+'?action=getData', function(d, err){
+      if(err || !d || !d.rows){ banner.textContent='❌ 讀取失敗（'+( err||'無資料')+'），請重新開啟連結'; return; }
       var row = d.rows.find(function(r){
         return (r['表單編號']||'').trim() === fillId.trim();
       });
-      if(!row){ banner.textContent='❌ 找不到案件 '+fillId; return; }
+      if(!row){ banner.textContent='❌ 找不到案件 '+fillId+'，請確認連結是否正確'; return; }
 
       // 儲存採購資料到 fd
       fd.staff     = row['業務名稱']     ||'';
@@ -1062,10 +1087,7 @@ function checkFillMode(){
         if(nextBtn) nextBtn.style.display='none';
       }
     })
-    .catch(function(e){
-      banner.textContent = '❌ 讀取失敗：' + e.message;
-      console.error('補填模式錯誤：', e);
-    });
+  }); // end jsonpGet
 }
 
 // 修改 submitForm 在補填模式下走不同 action
@@ -1113,11 +1135,14 @@ function submitSellPart(){
     mode:'no-cors'
   }).finally(function(){
     showPage('success');
-    document.querySelector('.ss-title').textContent='銷售內容已送出！';
-    document.querySelector('.ss-sub').textContent='老闆將收到審核通知，感謝您的填寫。';
+    var t=document.querySelector('.st2'); if(t) t.textContent='銷售內容已送出！';
+    var s=document.querySelector('.ss2'); if(s) s.textContent='老闆將收到審核通知，感謝您的填寫。';
   });
 }
 
+
+// ── 啟動：偵測是否為補填模式 ────────────────────────
+checkFillMode();
 
 </script>
 </body>
