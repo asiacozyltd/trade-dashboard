@@ -530,7 +530,7 @@ function doLogin(u){
 
 // 載入雲端帳號（Apps Script Sheets）
 function fetchAccounts(callback){
-  fetch(SCRIPT+'?action=getAccounts&_='+Date.now())
+  fetch(SCRIPT+'?action=getAccounts&_='+Date.now(),{redirect:'follow'})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok'&&d.accounts&&d.accounts.length>0){
@@ -686,7 +686,7 @@ function login(){
   if(btn){ btn.disabled=true; btn.textContent='驗證中...'; }
 
   // 先嘗試從雲端取得帳號（含密碼），再本地比對
-  fetch(SCRIPT+'?action=getAccounts&_='+Date.now())
+  fetch(SCRIPT+'?action=getAccounts&_='+Date.now(),{redirect:'follow'})
     .then(function(r){ return r.json(); })
     .then(function(d){
       if(btn){ btn.disabled=false; btn.textContent='登入'; }
@@ -748,26 +748,47 @@ function buildNav(){
   }).join('');
 }
 
-// 資料讀取
+// 資料讀取（讀 FormResponses 分頁）
 function load(){
   document.getElementById('dc').innerHTML='<div class="loading"><div class="spin"></div>從 Google Sheets 讀取...</div>';
-  fetch(SCRIPT+'?action=getData&_='+Date.now())
-    .then(function(r){return r.json();})
+  fetch(SCRIPT+'?action=getData&_='+Date.now(),{method:'GET',redirect:'follow'})
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    })
     .then(function(d){
-      if(d.status==='ok'&&d.rows&&d.rows.length>0){
+      if(d.status==='ok' && d.rows && d.rows.length>0){
         rows=d.rows.filter(function(r){return g(r,'staff')!=='';});
+        console.log('✅ getData 成功，共 '+rows.length+' 筆（FormResponses）');
         onLoad();
-      }else loadCSV();
-    }).catch(loadCSV);
+      } else {
+        var reason = d.message || (d.rows && d.rows.length===0 ? '試算表目前沒有資料' : 'API 回傳異常');
+        console.warn('⚠️ getData 回傳空資料：'+reason+' → 改用 CSV 備援');
+        loadCSV(reason);
+      }
+    })
+    .catch(function(err){
+      console.warn('❌ getData 連線失敗：'+err+' → 改用 CSV 備援');
+      loadCSV('API 連線失敗：'+err);
+    });
 }
-function loadCSV(){
+function loadCSV(reason){
+  console.log('📄 CSV 備援中… 原因：'+(reason||''));
   fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(CSV+'&_='+Date.now()))
     .then(function(r){return r.text();})
-    .then(function(c){var p=parseCSV(c);if(p.length>0){rows=p;onLoad();}else showErr();})
+    .then(function(c){
+      var p=parseCSV(c);
+      if(p.length>0){rows=p;console.log('✅ CSV 備援成功，共 '+p.length+' 筆');onLoad();}
+      else showErr('CSV 讀取成功但無資料（請確認 Sheets 已公開發布）');
+    })
     .catch(function(){
       fetch(CSV+'&_='+Date.now()).then(function(r){return r.text();})
-        .then(function(c){var p=parseCSV(c);if(p.length>0){rows=p;onLoad();}else showErr();})
-        .catch(showErr);
+        .then(function(c){
+          var p=parseCSV(c);
+          if(p.length>0){rows=p;console.log('✅ CSV 直連成功，共 '+p.length+' 筆');onLoad();}
+          else showErr('無法讀取資料，請確認：1) Apps Script 已重新部署  2) Google Sheets 已公開發布');
+        })
+        .catch(function(e){showErr('所有讀取管道失敗：'+e);});
     });
 }
 function onLoad(){
@@ -791,11 +812,20 @@ function onLoad(){
   updateAlert();
   if(document.getElementById('s-daily').classList.contains('on')) renderDaily();
 }
-function showErr(){
+function showErr(msg){
+  var hint = msg || '無法讀取 Sheets';
   document.getElementById('dc').innerHTML=
     '<div class="empty"><span class="eico">⚠️</span>'
-    +'<div style="font-size:14px;font-weight:700;color:#dc2626;">無法讀取 Sheets</div>'
-    +'<br><button onclick="load()" style="padding:9px 20px;background:#f1f5f9;border:1px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;">重試</button></div>';
+    +'<div style="font-size:14px;font-weight:700;color:#dc2626;">資料讀取失敗</div>'
+    +'<div style="font-size:12px;color:#64748b;margin:8px 0 12px;max-width:320px;line-height:1.6;">'+hint+'</div>'
+    +'<div style="font-size:12px;color:#94a3b8;margin-bottom:12px;line-height:1.8;text-align:left;background:#f8fafc;padding:10px 14px;border-radius:8px;">'
+    +'🔧 排查步驟：<br>'
+    +'1. Apps Script → 部署 → <b>管理部署</b> → 確認已重新部署<br>'
+    +'2. Google Sheets → 檔案 → 共用 → 確認「任何人都能查看」<br>'
+    +'3. 開啟瀏覽器 F12 主控台，確認錯誤訊息'
+    +'</div>'
+    +'<button onclick="load()" style="padding:9px 20px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;">🔄 重試</button></div>';
+  console.error('showErr：'+hint);
 }
 function parseCSV(csv){
   var lines=csv.split('\n').filter(function(l){return l.trim();});
@@ -1005,7 +1035,7 @@ function loadTransfer(){
 }
 
 function loadPayments(cb){
-  fetch(SCRIPT+'?action=getAllPayments&_='+Date.now())
+  fetch(SCRIPT+'?action=getAllPayments&_='+Date.now(),{redirect:'follow'})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok') PAYMENTS_CACHE=d.payments||[];
@@ -1551,6 +1581,7 @@ function doAccountingConfirm(rowNum){
   toast('轉入款項中...','#0369a1');
   fetch(SCRIPT,{
     method:'POST',
+    mode:'no-cors',
     body:JSON.stringify({
       action:'savePayments',
       formId:formId,
@@ -2020,7 +2051,7 @@ function loadTransfer(){
 }
 
 function loadPayments(cb){
-  fetch(SCRIPT+'?action=getAllPayments&_='+Date.now())
+  fetch(SCRIPT+'?action=getAllPayments&_='+Date.now(),{redirect:'follow'})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok'&&d.payments){
