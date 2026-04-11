@@ -501,11 +501,7 @@ function validate(n){
           if(!sps[j].amt || parseFloat(sps[j].amt)<=0) return '請填入第'+(j+1)+'期銷售金額';
           if(!sps[j].date) return '請填入第'+(j+1)+'期預計收款日';
         }
-        // 純銷售案件需填成本才能估算毛利率
-        if((fd.type||'')==='銷售'){
-          var sbEl=document.getElementById('sell-buy-amt');
-          if(!sbEl||!parseFloat(sbEl.value)) return '請填入採購成本金額（用於計算毛利率）';
-        }
+        // 純銷售案件成本為選填（不強制）
       }
       return null;
     },
@@ -1012,7 +1008,6 @@ function checkFillMode(){
 
   FILL_MODE   = true;
   FILL_FORMID = fillId;
-  document.title = '補填銷售內容｜貿易大漁';
 
   // 顯示載入中提示
   var banner = document.createElement('div');
@@ -1021,73 +1016,152 @@ function checkFillMode(){
   banner.textContent = '⏳ 載入案件資料中...';
   document.body.insertBefore(banner, document.body.firstChild);
 
-  // 從 Sheets 讀取原始採購資料（JSONP 繞過 CORS）
   jsonpGet(SCRIPT_URL+'?action=getData', function(d, err){
-      if(err || !d || !d.rows){ banner.textContent='❌ 讀取失敗（'+( err||'無資料')+'），請重新開啟連結'; return; }
-      var row = d.rows.find(function(r){
-        return (r['表單編號']||'').trim() === fillId.trim();
-      });
-      if(!row){ banner.textContent='❌ 找不到案件 '+fillId+'，請確認連結是否正確'; return; }
+    if(err || !d || !d.rows){ banner.textContent='❌ 讀取失敗（'+(err||'無資料')+'），請重新開啟連結'; return; }
+    var row = d.rows.find(function(r){
+      return (r['表單編號']||'').trim() === fillId.trim();
+    });
+    if(!row){ banner.textContent='❌ 找不到案件 '+fillId+'，請確認連結是否正確'; return; }
 
-      // 儲存採購資料到 fd
-      fd.staff     = row['業務名稱']     ||'';
-      fd.type      = '採購+銷售(三角貿易)';
-      fd.caseName  = row['案件名稱']     ||'';
-      fd.supplier  = row['供應商名稱（賣方）']||'';
-      fd.buyCur    = row['採購幣別']     ||'TWD';
-      fd.buyAmt    = parseFloat(row['應付總金額'])||0;
-      fd.buyDate   = row['預計付款日期'] ||'';
-      fd.buyPay    = row['付款條件']     ||'';
-      fd.buyNote   = row['備註（採購）'] ||'';
-      fd.formId    = fillId;
+    // 判斷原始案件類型 → 決定要補填哪個部分
+    var origType   = (row['案件屬性']||'').toString().trim();
+    // 原始是「採購」→ 補填「銷售」；原始是「銷售」→ 補填「採購」
+    var fillPart   = origType === '銷售' ? '採購' : '銷售';
+    var fillColor  = fillPart === '採購' ? '#991b1b' : '#4f46e5';
 
-      // 更新橫幅
-      banner.textContent = '✍️ 補填銷售內容｜' + fd.caseName + '（' + fillId + '）由 ' + fd.staff + ' 轉交';
+    document.title = '補填'+fillPart+'內容｜貿易大漁';
+    fd.type      = '採購+銷售(三角貿易)';
+    fd.formId    = fillId;
+    fd.fillPart  = fillPart;  // 記錄補填方向
 
-      // 直接跳到第2步，隱藏採購區塊
-      showPage(2);
-      updateSections('採購+銷售(三角貿易)');
+    // 從 Sheets 讀出已有的欄位存入 fd
+    fd.staff     = row['業務名稱']          ||'';
+    fd.caseName  = row['案件名稱']          ||'';
+    fd.asst      = row['承辦業助']          ||'';
+    fd.buyCon    = row['合約 [賣方合約（採購）]']||'';
+    fd.sellCon   = row['合約 [買方合約（銷售）]']||'';
+    fd.trade     = row['貿易條件']          ||'';
+    fd.etd       = row['ETD/卸魚日']        ||'';
+    fd.eta       = row['ETA/到貨日']        ||'';
+    fd.origin    = row['出貨地/發貨港口/出貨地點']||'';
+    fd.dest      = row['目的地/收貨港口/收貨地點']||'';
+    // 採購欄位
+    fd.supplier  = row['供應商名稱（賣方）'] ||'';
+    fd.buyCur    = row['採購幣別']           ||'TWD';
+    fd.buyAmt    = parseFloat(row['應付總金額'])||0;
+    fd.buyDate   = row['預計付款日期']       ||'';
+    fd.buyPay    = row['付款條件']           ||'';
+    fd.buyNote   = row['備註（採購）']       ||'';
+    // 銷售欄位
+    fd.buyer     = row['客戶名稱（買方）']   ||'';
+    fd.sellCur   = row['銷售幣別']           ||'TWD';
+    fd.sellAmt   = parseFloat(row['應收總金額'])||0;
+    fd.sellDate  = row['預計收款日']         ||'';
+    fd.sellPay   = row['收款條件']           ||'';
+    fd.sellNote  = row['備註（銷售）']       ||'';
 
-      // 隱藏採購區塊，只顯示銷售
-      var buySec = document.getElementById('buy-sec');
-      var buyT   = document.getElementById('buy-sec-title');
-      if(buySec){ buySec.style.display='none'; }
-      if(buyT)  { buyT.style.display='none';  }
+    // 更新橫幅（顯示補填方向）
+    banner.style.background = fillColor;
+    banner.textContent = '✍️ 補填'+fillPart+'內容｜' + fd.caseName + '（' + fillId + '）由 ' + fd.staff + ' 轉交';
 
-      // 顯示案件摘要（讓續填業務知道採購內容）
-      var infoDiv = document.createElement('div');
-      infoDiv.style.cssText = 'background:#f0f4ff;border:1px solid #c7d2fe;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;';
-      infoDiv.innerHTML = '<div style="font-weight:700;color:#3730a3;margin-bottom:6px;">📋 採購資訊（僅供參考）</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;color:#374151;">'
-        + '<div>供應商：<b>'+fd.supplier+'</b></div>'
-        + '<div>採購金額：<b>'+fd.buyCur+' '+Math.round(fd.buyAmt).toLocaleString()+'</b></div>'
-        + '<div>預計付款日：<b>'+fd.buyDate+'</b></div>'
-        + '<div>付款條件：<b>'+fd.buyPay+'</b></div>'
-        + '</div>';
-      var sellSec = document.getElementById('sell-sec');
+    // 顯示對方已填的資訊摘要
+    var refTitle  = fillPart==='銷售' ? '採購' : '銷售';
+    var refColor  = fillPart==='銷售' ? '#fef2f2' : '#f0fdf4';
+    var refBorder = fillPart==='銷售' ? '#fca5a5' : '#86efac';
+    var refTitleC = fillPart==='銷售' ? '#991b1b' : '#15803d';
+    var refInfo   = fillPart==='銷售'
+      ? '<div>供應商：<b>'+fd.supplier+'</b></div><div>採購金額：<b>'+fd.buyCur+' '+Math.round(fd.buyAmt).toLocaleString()+'</b></div><div>付款條件：<b>'+(fd.buyPay||'—')+'</b></div><div>預計付款日：<b>'+(fd.buyDate||'—')+'</b></div>'
+      : '<div>客戶：<b>'+fd.buyer+'</b></div><div>銷售金額：<b>'+fd.sellCur+' '+Math.round(fd.sellAmt).toLocaleString()+'</b></div><div>收款條件：<b>'+(fd.sellPay||'—')+'</b></div><div>預計收款日：<b>'+(fd.sellDate||'—')+'</b></div>';
+
+    var infoDiv = document.createElement('div');
+    infoDiv.style.cssText = 'background:'+refColor+';border:1px solid '+refBorder+';border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;';
+    infoDiv.innerHTML = '<div style="font-weight:700;color:'+refTitleC+';margin-bottom:6px;">📋 '+refTitle+'資訊（對方已填，僅供參考）</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;color:#374151;">'+refInfo+'</div>';
+
+    // 跳到第2步
+    showPage(2);
+    updateSections('採購+銷售(三角貿易)');
+
+    if(fillPart==='銷售'){
+      // 補填銷售：隱藏採購區塊，顯示銷售
+      var buySec=document.getElementById('buy-sec');
+      var buyT=document.getElementById('buy-sec-title');
+      if(buySec) buySec.style.display='none';
+      if(buyT)   buyT.style.display='none';
+      var sellSec=document.getElementById('sell-sec');
       if(sellSec) sellSec.parentNode.insertBefore(infoDiv, sellSec);
+      if(!document.getElementById('sell-periods').querySelector('.period-card')) addPeriod('sell');
+    } else {
+      // 補填採購：隱藏銷售區塊，顯示採購
+      var sellSec2=document.getElementById('sell-sec');
+      var sellT=document.getElementById('sell-sec-title');
+      var sellCostSec=document.getElementById('sell-cost-sec');
+      if(sellSec2)    sellSec2.style.display='none';
+      if(sellT)       sellT.style.display='none';
+      if(sellCostSec) sellCostSec.style.display='none';
+      var buySec2=document.getElementById('buy-sec');
+      if(buySec2) buySec2.parentNode.insertBefore(infoDiv, buySec2);
+      if(!document.getElementById('buy-periods').querySelector('.period-card')) addPeriod('buy');
+    }
 
-      // 初始化銷售期數
-      if(!document.getElementById('sell-periods').querySelector('.period-card')){
-        addPeriod('sell');
+    // 補填模式：page-2「下一步」改為「→ 下一步（交易細節）」
+    // 讓流程走 page2 → page3 → 送出
+    var navbtns2 = document.querySelector('#page-2 .navbtns');
+    if(navbtns2){
+      var nextBtn2 = navbtns2.querySelector('.bn');
+      if(nextBtn2){
+        nextBtn2.textContent = '下一步：交易細節 →';
+        nextBtn2.style.background = fillColor;
+        // 覆寫 goNext 驗證，補填模式只驗證有填的那一半
+        nextBtn2.onclick = function(){ fillGoNext2(); };
       }
+    }
 
-      // 補填模式：在 page-2 底部插入送出按鈕，隱藏「下一步」
-      var navbtns = document.querySelector('#page-2 .navbtns');
-      if(navbtns){
-        // 隱藏下一步
-        var nextBtn = navbtns.querySelector('.bn');
-        if(nextBtn) nextBtn.style.display='none';
-
-        // 插入送出按鈕（在 navbtns 前）
-        var fillBtn = document.createElement('button');
-        fillBtn.id = 'fill-submit-btn';
-        fillBtn.textContent = '📤 送出銷售內容（通知老闆審核）';
-        fillBtn.style.cssText = 'width:100%;padding:16px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;margin-top:8px;display:block;';
-        fillBtn.onclick = function(){ submitSellPart(); };
-        navbtns.parentNode.insertBefore(fillBtn, navbtns);
+    // page-3 的「下一步」改為「送出簽核」
+    var navbtns3 = document.querySelector('#page-3 .navbtns');
+    if(navbtns3){
+      var nextBtn3 = navbtns3.querySelector('.bn');
+      if(nextBtn3){
+        nextBtn3.textContent = '📤 送出補填內容（通知老闆審核）';
+        nextBtn3.style.cssText += ';background:'+fillColor+';';
+        nextBtn3.onclick = function(){ fillGoSubmit(); };
       }
+    }
   }); // end jsonpGet
+}
+
+// 補填模式：page-2 → page-3（只驗證補填的那一半）
+function fillGoNext2(){
+  var fp = fd.fillPart || '銷售';
+  if(fp==='銷售'){
+    if(!v('buyer'))   { alert('請填入客戶名稱'); return; }
+    if(!getSellPay()) { alert('請填入收款條件'); return; }
+    var sps=getPeriods('sell');
+    if(!sps.length)   { alert('請至少填入一筆收款期數'); return; }
+    for(var j=0;j<sps.length;j++){
+      if(!sps[j].name){ alert('請填入第'+(j+1)+'期收款名稱'); return; }
+      if(!sps[j].amt||parseFloat(sps[j].amt)<=0){ alert('請填入第'+(j+1)+'期銷售金額'); return; }
+      if(!sps[j].date){ alert('請填入第'+(j+1)+'期預計收款日'); return; }
+    }
+  } else {
+    if(!v('supplier')) { alert('請填入供應商名稱'); return; }
+    if(!getBuyPay())   { alert('請填入付款條件'); return; }
+    var bps=getPeriods('buy');
+    if(!bps.length)    { alert('請至少填入一筆付款期數'); return; }
+    for(var i=0;i<bps.length;i++){
+      if(!bps[i].name){ alert('請填入第'+(i+1)+'期付款名稱'); return; }
+      if(!bps[i].amt||parseFloat(bps[i].amt)<=0){ alert('請填入第'+(i+1)+'期採購金額'); return; }
+      if(!bps[i].date){ alert('請填入第'+(i+1)+'期預計付款日'); return; }
+    }
+  }
+  collect(2);
+  showPage(3);
+}
+
+// 補填模式：page-3 收集交易細節後送出
+function fillGoSubmit(){
+  collect(3);
+  submitSellPart();
 }
 
 // 修改 submitForm 在補填模式下走不同 action
@@ -1120,19 +1194,41 @@ function submitSellPart(){
   }catch(e){}
 
   var payload = {
-    action:      'submitSellPart',
-    formId:      FILL_FORMID,
-    caseName:    fd.caseName,
-    staff:       fd.staff,
-    sellStaff:   staffName,
-    buyer:       fd.buyer    ||'',
-    sellCur:     sellCur,
-    sellAmt:     sellAmt,
-    sellDate:    fd.sellDate ||'',
-    sellPay:     fd.sellPay  ||'',
-    sellNote:    fd.sellNote ||'',
-    sellPeriods: sellPeriods,
-    transferType: fd.transferType || '',
+    action:       'submitSellPart',
+    formId:       FILL_FORMID,
+    caseName:     fd.caseName,
+    staff:        fd.staff,
+    sellStaff:    staffName,
+    transferType: fd.fillPart || fd.transferType || '',
+    // 銷售欄位
+    buyer:        fd.buyer    ||'',
+    sellCur:      sellCur,
+    sellAmt:      sellAmt,
+    sellDate:     fd.sellDate ||'',
+    sellPay:      fd.sellPay  ||'',
+    sellNote:     fd.sellNote ||'',
+    sellPeriods:  sellPeriods,
+    // 採購欄位（補填採購時用）
+    supplier:     fd.supplier ||'',
+    buyCur:       fd.buyCur   ||'TWD',
+    buyAmt:       fd.buyAmt   ||0,
+    buyDate:      fd.buyDate  ||'',
+    buyPay:       fd.buyPay   ||'',
+    buyNote:      fd.buyNote  ||'',
+    buyPeriods:   getPeriods('buy'),
+    // 交易細節（page-3 填的）
+    buyCon:       fd.buyCon   ||'',
+    sellCon:      fd.sellCon  ||'',
+    trade:        fd.trade    ||'',
+    etd:          fd.etd      ||'',
+    eta:          fd.eta      ||'',
+    origin:       fd.origin   ||'',
+    dest:         fd.dest     ||'',
+    extra:        fd.extra    ||0,
+    freight:      fd.freight  ||0,
+    tax:          fd.tax      ||0,
+    insure:       fd.insure   ||0,
+    comm:         fd.comm     ||0,
   };
 
   var btn = document.getElementById('fill-submit-btn') || document.getElementById('submit-btn');
