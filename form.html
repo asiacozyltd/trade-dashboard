@@ -1036,6 +1036,23 @@ function checkFillMode(){
     });
     if(!row){ banner.textContent='❌ 找不到案件 '+fillId+'，請確認連結是否正確'; return; }
 
+    // ── 防重複：檢查是否已補填完成 ──
+    var fillStat = (row['銷售補填狀態']||'').trim();
+    if(fillStat === '已完成'){
+      banner.style.background = '#15803d';
+      banner.textContent = '✅ 此案件（'+fillId+'）已補填完成！';
+      document.querySelectorAll('.pg').forEach(function(p){ p.style.display='none'; });
+      var doneDiv = document.createElement('div');
+      doneDiv.style.cssText = 'max-width:480px;margin:40px auto;background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:28px 24px;text-align:center;';
+      doneDiv.innerHTML = '<div style="font-size:40px;margin-bottom:12px;">✅</div>'
+        + '<div style="font-weight:700;color:#15803d;font-size:18px;margin-bottom:8px;">此案件已補填完成</div>'
+        + '<div style="color:#374151;margin-bottom:6px;">案件編號：<b>'+fillId+'</b></div>'
+        + '<div style="color:#374151;">案件名稱：<b>'+(row['案件名稱']||'')+'</b></div>'
+        + '<div style="color:#64748b;font-size:13px;margin-top:16px;">若需修改，請聯繫系統管理員</div>';
+      document.body.appendChild(doneDiv);
+      return;
+    }
+
     // 判斷原始案件類型 → 決定要補填哪個部分
     var origType   = (row['案件屬性']||'').toString().trim();
     // 原始是「採購」→ 補填「銷售」；原始是「銷售」→ 補填「採購」
@@ -1281,8 +1298,10 @@ function submitSellPart(){
     body: JSON.stringify(payload),
     mode:'no-cors'
   }).finally(function(){
+    // no-cors 無法讀回應，直接跳成功頁
+    // 後端有防重複保護，若已完成則不會重複寫入
     showPage('success');
-    var t=document.querySelector('.st2'); if(t) t.textContent='銷售內容已送出！';
+    var t=document.querySelector('.st2'); if(t) t.textContent='內容已送出！';
     var s=document.querySelector('.ss2'); if(s) s.textContent='老闆將收到審核通知，感謝您的填寫。';
   });
 }
