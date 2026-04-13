@@ -917,15 +917,19 @@ function onTransferChange(){
   var emailRow = document.getElementById('transfer-email-row');
   var emailDisp= document.getElementById('transfer-email-display');
   var emailInp = document.getElementById('transfer-email-input');
+  var nameRow  = document.getElementById('transfer-name-row');
+  var nameInp  = document.getElementById('transfer-name-input');
   var note     = document.getElementById('transfer-note');
   var btn      = document.getElementById('submit-btn');
   var val      = sel ? sel.value : '';
 
+  // 清空狀態
+  if(nameRow) nameRow.style.display='none';
+  if(nameInp) nameInp.value='';
+
   if(!val){
     emailRow.style.display='none';
     note.style.display='none';
-    var nameRow0 = document.getElementById('transfer-name-row');
-    if(nameRow0){ nameRow0.style.display='none'; }
     btn.textContent='📤 送出回報（通知老闆審核）';
     btn.style.background='';
     return;
@@ -936,22 +940,19 @@ function onTransferChange(){
   btn.style.background='#4f46e5';
 
   if(val==='其他'){
-    // 手動輸入信箱
+    // 手動輸入信箱 + 姓名
     emailDisp.style.display='none';
     emailInp.style.display='block';
     emailInp.value='';
-    var ct = fd.type||'';
-    var fw = ct==='銷售'?'採購':'銷售';
-    btn.textContent='📤 送出並通知對方填寫'+fw;
+    if(nameRow) nameRow.style.display='block';
+    btn.textContent='📤 送出並通知對方補填';
   } else {
-    // 顯示對應信箱
+    // 顯示對應信箱，隱藏姓名欄
     var email = STAFF_EMAILS[val]||'（尚未設定信箱）';
     emailDisp.style.display='block';
     emailDisp.textContent='📧 ' + email;
     emailInp.style.display='none';
-    var ct3 = fd.type||'';
-    var fw3 = ct3==='銷售'?'採購':'銷售';
-    btn.textContent='📤 送出並通知 '+val+' 填寫'+fw3;
+    btn.textContent='📤 送出並通知 '+val+' 補填';
   }
 }
 
@@ -968,10 +969,10 @@ function initTransfer(){
   var desc = document.querySelector('#transfer-sec div[style*="color:#64748b"]');
   if(caseType === '採購'){
     if(lbl) lbl.innerHTML = '轉交銷售業務員 <span class="opt">選填</span>';
-    if(desc) desc.textContent = '此為純採購案件，可轉交給銷售業務員補填銷售內容後再送審。';
+    if(desc) desc.textContent = '此為純採購案件，可轉交給銷售業務員補填內容後再送審。';
   } else if(caseType === '銷售'){
     if(lbl) lbl.innerHTML = '轉交採購業務員 <span class="opt">選填</span>';
-    if(desc) desc.textContent = '此為純銷售案件，可轉交給採購業務員補填採購內容後再送審。';
+    if(desc) desc.textContent = '此為純銷售案件，可轉交給採購業務員補填內容後再送審。';
   } else {
     if(lbl) lbl.innerHTML = '轉交業務員 <span class="opt">選填</span>';
     if(desc) desc.textContent = '若採購與銷售由不同業務負責，可選擇對方補填另一半內容。';
