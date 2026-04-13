@@ -833,6 +833,9 @@ function loadViaJSONP(){
       rows = d.rows.filter(function(r){return g(r,'staff')!=='';});
       console.log('✅ JSONP getData01 成功，共 '+rows.length+' 筆（FormResponses01）');
       onLoad();
+    } else if(d && d.status==='ok' && d.rows && d.rows.length===0){
+      console.warn('⚠️ FormResponses01 無資料，嘗試 getData（舊分頁）備援');
+      loadViaJSONP_legacy();
     } else {
       console.warn('⚠️ JSONP 回傳空資料 → 改用 CSV 備援');
       loadCSV();
@@ -852,6 +855,39 @@ function loadViaJSONP(){
   };
   document.head.appendChild(script);
 }
+// 備援：若 FormResponses01 無資料，嘗試讀舊 FormResponses
+function loadViaJSONP_legacy(){
+  var cbName = '_cb_legacy_'+Date.now();
+  var script = document.createElement('script');
+  var done = false;
+  var timer = setTimeout(function(){
+    if(done) return; done=true;
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    console.warn('⚠️ Legacy JSONP 逾時 → 改用 CSV');
+    loadCSV();
+  }, 5000);
+  window[cbName] = function(d){
+    clearTimeout(timer); done=true;
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    if(d && d.status==='ok' && d.rows && d.rows.length>0){
+      rows = d.rows.filter(function(r){return r['業務名稱']||r['業務']||r['staff']||r[F.staff];});
+      console.log('✅ Legacy getData 成功，共 '+rows.length+' 筆（FormResponses）');
+      onLoad();
+    } else {
+      loadCSV();
+    }
+  };
+  script.src = SCRIPT+'?action=getData&callback='+cbName+'&_='+Date.now();
+  script.onerror = function(){
+    if(done) return; done=true;
+    clearTimeout(timer); delete window[cbName];
+    loadCSV();
+  };
+  document.head.appendChild(script);
+}
+
 function loadCSV(){
   // 直接讀 Google Sheets 公開 CSV（不透過 proxy）
   console.log('📄 改用 CSV 直連備援...');
