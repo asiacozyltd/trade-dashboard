@@ -431,6 +431,11 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <div id="transfer-email-display" style="display:none;padding:9px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bae6fd;font-size:13px;color:#1e40af;font-weight:700;"></div>
       <input type="email" id="transfer-email-input" style="display:none;width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;" placeholder="請輸入對方的 Email 地址">
     </div>
+    <!-- 其他：手填姓名 -->
+    <div id="transfer-name-row" style="display:none;margin-top:8px;">
+      <div class="lbl">業務員姓名（顯示於案件記錄）</div>
+      <input type="text" id="transfer-name-input" style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;" placeholder="請輸入對方的姓名">
+    </div>
 
     <div id="transfer-note" style="display:none;margin-top:10px;">
       <div class="lbl">備註給對方 <span class="opt">選填</span></div>
@@ -836,7 +841,16 @@ async function submitForm(){
     formId:      fd.formId,
     sellCostAmt: fd.sellCostAmt||0,
     sellCostCur: fd.sellCostCur||'TWD',
-    transferTo:    (function(){ var el=document.getElementById('transfer-to'); return el?el.value:''; })(),
+    transferTo:    (function(){
+      var el=document.getElementById('transfer-to');
+      var val=el?el.value:'';
+      // 若選「其他」，使用手填姓名；否則用選單值
+      if(val==='其他'){
+        var nameEl=document.getElementById('transfer-name-input');
+        return nameEl&&nameEl.value.trim() ? nameEl.value.trim() : '指定人員';
+      }
+      return val;
+    })(),
     transferType:  fd.type||'',  // 記錄原始案件類型，讓對方知道要補填哪個部分
     transferEmail:(function(){
       var sel=document.getElementById('transfer-to');
@@ -908,9 +922,10 @@ function onTransferChange(){
   var val      = sel ? sel.value : '';
 
   if(!val){
-    // 不轉交
     emailRow.style.display='none';
     note.style.display='none';
+    var nameRow0 = document.getElementById('transfer-name-row');
+    if(nameRow0){ nameRow0.style.display='none'; }
     btn.textContent='📤 送出回報（通知老闆審核）';
     btn.style.background='';
     return;
