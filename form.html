@@ -848,6 +848,9 @@ async function submitForm(){
       return STAFF_EMAILS[val]||'';
     })(),
     transferMsg: (function(){ var el=document.getElementById('transfer-msg'); return el?el.value:''; })(),
+    // 確認金額（勾選後手動輸入的驗證金額）
+    buyConfirmAmt:  parseFloat((document.getElementById('buy-confirm-amt')||{}).value)||0,
+    sellConfirmAmt: parseFloat((document.getElementById('sell-confirm-amt')||{}).value)||0,
     // 分期付款資料
     periods:   (fd.buyPeriods||[]).map(function(p){return Object.assign({type:'採購'},p);})
                .concat((fd.sellPeriods||[]).map(function(p){return Object.assign({type:'銷售'},p);})),
