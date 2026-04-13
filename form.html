@@ -69,6 +69,19 @@ textarea{height:72px;resize:none;line-height:1.6;}
 .di.on{background:var(--teal);width:20px;border-radius:4px;}
 .hint{font-size:11px;color:var(--muted);margin-top:5px;}
 .add-period-btn{width:100%;padding:10px;border-radius:10px;border:1.5px dashed #cbd5e1;background:none;color:#64748b;font-size:13px;font-family:'Noto Sans TC',sans-serif;cursor:pointer;margin-top:6px;}
+.total-confirm{display:flex;flex-direction:column;gap:8px;margin-top:8px;padding:12px 14px;border-radius:10px;border:1.5px solid #cbd5e1;background:#f8fafc;transition:all .15s;}
+.total-confirm.confirmed{border-color:#0284c7;background:#eff6ff;}
+.total-confirm-check{display:flex;align-items:center;gap:10px;cursor:pointer;}
+.total-confirm input[type=checkbox]{width:20px;height:20px;accent-color:#0284c7;cursor:pointer;flex-shrink:0;}
+.total-confirm-txt{font-size:13px;font-weight:700;color:#64748b;}
+.total-confirm.confirmed .total-confirm-txt{color:#0369a1;}
+.total-confirm-input-row{display:none;flex-direction:column;gap:4px;padding-top:4px;border-top:1px solid #e2e8f0;}
+.total-confirm-input-row.show{display:flex;}
+.total-confirm-input-row label{font-size:12px;color:#0369a1;font-weight:700;}
+.total-confirm-amt{width:100%;padding:10px 12px;border-radius:8px;border:1.5px solid #bae6fd;font-size:15px;font-weight:700;font-family:'DM Mono',monospace;background:#fff;color:#0369a1;outline:none;}
+.total-confirm-amt.error{border-color:#dc2626;background:#fef2f2;color:#dc2626;}
+.total-confirm-amt.ok{border-color:#16a34a;background:#f0fdf4;color:#16a34a;}
+.total-confirm-hint{font-size:12px;color:#64748b;min-height:16px;}
 .add-period-btn:active{background:#f8fafc;}
 .period-card{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;position:relative;}
 .period-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
@@ -169,6 +182,19 @@ textarea{height:72px;resize:none;line-height:1.6;}
         <span class="ct-lbl">採購總金額</span>
         <span class="ct-val" id="buy-total">—</span>
       </div>
+      <div id="buy-confirm-row" class="total-confirm" style="display:none;">
+        <label class="total-confirm-check">
+          <input type="checkbox" id="buy-total-confirm" onchange="onTotalConfirm('buy')">
+          <span class="total-confirm-txt">確認採購總金額無誤</span>
+        </label>
+        <div id="buy-confirm-input-row" class="total-confirm-input-row">
+          <label>請再輸入一次採購總金額（數字）</label>
+          <input type="number" id="buy-confirm-amt" class="total-confirm-amt"
+            min="0" step="any" inputmode="numeric" placeholder="輸入與上方相同的金額"
+            oninput="checkConfirmAmt('buy')">
+          <span id="buy-confirm-hint" class="total-confirm-hint"></span>
+        </div>
+      </div>
     </div>
     <div class="field">
       <div class="lbl">備註（採購）<span class="opt">選填</span></div>
@@ -192,6 +218,20 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <div class="cost-total" style="margin-top:10px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac;">
         <span class="ct-lbl" style="color:#15803d;">銷售總金額</span>
         <span class="ct-val" style="color:#15803d;" id="sell-total">—</span>
+      </div>
+      <div id="sell-confirm-row" class="total-confirm" style="display:none;">
+        <label class="total-confirm-check">
+          <input type="checkbox" id="sell-total-confirm" onchange="onTotalConfirm('sell')">
+          <span class="total-confirm-txt">確認銷售總金額無誤</span>
+        </label>
+        <div id="sell-confirm-input-row" class="total-confirm-input-row">
+          <label style="color:#15803d;">請再輸入一次銷售總金額（數字）</label>
+          <input type="number" id="sell-confirm-amt" class="total-confirm-amt"
+            min="0" step="any" inputmode="numeric" placeholder="輸入與上方相同的金額"
+            style="border-color:#86efac;color:#15803d;"
+            oninput="checkConfirmAmt('sell')">
+          <span id="sell-confirm-hint" class="total-confirm-hint"></span>
+        </div>
       </div>
     </div>
     <div class="field">
@@ -490,6 +530,14 @@ function validate(n){
           if(!bps[i].amt || parseFloat(bps[i].amt)<=0) return '請填入第'+(i+1)+'期採購金額';
           if(!bps[i].date) return '請填入第'+(i+1)+'期預計付款日';
         }
+        var bConfirmRow = document.getElementById('buy-confirm-row');
+        var bConfirm    = document.getElementById('buy-total-confirm');
+        var bAmtInput   = document.getElementById('buy-confirm-amt');
+        if(bConfirmRow && bConfirmRow.style.display!=='none'){
+          if(!bConfirm || !bConfirm.checked) return '請勾選確認採購總金額無誤';
+          if(!bAmtInput || !bAmtInput.value) return '請輸入採購總金額確認數字';
+          if(bAmtInput.className.indexOf('error')>=0) return '採購確認金額與系統計算不符，請重新確認';
+        }
       }
       if(needSell){
         if(!v('buyer'))   return '請填入客戶名稱（銷售）';
@@ -500,6 +548,14 @@ function validate(n){
           if(!sps[j].name) return '請填入第'+(j+1)+'期收款名稱';
           if(!sps[j].amt || parseFloat(sps[j].amt)<=0) return '請填入第'+(j+1)+'期銷售金額';
           if(!sps[j].date) return '請填入第'+(j+1)+'期預計收款日';
+        }
+        var sConfirmRow = document.getElementById('sell-confirm-row');
+        var sConfirm    = document.getElementById('sell-total-confirm');
+        var sAmtInput   = document.getElementById('sell-confirm-amt');
+        if(sConfirmRow && sConfirmRow.style.display!=='none'){
+          if(!sConfirm || !sConfirm.checked) return '請勾選確認銷售總金額無誤';
+          if(!sAmtInput || !sAmtInput.value) return '請輸入銷售總金額確認數字';
+          if(sAmtInput.className.indexOf('error')>=0) return '銷售確認金額與系統計算不符，請重新確認';
         }
         // 純銷售案件成本為選填（不強制）
       }
@@ -984,7 +1040,6 @@ function calcPeriodTotalFromEl(el){
 function calcPeriodTotal(type){
   var container = document.getElementById(type+'-periods');
   if(!container) return;
-  // Group by currency
   var totals = {};
   container.querySelectorAll('.period-card').forEach(function(card){
     var amt = parseFloat(card.querySelector('.period-amt').value)||0;
@@ -994,8 +1049,61 @@ function calcPeriodTotal(type){
   var totalEl = document.getElementById(type+'-total');
   if(!totalEl) return;
   var keys = Object.keys(totals);
-  if(!keys.length){ totalEl.textContent='—'; return; }
+  var confirmRow = document.getElementById(type+'-confirm-row');
+  var confirmBox = document.getElementById(type+'-total-confirm');
+  if(!keys.length){
+    totalEl.textContent='—';
+    if(confirmRow) confirmRow.style.display='none';
+    return;
+  }
   totalEl.textContent = keys.map(function(c){ return c+' '+fmt(totals[c]); }).join(' + ');
+  // 金額有變動就重置勾選，顯示確認框
+  if(confirmRow){ confirmRow.style.display='flex'; }
+  if(confirmBox){ confirmBox.checked = false; onTotalConfirm(type); }
+}
+function onTotalConfirm(type){
+  var confirmBox  = document.getElementById(type+'-total-confirm');
+  var inputRow    = document.getElementById(type+'-confirm-input-row');
+  var confirmRow  = document.getElementById(type+'-confirm-row');
+  var amtInput    = document.getElementById(type+'-confirm-amt');
+  var hint        = document.getElementById(type+'-confirm-hint');
+  if(!confirmBox) return;
+  var checked = confirmBox.checked;
+  // 勾選後顯示輸入欄，取消勾選則清空隱藏
+  if(inputRow){
+    inputRow.className = 'total-confirm-input-row' + (checked ? ' show' : '');
+    if(!checked && amtInput){ amtInput.value=''; amtInput.className='total-confirm-amt'; }
+    if(!checked && hint) hint.textContent='';
+  }
+  if(confirmRow){
+    if(checked) confirmRow.classList.add('confirmed');
+    else confirmRow.classList.remove('confirmed');
+  }
+}
+
+function checkConfirmAmt(type){
+  var amtInput = document.getElementById(type+'-confirm-amt');
+  var hint     = document.getElementById(type+'-confirm-hint');
+  if(!amtInput) return;
+  // 計算實際總金額（所有期同幣別加總）
+  var container = document.getElementById(type+'-periods');
+  var totals = {};
+  container.querySelectorAll('.period-card').forEach(function(card){
+    var a = parseFloat(card.querySelector('.period-amt').value)||0;
+    var c = card.querySelector('.period-cur').value||'TWD';
+    if(a>0){ totals[c]=(totals[c]||0)+a; }
+  });
+  var inputVal = parseFloat(amtInput.value)||0;
+  var totalSum = Object.values(totals).reduce(function(s,v){return s+v;},0);
+  if(!inputVal){ amtInput.className='total-confirm-amt'; if(hint) hint.textContent=''; return; }
+  var match = Math.abs(inputVal - totalSum) < 0.01;
+  amtInput.className = 'total-confirm-amt ' + (match ? 'ok' : 'error');
+  if(hint){
+    hint.textContent = match
+      ? '✓ 金額吻合'
+      : '✗ 金額不符，系統計算為 ' + fmt(totalSum) + '，請重新確認';
+    hint.style.color = match ? '#16a34a' : '#dc2626';
+  }
 }
 
 function getPeriods(type){
@@ -1087,8 +1195,8 @@ function fillPeriodsFromSheets(type, row){
         var curEl  = card.querySelector('.period-cur');
         var dateEl = card.querySelector('.period-date');
         if(nameEl && !nameEl.value) nameEl.value = '收款';
-        if(amtEl)  amtEl.value  = amt;
-        if(curEl)  curEl.value  = cur;
+        if(amtEl){ amtEl.value = amt; amtEl.dispatchEvent(new Event('input')); }
+        if(curEl){ curEl.value = cur; curEl.dispatchEvent(new Event('change')); }
         if(dateEl && date) dateEl.value = date.substring(0,10).replace(/\//g,'-');
         calcPeriodTotal('sell');
       }
@@ -1107,8 +1215,8 @@ function fillPeriodsFromSheets(type, row){
         var bCurEl  = bCard.querySelector('.period-cur');
         var bDateEl = bCard.querySelector('.period-date');
         if(bNameEl && !bNameEl.value) bNameEl.value = '付款';
-        if(bAmtEl)  bAmtEl.value  = bAmt;
-        if(bCurEl)  bCurEl.value  = bCur;
+        if(bAmtEl){ bAmtEl.value = bAmt; bAmtEl.dispatchEvent(new Event('input')); }
+        if(bCurEl){ bCurEl.value = bCur; bCurEl.dispatchEvent(new Event('change')); }
         if(bDateEl && bDate) bDateEl.value = bDate.substring(0,10).replace(/\//g,'-');
         calcPeriodTotal('buy');
       }
@@ -1480,6 +1588,8 @@ function submitSellPart(){
     buyPay:       fd.buyPay    ||'',
     buyNote:      fd.buyNote   ||'',
     buyPeriods:   buyPeriods,
+    buyConfirmAmt:  parseFloat((document.getElementById('buy-confirm-amt')||{}).value)||0,
+    sellConfirmAmt: parseFloat((document.getElementById('sell-confirm-amt')||{}).value)||0,
     // 交易細節（page-3 填的）
     buyCon:       fd.buyCon   ||'',
     sellCon:      fd.sellCon  ||'',
@@ -1525,6 +1635,22 @@ function submitSellPart(){
   });
 }
 
+
+// ── 啟動：頁面載入時同步業務員信箱 ──────────────────
+(function(){
+  jsonpGet(SCRIPT_URL+'?action=getAccounts', function(accData, accErr){
+    if(accData && accData.status==='ok' && accData.accounts){
+      accData.accounts.forEach(function(u){
+        if(u.email && u.staffName && STAFF_EMAILS.hasOwnProperty(u.staffName)){
+          STAFF_EMAILS[u.staffName] = u.email;
+        }
+      });
+      // 若轉交選單已有選擇，重新觸發更新信箱顯示
+      var sel = document.getElementById('transfer-to');
+      if(sel && sel.value) onTransferChange();
+    }
+  });
+})();
 
 // ── 啟動：偵測是否為補填模式 ────────────────────────
 checkFillMode();
