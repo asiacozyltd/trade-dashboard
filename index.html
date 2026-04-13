@@ -1430,6 +1430,7 @@ function showDayDetail(el){
   var dateStr = typeof el === 'string' ? el : el.dataset.date;
   var matchDate = dateStr.replace(/\//g,'-');
 
+  console.log('=== showDayDetail ===', dateStr, '→', matchDate, '| rows:', rows.length);
   // 從 FormResponses01 分期欄位找當天的案件
   // 統一日期格式比對（支援 / 和 - 兩種格式）
   function normDate(s){ return (s||'').toString().trim().replace(/[\/-]/g,'-').substring(0,10); }
@@ -1442,6 +1443,7 @@ function showDayDetail(el){
       if(hasBuy){
         var bDate = normDate(r['採購期'+pi+'預計日']);
         var bAmt  = parseFloat(r['採購期'+pi+'金額'])||0;
+        if(pi===1 && bDate) console.log('  採購期1日期:', bDate, 'vs matchDate:', matchDate, '相符:', bDate===matchDate);
         if(bDate===matchDate && bAmt>0){
           dayItems.push({r:r,type:'buy',cur:(r['採購期'+pi+'幣別']||'TWD').toUpperCase(),
             amt:bAmt,date:bDate,periodName:r['採購期'+pi+'名稱']||('第'+pi+'期')});
@@ -1597,7 +1599,7 @@ function showD(rowNum){
       +dr('折合NTD',    'NT$'+fmtN(m.buyNTD))
       +dr('付款條件',    r[F.buyPay]||'—')
       +dr('賣方合約',    r[F.buyCon]||'未選')
-      +(r[F.buyRem]?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:#fca5a5;">'+r[F.buyRem]+'</div></div>':'')
+      +(r[F.buyRem]?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:var(--ink);font-weight:500;">'+r[F.buyRem]+'</div></div>':'')
       +'</div>'
       + makePeriodTable(buyPeriods3, true)
       +'</div>';
@@ -1614,7 +1616,7 @@ function showD(rowNum){
       +dr('收款條件',    r[F.sellPay]||'—')
       +dr('買方合約',    r[F.sellCon]||'未選')
       +(isSellOnly3 && m.buyNTD>0 ? dr('銷售成本', (r[F.sellCostCur]||'TWD')+' '+fmtN(r[F.sellCostAmt])) : '')
-      +(r[F.sellRem]?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:#86efac;">'+r[F.sellRem]+'</div></div>':'')
+      +(r[F.sellRem]?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:var(--ink);font-weight:500;">'+r[F.sellRem]+'</div></div>':'')
       +'</div>'
       + makePeriodTable(sellPeriods3, false)
       +'</div>';
