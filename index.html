@@ -1273,9 +1273,13 @@ function renderDaily(){
         var dayColor=isToday?'#0369a1':(d===0?'#dc2626':d===6?'#0369a1':'var(--ink)');
         var fullDate=yr+'/'+(mo+1<10?'0'+(mo+1):String(mo+1))+'/'+(cellDay<10?'0'+cellDay:String(cellDay));
         var hasData=(estMap[cellDay]||actMap[cellDay]);
-        var clickAttr=hasData?' onclick="showDayDetail(this)" data-date="'+fullDate+'" style="cursor:pointer;':' style="';
-
-        cal+='<td'+clickAttr+'background:'+bg+';border:'+border+';height:88px;padding:5px;vertical-align:top;">';
+        var tdStyle='background:'+bg+';border:'+border+';height:88px;padding:0;vertical-align:top;position:relative;'+(hasData?'cursor:pointer;':'');
+        cal+='<td style="'+tdStyle+'">';
+        // 用覆蓋整格的透明 div 捕捉點擊（避免子元素干擾）
+        if(hasData){
+          cal+='<div onclick="showDayDetail(\'' + fullDate + '\')" style="position:absolute;inset:0;z-index:1;"></div>';
+        }
+        cal+='<div style="position:relative;z-index:2;padding:5px;height:100%;">';
         cal+='<div style="font-size:11px;font-weight:700;color:'+dayColor+';margin-bottom:3px;">'+cellDay+(isToday?'<span style="font-size:9px;font-weight:400;color:#0369a1;margin-left:3px;">今</span>':'')+'</div>';
 
         // ── 預估（灰色，上層）──
@@ -1303,7 +1307,7 @@ function renderDaily(){
               +actLines.join('')+'</div>';
           }
         }
-        cal+='</td>';
+        cal+='</div></td>';
       }
     }
     cal+='</tr>';
@@ -1426,11 +1430,11 @@ function renderDaily(){
 }
 
 // 點擊日曆格子 → 顯示當日案件明細
-function showDayDetail(el){
-  var dateStr = typeof el === 'string' ? el : el.dataset.date;
-  var matchDate = dateStr.replace(/\//g,'-');
+function showDayDetail(dateStr){
+  var matchDate = (dateStr||'').replace(/\//g,'-');
+  console.log('=== showDayDetail ===', dateStr, '→ matchDate:', matchDate, '| rows:', rows.length);
 
-  console.log('=== showDayDetail ===', dateStr, '→', matchDate, '| rows:', rows.length);
+
   // 從 FormResponses01 分期欄位找當天的案件
   // 統一日期格式比對（支援 / 和 - 兩種格式）
   function normDate(s){ return (s||'').toString().trim().replace(/[\/-]/g,'-').substring(0,10); }
