@@ -1428,70 +1428,80 @@ function renderDaily(){
 // 點擊日曆格子 → 顯示當日案件明細
 function showDayDetail(el){
   var dateStr = typeof el === 'string' ? el : el.dataset.date;
-  // 找出當天有應付 或 應收 的案件（依付款日/收款日，不是填報日）
-  var dayRows = rows.filter(function(r){
-    var bd = (g(r,'buyDate')||'').replace(/\//g,'-');
-    var sd = (g(r,'sellDate')||'').replace(/\//g,'-');
-    var matchDate = dateStr.replace(/\//g,'-');
-    return bd === matchDate || sd === matchDate;
+  var matchDate = dateStr.replace(/\//g,'-');
+
+  // 從 FormResponses01 分期欄位找當天的案件
+  var dayItems = [];
+  rows.forEach(function(r){
+    var caseType = g(r,'type');
+    var hasBuy  = caseType.indexOf('採購')>=0;
+    var hasSell = caseType.indexOf('銷售')>=0;
+    for(var pi=1; pi<=3; pi++){
+      if(hasBuy){
+        var bDate = (r['採購期'+pi+'預計日']||'').replace(/\//g,'-');
+        var bAmt  = parseFloat(r['採購期'+pi+'金額'])||0;
+        if(bDate===matchDate && bAmt>0){
+          dayItems.push({r:r,type:'buy',cur:(r['採購期'+pi+'幣別']||'TWD').toUpperCase(),
+            amt:bAmt,date:bDate,periodName:r['採購期'+pi+'名稱']||('第'+pi+'期')});
+        }
+      }
+      if(hasSell){
+        var sDate = (r['銷售期'+pi+'預計日']||'').replace(/\//g,'-');
+        var sAmt  = parseFloat(r['銷售期'+pi+'金額'])||0;
+        if(sDate===matchDate && sAmt>0){
+          dayItems.push({r:r,type:'sell',cur:(r['銷售期'+pi+'幣別']||'TWD').toUpperCase(),
+            amt:sAmt,date:sDate,periodName:r['銷售期'+pi+'名稱']||('第'+pi+'期')});
+        }
+      }
+    }
   });
 
-  document.getElementById('day-title').textContent = dateStr + '　共 ' + dayRows.length + ' 筆案件';
-  var body = document.getElementById('day-body');
+  var seenIds={}, dayRows=[];
+  dayItems.forEach(function(item){
+    var fid=g(item.r,'formId');
+    if(!seenIds[fid]){seenIds[fid]=true;dayRows.push(item.r);}
+  });
 
-  if(!dayRows.length){
-    body.innerHTML = '<div class="empty"><span class="eico">📋</span>當日無案件</div>';
+  document.getElementById('day-title').textContent=dateStr+'　共 '+dayRows.length+' 筆案件';
+  var body=document.getElementById('day-body');
+
+  if(!dayItems.length){
+    body.innerHTML='<div class="empty"><span class="eico">📋</span>當日無案件</div>';
     document.getElementById('DayM').classList.add('open');
     return;
   }
 
-  // 用 DOM 建立，避免引號衝突
-  body.innerHTML = '';
+  body.innerHTML='';
   dayRows.forEach(function(r){
-    var pend=isPend(r), appr=isAppr(r);
+    var fid=g(r,'formId');
+    var pend=isPend(r),appr=isAppr(r);
     var bc=pend?'bp':appr?'ba':'br';
     var sl=pend?'待審核':appr?'已同意':'退回';
-    var rowNum = r._row;
-
-    var card = document.createElement('div');
+    var card=document.createElement('div');
     card.style.cssText='background:var(--card);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;';
 
-    // 標題
-    var topDiv = document.createElement('div');
+    var topDiv=document.createElement('div');
     topDiv.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;';
-    var infoDiv = document.createElement('div');
-    infoDiv.innerHTML = '<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">'+g(r,'formId')+'</div>'
-      +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+g(r,'name')+'</div>'
-      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+g(r,'staff')+(g(r,'asst')?' / '+g(r,'asst'):'')+'</div>';
-    var badge = document.createElement('span');
-    badge.className = 'bdg '+bc;
-    badge.textContent = sl;
-    topDiv.appendChild(infoDiv);
-    topDiv.appendChild(badge);
+    var infoDiv=document.createElement('div');
+    infoDiv.innerHTML='<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">'+fid+'</div>'      +'<div style="font-size:14px;font-weight:700;color:var(--ink);">'+g(r,'name')+'</div>'      +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+g(r,'staff')+(g(r,'asst')?' / '+g(r,'asst'):'')+'</div>';
+    var badge=document.createElement('span');
+    badge.className='bdg '+bc; badge.textContent=sl;
+    topDiv.appendChild(infoDiv); topDiv.appendChild(badge);
     card.appendChild(topDiv);
 
-    // 金額
-    var amtGrid = document.createElement('div');
-    amtGrid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;';
-    var buyAmt = g(r,'buyAmt'), sellAmt = g(r,'sellAmt');
-    var buyCur = g(r,'buyCur')||'TWD', sellCur = g(r,'sellCur')||'TWD';
-    if(buyAmt){
-      var buyBox = document.createElement('div');
-      buyBox.style.cssText='background:#fef2f2;border-radius:7px;padding:8px 10px;';
-      buyBox.innerHTML='<div style="font-size:10px;color:var(--coral);font-weight:700;margin-bottom:2px;">↓ 應付（採購）</div>'
-        +'<div style="font-size:14px;font-weight:700;color:var(--coral);font-family:monospace;">'+fmtAmt(buyAmt,buyCur)+'</div>'
-        +(g(r,'buyDate')?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">付款日 '+g(r,'buyDate')+'</div>':'');
-      amtGrid.appendChild(buyBox);
-    }
-    if(sellAmt){
-      var sellBox = document.createElement('div');
-      sellBox.style.cssText='background:#f0fdf4;border-radius:7px;padding:8px 10px;';
-      sellBox.innerHTML='<div style="font-size:10px;color:var(--jade);font-weight:700;margin-bottom:2px;">↑ 應收（銷售）</div>'
-        +'<div style="font-size:14px;font-weight:700;color:var(--jade);font-family:monospace;">'+fmtAmt(sellAmt,sellCur)+'</div>'
-        +(g(r,'sellDate')?'<div style="font-size:10px;color:var(--muted);margin-top:3px;">收款日 '+g(r,'sellDate')+'</div>':'');
-      amtGrid.appendChild(sellBox);
-    }
+    // 當天分期明細
+    var thisItems=dayItems.filter(function(i){return g(i.r,'formId')===fid;});
+    var amtGrid=document.createElement('div');
+    amtGrid.style.cssText='display:flex;flex-direction:column;gap:6px;margin-bottom:10px;';
+    thisItems.forEach(function(item){
+      var box=document.createElement('div');
+      var isBuy=item.type==='buy';
+      box.style.cssText='border-radius:7px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;'        +(isBuy?'background:#fef7f0;border:1px solid #fed7aa;':'background:#f0fdf4;border:1px solid #bbf7d0;');
+      box.innerHTML='<div>'        +'<div style="font-size:10px;font-weight:700;margin-bottom:2px;color:'+(isBuy?'#c2410c':'#15803d')+';">'          +(isBuy?'↓ 應付（採購）':'↑ 應收（銷售）')+'　<span style="font-size:10px;font-weight:400;color:var(--muted);">'+item.periodName+'</span></div>'        +'<div style="font-size:15px;font-weight:700;font-family:monospace;color:'+(isBuy?'#ea580c':'#16a34a')+';">'          +item.cur+' '+fmtN(item.amt)+'</div>'        +'</div>'        +'<div style="font-size:11px;color:var(--muted);text-align:right;">預計日<br><b style="color:var(--ink);">'+item.date.replace(/-/g,'/')+'</b></div>';
+      amtGrid.appendChild(box);
+    });
     card.appendChild(amtGrid);
+
 
     // 備註
     var buyRem = g(r,'buyRem'), sellRem = g(r,'sellRem');
@@ -1553,16 +1563,21 @@ function showD(rowNum){
   // ── 分期明細 HTML 產生函式 ───────────────────────────
   function makePeriodTable(periods, isBuy){
     if(!periods.length) return '';
-    var color = isBuy ? '#f87171' : '#4ade80';
-    var html = '<div style="margin:4px 0 8px;background:#253447;border-radius:8px;overflow:hidden;">'
-      +'<div style="display:grid;grid-template-columns:1.2fr 1.4fr 1.2fr 1.2fr;gap:0;background:#1e2d3d;padding:6px 12px;font-size:10px;color:#64748b;font-weight:700;letter-spacing:.04em;">'
+    var hdrBg   = isBuy ? '#fff7ed' : '#f0fdf4';
+    var hdrBdr  = isBuy ? '#fed7aa' : '#bbf7d0';
+    var rowBg   = isBuy ? '#fffbf5' : '#f9fffe';
+    var rowBdr  = isBuy ? '#ffedd5' : '#dcfce7';
+    var amtClr  = isBuy ? '#c2410c' : '#15803d';
+    var html = '<div style="margin:4px 0 10px;border:1px solid '+hdrBdr+';border-radius:8px;overflow:hidden;">'
+      +'<div style="display:grid;grid-template-columns:1.2fr 1.5fr 1.2fr 1.1fr;background:'+hdrBg+';padding:6px 12px;font-size:10px;font-weight:700;letter-spacing:.04em;border-bottom:1px solid '+hdrBdr+';color:'+amtClr+';">'
       +'<span>期別名稱</span><span>幣別 / 金額</span><span>預計日期</span><span>備註</span></div>';
-    periods.forEach(function(p){
-      html += '<div style="display:grid;grid-template-columns:1.2fr 1.4fr 1.2fr 1.2fr;gap:0;padding:8px 12px;border-top:0.5px solid #2d3f52;font-size:12px;">'
-        +'<span style="color:#e2e8f0;font-weight:500;">'+( p.name||'—')+'</span>'
-        +'<span style="color:'+color+';font-weight:700;">'+(p.cur||'TWD')+' '+fmtN(p.amt)+'</span>'
-        +'<span style="color:#94a3b8;">'+(p.date||'—')+'</span>'
-        +'<span style="color:#64748b;">'+(p.note||'—')+'</span>'
+    periods.forEach(function(p,idx){
+      var bg = idx%2===0 ? rowBg : '#fff';
+      html += '<div style="display:grid;grid-template-columns:1.2fr 1.5fr 1.2fr 1.1fr;background:'+bg+';padding:8px 12px;border-top:0.5px solid '+rowBdr+';font-size:12px;">'
+        +'<span style="color:var(--ink);font-weight:500;">'+(p.name||'—')+'</span>'
+        +'<span style="color:'+amtClr+';font-weight:700;font-family:monospace;">'+(p.cur||'TWD')+' '+fmtN(p.amt)+'</span>'
+        +'<span style="color:var(--muted);">'+(p.date||'—')+'</span>'
+        +'<span style="color:var(--muted);">'+(p.note||'—')+'</span>'
         +'</div>';
     });
     html += '</div>';
