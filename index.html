@@ -467,51 +467,63 @@ function fetchRates(){
   var el=document.getElementById('rate-info');
   if(el)el.textContent='載入台灣銀行匯率中...';
 
-  // 台灣銀行即期匯率 API（透過 CORS proxy）
-  var tbUrl='https://api.allorigins.win/raw?url='+encodeURIComponent('https://rate.bot.com.tw/xrt/flcsv/0/day');
-  fetch(tbUrl)
+  // ── 方法一：台灣銀行 JSON API（最新一個營業日，即期買入）────
+  // 台灣銀行 API 有 CORS 限制，透過 allorigins proxy 取得
+  var tbJsonUrl='https://api.allorigins.win/raw?url='+encodeURIComponent('https://rate.bot.com.tw/xrt/flcsv/0/day');
+  fetch(tbJsonUrl)
     .then(function(r){ return r.text(); })
     .then(function(txt){
-      // 解析台灣銀行 CSV
-      // 格式：幣別,現金買入,現金賣出,即期買入,即期賣出,...
+      // CSV 格式（台灣銀行）：
+      // 幣別名稱, 幣別, 現金買入, 現金賣出, 即期買入, 即期賣出, ...
+      // col index:  0      1       2         3         4         5
       var lines = txt.split('\n');
-      var updated = new Date().toLocaleDateString('zh-TW');
+      var found = {USD:false, JPY:false, EUR:false};
       lines.forEach(function(line){
         var cols = line.split(',');
-        if(!cols[0]) return;
-        var cur  = cols[0].trim().toUpperCase();
-        // 即期賣出 = col[4]（買外幣用賣出匯率）
-        var sell = parseFloat(cols[4]);
-        if(!sell || sell<=0) return;
-        if(cur==='USD') RATE.USD = Math.round(sell*100)/100;
-        if(cur==='JPY') RATE.JPY = Math.round(sell*1000)/1000;
-        if(cur==='EUR') RATE.EUR = Math.round(sell*100)/100;
+        if(cols.length < 5) return;
+        var cur = (cols[1]||cols[0]).toString().trim().toUpperCase();
+        // 即期買入 = col[4]（公司賣外幣收回台幣用買入）
+        var spotBuy = parseFloat(cols[4]);
+        if(!spotBuy || spotBuy <= 0) return;
+        if(cur==='USD'){ RATE.USD=Math.round(spotBuy*100)/100;   found.USD=true; }
+        if(cur==='JPY'){ RATE.JPY=Math.round(spotBuy*1000)/1000; found.JPY=true; }
+        if(cur==='EUR'){ RATE.EUR=Math.round(spotBuy*100)/100;   found.EUR=true; }
       });
-      if(el)el.textContent='台灣銀行即期匯率 '+updated
-        +' | USD '+RATE.USD.toFixed(2)
-        +' JPY '+RATE.JPY.toFixed(3)
-        +' EUR '+RATE.EUR.toFixed(2);
-      if(rows.length>0)onLoad();
+      // 若三種幣別都抓到才算成功
+      if(found.USD && found.JPY && found.EUR){
+        var updated = new Date().toLocaleDateString('zh-TW');
+        if(el)el.textContent='台灣銀行即期買入 '+updated
+          +' | USD '+RATE.USD.toFixed(2)
+          +' / JPY '+RATE.JPY.toFixed(3)
+          +' / EUR '+RATE.EUR.toFixed(2);
+        if(rows.length>0) onLoad();
+      } else {
+        throw new Error('CSV 解析不完整');
+      }
     })
-    .catch(function(){
-      // 備用：open.er-api.com
+    .catch(function(e){
+      console.warn('台灣銀行 CSV 失敗：'+e+' → 改用備用 API');
+      // ── 方法二：open.er-api.com 備用（免費，無需 key）────
       fetch('https://open.er-api.com/v6/latest/TWD')
         .then(function(r){return r.json();})
         .then(function(d){
-          if(d&&d.rates){
+          if(d && d.rates){
+            // er-api 是以 TWD 為基準的相對匯率，取倒數換算成 1外幣=多少TWD
             if(d.rates.USD>0) RATE.USD=Math.round((1/d.rates.USD)*100)/100;
             if(d.rates.JPY>0) RATE.JPY=Math.round((1/d.rates.JPY)*1000)/1000;
             if(d.rates.EUR>0) RATE.EUR=Math.round((1/d.rates.EUR)*100)/100;
-            var updated=d.time_last_update_utc?new Date(d.time_last_update_utc).toLocaleDateString('zh-TW'):'';
+            var updated=d.time_last_update_utc
+              ? new Date(d.time_last_update_utc).toLocaleDateString('zh-TW') : '';
             if(el)el.textContent='即期匯率（備用）'+updated
               +' | USD '+RATE.USD.toFixed(2)
-              +' JPY '+RATE.JPY.toFixed(3)
-              +' EUR '+RATE.EUR.toFixed(2);
-            if(rows.length>0)onLoad();
+              +' / JPY '+RATE.JPY.toFixed(3)
+              +' / EUR '+RATE.EUR.toFixed(2);
+            if(rows.length>0) onLoad();
           }
         })
         .catch(function(){
-          if(el)el.textContent='匯率載入失敗，使用預設值 USD '+RATE.USD+' / JPY '+RATE.JPY+' / EUR '+RATE.EUR;
+          if(el)el.textContent='⚠️ 匯率載入失敗，使用預設值 USD '
+            +RATE.USD+' / JPY '+RATE.JPY+' / EUR '+RATE.EUR;
         });
     });
 }
@@ -613,51 +625,87 @@ function saveU(arr){
 function getCU(){try{var s=localStorage.getItem('tcu');return s?JSON.parse(s):[];}catch(e){return[];}}
 function saveCU(a){try{localStorage.setItem('tcu',JSON.stringify(a));}catch(e){}}
 
+// ── FormResponses01 分期計算輔助函式 ─────────────────
+function getPeriods01(r, type) {
+  // type = 'buy' or 'sell'
+  var prefix = type==='buy' ? '採購期' : '銷售期';
+  var periods = [];
+  for(var i=1; i<=3; i++){
+    var amt = parseFloat(r[prefix+i+'金額'])||0;
+    if(!amt && !r[prefix+i+'名稱']) continue;
+    periods.push({
+      name: r[prefix+i+'名稱']||'',
+      cur:  r[prefix+i+'幣別']||'TWD',
+      amt:  amt,
+      date: r[prefix+i+'預計日']||'',
+      note: r[prefix+i+'備註']||'',
+    });
+  }
+  return periods;
+}
+
+function calcTotalNTD01(r, type) {
+  var periods = getPeriods01(r, type);
+  if(!periods.length) return 0;
+  return periods.reduce(function(sum,p){
+    return sum + calcNTD(p.amt, p.cur||'TWD');
+  }, 0);
+}
+
 var CU=loadU(),curUser=null,rows=[],filtered=[],logs=[],fillPend=false;
 var dailyChart=null;
 
 var F={
+  // 步驟1
   time:        '時間戳記',
-  email:       '電子郵件地址',
   staff:       '業務名稱',
   type:        '案件屬性',
   name:        '案件名稱',
-  supp:        '供應商名稱（賣方）',
-  buyCur:      '採購幣別',
-  buyAmt:      '應付總金額',
-  buyDate:     '預計付款日期',
-  buyPay:      '付款條件',
-  buyRem:      '備註（採購）',
-  hasBuyer:    '是否已有銷售對象',
-  buyer:       '客戶名稱（買方）',
-  sellCur:     '銷售幣別',
-  sellAmt:     '應收總金額',
-  sellDate:    '預計收款日',
-  sellPay:     '收款條件',
-  sellRem:     '備註（銷售）',
   asst:        '承辦業助',
-  profit:      '預估毛利潤',
-  buyCon:      '合約 [賣方合約（採購）]',
-  sellCon:     '合約 [買方合約（銷售）]',
+  // 步驟2 採購
+  supp:        '供應商（賣方）',
+  buyPay:      '付款條件（採購）',
+  buyP1name:   '採購期1名稱', buyP1cur:'採購期1幣別', buyP1amt:'採購期1金額', buyP1date:'採購期1預計日', buyP1note:'採購期1備註',
+  buyP2name:   '採購期2名稱', buyP2cur:'採購期2幣別', buyP2amt:'採購期2金額', buyP2date:'採購期2預計日', buyP2note:'採購期2備註',
+  buyP3name:   '採購期3名稱', buyP3cur:'採購期3幣別', buyP3amt:'採購期3金額', buyP3date:'採購期3預計日', buyP3note:'採購期3備註',
+  buyRem:      '備註（採購）',
+  // 步驟2 銷售
+  buyer:       '客戶（買方）',
+  sellPay:     '收款條件（銷售）',
+  sellP1name:  '銷售期1名稱', sellP1cur:'銷售期1幣別', sellP1amt:'銷售期1金額', sellP1date:'銷售期1預計日', sellP1note:'銷售期1備註',
+  sellP2name:  '銷售期2名稱', sellP2cur:'銷售期2幣別', sellP2amt:'銷售期2金額', sellP2date:'銷售期2預計日', sellP2note:'銷售期2備註',
+  sellP3name:  '銷售期3名稱', sellP3cur:'銷售期3幣別', sellP3amt:'銷售期3金額', sellP3date:'銷售期3預計日', sellP3note:'銷售期3備註',
+  sellRem:     '備註（銷售）',
+  sellCostAmt: '銷售成本金額',
+  sellCostCur: '銷售成本幣別',
+  // 步驟3
+  buyCon:      '賣方合約（採購）',
+  sellCon:     '買方合約（銷售）',
   trade:       '貿易條件',
-  etd:         'ETD/卸魚日',
-  eta:         'ETA/到貨日',
-  origin:      '出貨地/發貨港口/出貨地點',
-  dest:        '目的地/收貨港口/收貨地點',
+  etd:         'ETD 出貨日',
+  eta:         'ETA 到貨日',
+  origin:      '出貨地/發貨港口',
+  dest:        '目的地/收貨港口',
   extra:       '其他費用',
   freight:     '運費',
   tax:         '規費',
   insure:      '保險費',
   comm:        '佣金',
-  status:      '老闆已同意',
-  bossNote:    '老闆是否有先同意採購',
-  signTime:    '簽屬時間',
-  formId:      '表單編號',
-  sellCostAmt: '銷售成本金額',
-  sellCostCur: '銷售成本幣別',
+  // 步驟4
   transferTo:  '轉交銷售業務',
   transferMsg: '轉交備註',
+  // 系統
+  formId:      '表單編號',
   fillStatus:  '銷售補填狀態',
+  status:      '老闆已同意',
+  bossNote:    '老闆備註',
+  signTime:    '簽核時間',
+  acct:        '會計確認',
+  // 計算用（從分期加總）
+  buyAmt:      '採購期1金額',  // 向下相容：取第1期（實際用 calcBuyAmt）
+  sellAmt:     '銷售期1金額', // 向下相容：取第1期（實際用 calcSellAmt）
+  buyCur:      '採購期1幣別',
+  sellCur:     '銷售期1幣別',
 };
 function g(r,k){return(r[F[k]]||'').toString().trim();}
 function pf(v){return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0;}
@@ -670,8 +718,10 @@ function isFillPending(r){return (r[F.fillStatus]||'')==='待補填';}
 function calcNTD(amt, cur){ return pf(amt)*(RATE[cur.toUpperCase()]||1); }
 function calcMargin(r){
   var caseType = (r[F.type]||'').toString().trim();
-  var sellNTD  = calcNTD(r[F.sellAmt], r[F.sellCur]||'TWD');
-  var buyNTD   = calcNTD(r[F.buyAmt],  r[F.buyCur] ||'TWD');
+  // 從分期加總計算 NTD
+  var buyNTD  = calcTotalNTD01(r, 'buy');
+  var sellNTD = calcTotalNTD01(r, 'sell');
+  var fees    = pf(r[F.extra])+pf(r[F.freight])+pf(r[F.tax])+pf(r[F.insure])+pf(r[F.comm]);
 
   // 1. 純採購：不顯示毛利率
   if(caseType==='採購'){
@@ -683,15 +733,13 @@ function calcMargin(r){
     var costAmt = parseFloat(r[F.sellCostAmt])||0;
     var costCur = (r[F.sellCostCur]||'TWD').toString();
     var costNTD = calcNTD(costAmt, costCur);
-    var fees    = pf(r[F.extra])+pf(r[F.freight])+pf(r[F.tax])+pf(r[F.insure])+pf(r[F.comm]);
     var profit  = sellNTD - costNTD - fees;
     var margin  = sellNTD>0 ? (profit/sellNTD*100).toFixed(1) : '—';
     return {buyNTD:costNTD, sellNTD:sellNTD, profitNTD:profit, margin:margin, isSellOnly:true};
   }
 
-  // 3. 採購+銷售：用銷售金額 - 採購金額
-  var fees2   = pf(r[F.extra])+pf(r[F.freight])+pf(r[F.tax])+pf(r[F.insure])+pf(r[F.comm]);
-  var profit2 = sellNTD - buyNTD - fees2;
+  // 3. 採購+銷售：銷售 - 採購 - 費用
+  var profit2 = sellNTD - buyNTD - fees;
   var margin2 = sellNTD>0 ? (profit2/sellNTD*100).toFixed(1) : '—';
   return {buyNTD:buyNTD, sellNTD:sellNTD, profitNTD:profit2, margin:margin2};
 }
@@ -1420,77 +1468,98 @@ function showD(rowNum){
 
   var m=calcMargin(r);
   var h='';
-  var caseType3 = (r[F.type]||'')||'';
+  var caseType3   = (r[F.type]||'').toString().trim();
   var isPurchOnly3 = caseType3==='採購';
   var isSellOnly3  = caseType3==='銷售';
 
-  // 採購
+  // ── 分期明細 HTML 產生函式 ───────────────────────────
+  function makePeriodTable(periods, isBuy){
+    if(!periods.length) return '';
+    var color = isBuy ? '#f87171' : '#4ade80';
+    var html = '<div style="margin:4px 0 8px;background:#253447;border-radius:8px;overflow:hidden;">'
+      +'<div style="display:grid;grid-template-columns:1.2fr 1.4fr 1.2fr 1.2fr;gap:0;background:#1e2d3d;padding:6px 12px;font-size:10px;color:#64748b;font-weight:700;letter-spacing:.04em;">'
+      +'<span>期別名稱</span><span>幣別 / 金額</span><span>預計日期</span><span>備註</span></div>';
+    periods.forEach(function(p){
+      html += '<div style="display:grid;grid-template-columns:1.2fr 1.4fr 1.2fr 1.2fr;gap:0;padding:8px 12px;border-top:0.5px solid #2d3f52;font-size:12px;">'
+        +'<span style="color:#e2e8f0;font-weight:500;">'+( p.name||'—')+'</span>'
+        +'<span style="color:'+color+';font-weight:700;">'+(p.cur||'TWD')+' '+fmtN(p.amt)+'</span>'
+        +'<span style="color:#94a3b8;">'+(p.date||'—')+'</span>'
+        +'<span style="color:#64748b;">'+(p.note||'—')+'</span>'
+        +'</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // ── 採購區塊 ─────────────────────────────────────────
   if(!isSellOnly3){
+    var buyPeriods3 = getPeriods01(r,'buy');
     h+='<div class="dsec"><div class="dsec-t tb">　採購（賣方）</div><div class="dgrid">'
-      +dr('供應商',     (r[F.supp]||''))
-      +dr('採購幣別',   (r[F.buyCur]||''))
-      +dr('應付總金額', fmtAmt((r[F.buyAmt]||''),(r[F.buyCur]||'')))
-      +dr('折合NTD',   'NT$'+fmtN(m.buyNTD))
-      +dr('預計付款日', (r[F.buyDate]||''))
-      +dr('付款條件',   (r[F.buyPay]||''))
-      +dr('賣方合約',   (r[F.buyCon]||''))
-      +(cv((r[F.buyRem]||''))?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:#7f1d1d;">'+(r[F.buyRem]||'')+'</div></div>':'')
-      +'</div></div>';
+      +dr('供應商',      r[F.supp]||'—')
+      +dr('採購幣別',    buyPeriods3.length?(buyPeriods3[0].cur||'TWD'):'TWD')
+      +dr('應付總金額',  'NT$'+fmtN(m.buyNTD))
+      +dr('折合NTD',    'NT$'+fmtN(m.buyNTD))
+      +dr('付款條件',    r[F.buyPay]||'—')
+      +dr('賣方合約',    r[F.buyCon]||'未選')
+      +(r[F.buyRem]?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:#fca5a5;">'+r[F.buyRem]+'</div></div>':'')
+      +'</div>'
+      + makePeriodTable(buyPeriods3, true)
+      +'</div>';
   }
 
-  // 銷售
+  // ── 銷售區塊 ─────────────────────────────────────────
   if(!isPurchOnly3){
+    var sellPeriods3 = getPeriods01(r,'sell');
     h+='<div class="dsec"><div class="dsec-t ts">　銷售（買方）</div><div class="dgrid">'
-      +dr('客戶名稱',   (r[F.buyer]||''))
-      +dr('銷售幣別',   (r[F.sellCur]||''))
-      +dr('應收總金額', fmtAmt((r[F.sellAmt]||''),(r[F.sellCur]||'')))
-      +dr('折合NTD',   'NT$'+fmtN(m.sellNTD))
-      +dr('預計收款日', (r[F.sellDate]||''))
-      +dr('收款條件',   (r[F.sellPay]||''))
-      +dr('買方合約',   (r[F.sellCon]||''))
-      +(isSellOnly3 && m.buyNTD>0?dr('銷售成本',(r[F.sellCostCur]||'')+' '+fmtN((r[F.sellCostAmt]||''))):'')
-      +(cv((r[F.sellRem]||''))?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:#14532d;">'+(r[F.sellRem]||'')+'</div></div>':'')
-      +'</div></div>';
+      +dr('客戶名稱',    r[F.buyer]||'—')
+      +dr('銷售幣別',    sellPeriods3.length?(sellPeriods3[0].cur||'TWD'):'TWD')
+      +dr('應收總金額',  'NT$'+fmtN(m.sellNTD))
+      +dr('折合NTD',    'NT$'+fmtN(m.sellNTD))
+      +dr('收款條件',    r[F.sellPay]||'—')
+      +dr('買方合約',    r[F.sellCon]||'未選')
+      +(isSellOnly3 && m.buyNTD>0 ? dr('銷售成本', (r[F.sellCostCur]||'TWD')+' '+fmtN(r[F.sellCostAmt])) : '')
+      +(r[F.sellRem]?'<div class="drow drow-f"><div class="drow-l">銷售備註</div><div class="drow-v" style="color:#86efac;">'+r[F.sellRem]+'</div></div>':'')
+      +'</div>'
+      + makePeriodTable(sellPeriods3, false)
+      +'</div>';
   }
 
-  // 物流/貿易
+  // ── 物流/貿易 ─────────────────────────────────────────
   h+='<div class="dsec"><div class="dsec-t">　物流 / 貿易</div><div class="dgrid">'
-    +dr('案件屬性', (r[F.type]||''))
-    +dr('運費',     fmtAmt((r[F.freight]||''),'TWD'))
-    +dr('保險費',   fmtAmt((r[F.insure]||''),'TWD'))
-    +dr('規費',     fmtAmt((r[F.tax]||''),'TWD'))
-    +dr('佣金',     fmtAmt((r[F.comm]||''),'TWD'))
-    +dr('其他費用', fmtAmt((r[F.extra]||''),'TWD'))
-    +dr('貿易條件', (r[F.trade]||''))
-    +dr('ETD/卸魚日',(r[F.etd]||''))
-    +dr('ETA/到貨日',(r[F.eta]||''))
-    +dr('出貨地',   (r[F.origin]||''))
-    +dr('目的地',   (r[F.dest]||''))
-    +dr('承辦業助', (r[F.asst]||''))
+    +dr('案件屬性', r[F.type])
+    +dr('運費',     'NT$'+fmtN(r[F.freight]))
+    +dr('保險費',   'NT$'+fmtN(r[F.insure]))
+    +dr('規費',     'NT$'+fmtN(r[F.tax]))
+    +dr('佣金',     'NT$'+fmtN(r[F.comm]))
+    +dr('其他費用', 'NT$'+fmtN(r[F.extra]))
+    +(r[F.asst]?dr('承辦業助', r[F.asst]):'')
+    +(r[F.etd] ?dr('ETD 出貨日', r[F.etd]):'')
+    +(r[F.eta] ?dr('ETA 到貨日', r[F.eta]):'')
+    +(r[F.origin]?dr('出貨地', r[F.origin]):'')
+    +(r[F.dest]  ?dr('目的地', r[F.dest]):'')
+    +(r[F.trade] ?dr('貿易條件', r[F.trade]):'')
     +'</div></div>';
 
-  // 毛利
+  // ── 毛利潤 ────────────────────────────────────────────
   var pColor3 = m.profitNTD>=0?'var(--jade)':'var(--coral)';
   var pBg3    = m.profitNTD>=0?'#f0fdf4':'#fef2f2';
-  var costAmt3= parseFloat((r[F.sellCostAmt]||''))||0;
-  var costCur3= (r[F.sellCostCur]||'')||'TWD';
+  var costAmt3= parseFloat(r[F.sellCostAmt])||0;
+  var costCur3= r[F.sellCostCur]||'TWD';
   h+='<div class="pbar" style="background:'+pBg3+';">';
   if(isSellOnly3 && costAmt3>0){
-    h+='<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">'
+    h+='<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;padding-bottom:6px;border-bottom:0.5px solid #e2e8f0;">'
       +'<span style="color:var(--muted);">銷售成本（'+costCur3+'）</span>'
       +'<span style="color:var(--coral);font-weight:700;">'+costCur3+' '+fmtN(costAmt3)+'</span>'
       +'</div>';
   }
   if(isPurchOnly3){
     h+='<span style="font-size:12px;color:var(--muted);font-weight:700;">預估毛利潤（純採購案件）</span>'
-      +'<div style="text-align:right;">'
-      +'<span style="font-size:18px;font-weight:700;color:var(--muted);font-family:monospace;">NT$0</span>'
-      +'</div>';
+      +'<div style="text-align:right;"><span style="font-size:18px;font-weight:700;color:var(--muted);font-family:monospace;">NT$0</span></div>';
   } else {
     h+='<span style="font-size:12px;color:'+pColor3+';font-weight:700;">預估毛利潤（NTD）</span>'
       +'<div style="text-align:right;">'
-      +'<span style="font-size:18px;font-weight:700;color:'+pColor3+';font-family:monospace;">NT$'+fmtN(m.profitNTD)+'</span>'
-      +'<span style="font-size:12px;color:var(--muted);margin-left:6px;">'+m.margin+'%</span>'
+      +'<span style="font-size:20px;font-weight:700;color:'+pColor3+';font-family:monospace;">NT$'+fmtN(m.profitNTD)+'</span>'
+      +'<span style="font-size:12px;color:var(--muted);margin-left:8px;background:#fff;padding:2px 6px;border-radius:4px;">'+m.margin+'%</span>'
       +'</div>';
   }
   h+='</div>';
