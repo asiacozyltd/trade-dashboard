@@ -1318,18 +1318,14 @@ function renderDaily(){
   }
   window._calClickHandler = function(e){
     var el = e.target;
-    console.log('click 捕捉到:', el.tagName, el.className);
-    // 往上最多找 6 層
     for(var i=0; i<6; i++){
       if(!el) break;
-      console.log('  往上第'+i+'層:', el.tagName, 'data-date:', el.getAttribute&&el.getAttribute('data-date'));
       if(el.tagName==='TD' && el.getAttribute('data-date')){
         showDayDetail(el.getAttribute('data-date'));
         return;
       }
       el = el.parentElement;
     }
-    console.log('  沒找到 td[data-date]');
   };
   // 用 capture 模式確保最先捕捉到事件
   document.addEventListener('click', window._calClickHandler, true);
@@ -1451,8 +1447,7 @@ function renderDaily(){
 // 點擊日曆格子 → 顯示當日案件明細
 function showDayDetail(dateStr){
   var matchDate = (dateStr||'').replace(/\//g,'-');
-  alert('showDayDetail 被呼叫: ' + dateStr);
-  console.log('=== showDayDetail ===', dateStr, '→ matchDate:', matchDate, '| rows:', rows.length);
+  console.log('=== showDayDetail ===', dateStr, 'rows:', rows.length);
 
 
   // 從 FormResponses01 分期欄位找當天的案件
@@ -1505,6 +1500,7 @@ function showDayDetail(dateStr){
     var pend=isPend(r),appr=isAppr(r);
     var bc=pend?'bp':appr?'ba':'br';
     var sl=pend?'待審核':appr?'已同意':'退回';
+    var rowNum = r._row;
     var card=document.createElement('div');
     card.style.cssText='background:var(--card);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;';
 
