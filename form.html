@@ -1352,6 +1352,9 @@ function checkFillMode(){
     fd.buyDate   = row['預計付款日期']       ||'';
     fd.buyPay    = row['付款條件']           ||'';
     fd.buyNote   = row['備註（採購）']       ||'';
+    // 轉交業務員名稱（補填人指定名稱）
+    fd.transferTo = row['轉交銷售業務']      || row['轉交業務員'] || '';
+    fd.fillStaff  = fd.transferTo;  // 備用：同一個值
     // 銷售欄位
     fd.buyer     = row['客戶名稱（買方）']   ||'';
     fd.sellCur   = row['銷售幣別']           ||'TWD';
@@ -1579,7 +1582,8 @@ function submitSellPart(){
     var cu = JSON.parse(localStorage.getItem('curUser')||'{}');
     staffName = cu.staffName || cu.name || '';
   }catch(e){}
-  if(!staffName) staffName = '補填人';  // 未登入時的備援
+  // 未登入時：用 transferTo（指定業務員名稱）或 fd.fillStaff 備援
+  if(!staffName) staffName = fd.transferTo || fd.fillStaff || fd.staff || '補填人';
 
   // origStaff = 原始填單人（從 Sheets 讀出）
   var origStaff = fd.origStaff || fd.staff || '';
@@ -1590,6 +1594,7 @@ function submitSellPart(){
     caseName:     fd.caseName,
     staff:        origStaff,   // 原始填單人
     sellStaff:    staffName,   // 補填人（當前登入者）
+    transferTo:   staffName,   // 同補填人名稱（供 Apps Script 組合業務名稱用）
     fillPart:     fd.fillPart || '銷售',  // 明確傳補填方向（'銷售' 或 '採購'）
     // 銷售欄位
     buyer:        fd.buyer    ||'',
