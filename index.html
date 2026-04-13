@@ -1273,12 +1273,9 @@ function renderDaily(){
         var dayColor=isToday?'#0369a1':(d===0?'#dc2626':d===6?'#0369a1':'var(--ink)');
         var fullDate=yr+'/'+(mo+1<10?'0'+(mo+1):String(mo+1))+'/'+(cellDay<10?'0'+cellDay:String(cellDay));
         var hasData=(estMap[cellDay]||actMap[cellDay]);
-        var tdStyle='background:'+bg+';border:'+border+';height:88px;padding:0;vertical-align:top;';
-        cal+='<td style="'+tdStyle+'">';
-        // 整個內容 div 就是可點擊區域
-        var contentStyle='padding:5px;height:100%;box-sizing:border-box;'+(hasData?'cursor:pointer;':'');
-        var contentClick=hasData?' onclick="showDayDetail(\'' + fullDate + '\')"':'';
-        cal+='<div'+contentClick+' style="'+contentStyle+'">';
+        var tdStyle='background:'+bg+';border:'+border+';height:88px;padding:5px;vertical-align:top;box-sizing:border-box;'+(hasData?'cursor:pointer;':'');
+        // data-date 給事件委派用，不在格子裡寫 onclick（避免引號跳脫問題）
+        cal+='<td style="'+tdStyle+'"'+(hasData?' data-date="'+fullDate+'"':'')+'>';
         cal+='<div style="font-size:11px;font-weight:700;color:'+dayColor+';margin-bottom:3px;">'+cellDay+(isToday?'<span style="font-size:9px;font-weight:400;color:#0369a1;margin-left:3px;">今</span>':'')+'</div>';
 
         // ── 預估（灰色，上層）──
@@ -1306,13 +1303,19 @@ function renderDaily(){
               +actLines.join('')+'</div>';
           }
         }
-        cal+='</div></td>';
+        cal+='</td>';
       }
     }
     cal+='</tr>';
   }
   cal+='</tbody></table>';
   document.getElementById('cal-body').innerHTML=cal;
+
+  // 事件委派：點擊有 data-date 的格子才觸發
+  document.getElementById('cal-body').onclick=function(e){
+    var td=e.target.closest('td[data-date]');
+    if(td) showDayDetail(td.getAttribute('data-date'));
+  };
 
   // ── 逾期未付款（預計日 < 今天 且未標記）──
   var overdueEl=document.getElementById('overdue-section');
