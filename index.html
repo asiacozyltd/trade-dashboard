@@ -1176,52 +1176,75 @@ function renderDaily(){
   var yr  = viewYear;
   var mo  = viewMonth;
   var moStr = (mo+1)<10?'0'+(mo+1):String(mo+1);
-  var prefix= yr+'/'+moStr;
   var today = new Date();
   var todayDate = today.getDate();
   var daysInMonth = new Date(yr,mo+1,0).getDate();
 
-  // ── 建立預估 map（來自 Payments 分頁）──
-  // 類型=採購 → 預估付款(↓)　類型=銷售 → 預估收款(↑)
-  var estMap={};
-  function addEst(day,type,cur,amt){
-    if(!day||day<1||day>daysInMonth)return;
-    if(!estMap[day])estMap[day]={buy:[],sell:[],rows:[]};
-    var list=type==='buy'?estMap[day].buy:estMap[day].sell;
-    var found=false;
-    list.forEach(function(i){if(i.cur===cur){i.amt+=amt;found=true;}});
-    if(!found)list.push({cur:cur,amt:amt});
-  }
-  PAYMENTS_CACHE.forEach(function(p){
-    var dateStr=(p['預計日期']||'').toString().replace(/\//g,'-');
-    if(!dateStr)return;
-    var dObj=new Date(dateStr);
-    if(isNaN(dObj)||dObj.getFullYear()!==yr||dObj.getMonth()!==mo)return;
-    var day=dObj.getDate();
-    var cur=(p['幣別']||'TWD').toUpperCase();
-    var amt=parseFloat(p['金額'])||0;
-    var type=p['類型']==='採購'?'buy':'sell';
-    if(amt>0) addEst(day,type,cur,amt);
+  // ── 已轉入 Payments 的 formId 集合（這些不再顯示在日曆）──
+  var transferredIds = {};
+  (allPayments||PAYMENTS_CACHE||[]).forEach(function(p){
+    if(p['表單編號']) transferredIds[p['表單編號']] = true;
   });
 
-  // ── 建立實際 map（來自 Payments 分頁已標記已付收）──
-  var actMap={};
-  PAYMENTS_CACHE.forEach(function(p){
-    if(p['已付收']!=='是')return;
-    var aDate=(p['實際日期']||'').replace(/\//g,'-');
-    if(!aDate)return;
-    var aObj=new Date(aDate);
-    if(isNaN(aObj)||aObj.getFullYear()!==yr||aObj.getMonth()!==mo)return;
-    var day=aObj.getDate();
-    if(!actMap[day])actMap[day]={buy:[],sell:[]};
-    var cur=(p['幣別']||'TWD').toUpperCase();
-    var amt=parseFloat(p['金額'])||0;
-    var type=p['類型']==='採購'?'buy':'sell';
-    var list=type==='buy'?actMap[day].buy:actMap[day].sell;
-    var found=false;
-    list.forEach(function(i){if(i.cur===cur){i.amt+=amt;found=true;}});
-    if(!found)list.push({cur:cur,amt:amt});
+  // ── 從 FormResponses01（rows）建立預估 map ──────────────
+  // 採購期1~3 → 應付(↓紅)　銷售期1~3 → 應收(↑綠)
+  // 只顯示「尚未轉入 Payments」的案件
+  var estMap = {};
+  // 明細記錄（點擊日期時顯示）
+  var estDetailMap = {};
+
+  function addEst(day, type, cur, amt, caseName, formId, periodName){
+    if(!day||day<1||day>daysInMonth||!amt||amt<=0) return;
+    if(!estMap[day]) estMap[day] = {buy:[],sell:[]};
+    if(!estDetailMap[day]) estDetailMap[day] = [];
+    var list = type==='buy' ? estMap[day].buy : estMap[day].sell;
+    var found = false;
+    list.forEach(function(i){ if(i.cur===cur){ i.amt+=amt; found=true; } });
+    if(!found) list.push({cur:cur, amt:amt});
+    estDetailMap[day].push({type:type, cur:cur, amt:amt, caseName:caseName, formId:formId, periodName:periodName});
+  }
+
+  rows.forEach(function(r){
+    var formId = g(r,'formId');
+    // 已轉入 Payments → 跳過，不顯示在日曆
+    if(transferredIds[formId]) return;
+    var caseName = g(r,'name');
+    var caseType = g(r,'type');
+    var hasBuy  = caseType.indexOf('採購')>=0;
+    var hasSell = caseType.indexOf('銷售')>=0;
+
+    // 採購分期
+    if(hasBuy){
+      for(var bi=1; bi<=3; bi++){
+        var bAmt  = parseFloat(r['採購期'+bi+'金額'])||0;
+        var bDate = (r['採購期'+bi+'預計日']||'').toString().trim();
+        var bCur  = (r['採購期'+bi+'幣別']||'TWD').toUpperCase();
+        var bName = r['採購期'+bi+'名稱']||('第'+bi+'期');
+        if(!bAmt||!bDate) continue;
+        var bDateStr = bDate.replace(/\//g,'-');
+        var bObj = new Date(bDateStr);
+        if(isNaN(bObj)||bObj.getFullYear()!==yr||bObj.getMonth()!==mo) continue;
+        addEst(bObj.getDate(), 'buy', bCur, bAmt, caseName, formId, bName);
+      }
+    }
+    // 銷售分期
+    if(hasSell){
+      for(var si=1; si<=3; si++){
+        var sAmt  = parseFloat(r['銷售期'+si+'金額'])||0;
+        var sDate = (r['銷售期'+si+'預計日']||'').toString().trim();
+        var sCur  = (r['銷售期'+si+'幣別']||'TWD').toUpperCase();
+        var sName = r['銷售期'+si+'名稱']||('第'+si+'期');
+        if(!sAmt||!sDate) continue;
+        var sDateStr = sDate.replace(/\//g,'-');
+        var sObj = new Date(sDateStr);
+        if(isNaN(sObj)||sObj.getFullYear()!==yr||sObj.getMonth()!==mo) continue;
+        addEst(sObj.getDate(), 'sell', sCur, sAmt, caseName, formId, sName);
+      }
+    }
   });
+
+  // actMap 保留空物件（Payments 不再帶回日曆）
+  var actMap = {};
 
   // 更新月份標題
   document.getElementById('daily-month').textContent = yr+'年'+(mo+1)+'月 應收／應付日曆';
@@ -1295,46 +1318,54 @@ function renderDaily(){
   if(overdueEl){
     if(!canSeeOverdue){ overdueEl.style.display='none'; }
     else {
-      var todayStr=today.getFullYear()+'/'
-        +(today.getMonth()+1<10?'0'+(today.getMonth()+1):today.getMonth()+1)+'/'
-        +(today.getDate()<10?'0'+today.getDate():today.getDate());
-      var overdue=PAYMENTS_CACHE.filter(function(p){
-        if(p['已付收']==='是')return false;
-        var pd=(p['預計日期']||'').replace(/-/g,'/');
-        return pd && pd < todayStr;
+      var todayStr=today.getFullYear()+'/'        +(today.getMonth()+1<10?'0'+(today.getMonth()+1):today.getMonth()+1)+'/'        +(today.getDate()<10?'0'+today.getDate():today.getDate());
+
+      // 從 FormResponses01 找逾期分期（排除已轉入 Payments 的案件）
+      var overdue = [];
+      rows.forEach(function(r){
+        var formId   = g(r,'formId');
+        if(transferredIds[formId]) return;
+        var caseName = g(r,'name');
+        var caseType = g(r,'type');
+        var staff    = g(r,'staff');
+        var hasBuy   = caseType.indexOf('採購')>=0;
+        var hasSell  = caseType.indexOf('銷售')>=0;
+        for(var pi=1; pi<=3; pi++){
+          if(hasBuy){
+            var bAmt  = parseFloat(r['採購期'+pi+'金額'])||0;
+            var bDate = (r['採購期'+pi+'預計日']||'').replace(/-/g,'/');
+            var bName = r['採購期'+pi+'名稱']||('第'+pi+'期');
+            var bCur  = (r['採購期'+pi+'幣別']||'TWD').toUpperCase();
+            if(bAmt>0 && bDate && bDate < todayStr){
+              overdue.push({caseName:caseName,formId:formId,staff:staff,type:'採購',name:bName,cur:bCur,amt:bAmt,date:bDate});
+            }
+          }
+          if(hasSell){
+            var sAmt  = parseFloat(r['銷售期'+pi+'金額'])||0;
+            var sDate = (r['銷售期'+pi+'預計日']||'').replace(/-/g,'/');
+            var sName = r['銷售期'+pi+'名稱']||('第'+pi+'期');
+            var sCur  = (r['銷售期'+pi+'幣別']||'TWD').toUpperCase();
+            if(sAmt>0 && sDate && sDate < todayStr){
+              overdue.push({caseName:caseName,formId:formId,staff:staff,type:'銷售',name:sName,cur:sCur,amt:sAmt,date:sDate});
+            }
+          }
+        }
       });
-      overdue.sort(function(a,b){
-        return (a['預計日期']||'') < (b['預計日期']||'')?-1:1;
-      });
+      overdue.sort(function(a,b){ return a.date<b.date?-1:1; });
+
       if(!overdue.length){
         overdueEl.style.display='none';
       } else {
         overdueEl.style.display='block';
-        var html='<div style="background:var(--card);border:1px solid #fca5a5;border-radius:12px;overflow:hidden;margin-bottom:16px;">'
-          +'<div style="background:#fef2f2;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #fca5a5;">'
-          +'<div style="font-size:14px;font-weight:700;color:#991b1b;">逾期未完成款項</div>'
-          +'<div style="background:#dc2626;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">'+overdue.length+' 筆</div>'
-          +'</div>';
+        var html='<div style="background:var(--card);border:1px solid #fca5a5;border-radius:12px;overflow:hidden;margin-bottom:16px;">'          +'<div style="background:#fef2f2;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #fca5a5;">'          +'<div style="font-size:14px;font-weight:700;color:#991b1b;">逾期未完成款項</div>'          +'<div style="background:#dc2626;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">'+overdue.length+' 筆</div>'          +'</div>';
         overdue.forEach(function(p){
-          var pd=(p['預計日期']||'').replace(/-/g,'/');
-          var diffDays=Math.floor((today-new Date(pd.replace(/\//g,'-')))/86400000);
-          var isBuy=p['類型']==='採購';
+          var diffDays=Math.floor((today-new Date(p.date.replace(/\//g,'-')))/86400000);
+          var isBuy=p.type==='採購';
           var tagBg=isBuy?'#fee2e2':'#fef9c3';
           var tagColor=isBuy?'#991b1b':'#854d0e';
           var tagText=isBuy?'應付未付':'應收未收';
           var amtColor=isBuy?'#dc2626':'#d97706';
-          html+='<div style="padding:12px 16px;border-bottom:0.5px solid #fde8e8;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
-            +'<div style="flex:1;min-width:0;">'
-            +'<div style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+p['案件名稱']+'</div>'
-            +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+p['表單編號']+' · '+p['業務名稱']+' · '+(p['類型']||'')+'：'+p['期別名稱']+'</div>'
-            +'<div style="font-size:11px;color:#dc2626;margin-top:3px;">預計日：<b>'+pd+'</b></div>'
-            +'</div>'
-            +'<div style="text-align:right;flex-shrink:0;">'
-            +'<div style="font-size:13px;font-weight:700;color:'+amtColor+';font-family:monospace;">'+(p['幣別']||'')+' '+fmtN(parseFloat(p['金額'])||0)+'</div>'
-            +'<div style="font-size:10px;color:#dc2626;margin-top:2px;">逾期 '+diffDays+' 天</div>'
-            +'<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:'+tagBg+';color:'+tagColor+';margin-top:3px;">'+tagText+'</span>'
-            +'</div>'
-            +'</div>';
+          html+='<div style="padding:12px 16px;border-bottom:0.5px solid #fde8e8;display:flex;justify-content:space-between;align-items:center;gap:8px;">'            +'<div style="flex:1;min-width:0;">'            +'<div style="font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+p.caseName+'</div>'            +'<div style="font-size:11px;color:var(--muted);margin-top:2px;">'+p.formId+' · '+p.staff+' · '+p.type+'：'+p.name+'</div>'            +'<div style="font-size:11px;color:#dc2626;margin-top:3px;">預計日：<b>'+p.date+'</b></div>'            +'</div>'            +'<div style="text-align:right;flex-shrink:0;">'            +'<div style="font-size:13px;font-weight:700;color:'+amtColor+';font-family:monospace;">'+p.cur+' '+fmtN(p.amt)+'</div>'            +'<div style="font-size:10px;color:#dc2626;margin-top:2px;">逾期 '+diffDays+' 天</div>'            +'<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:'+tagBg+';color:'+tagColor+';margin-top:3px;">'+tagText+'</span>'            +'</div>'            +'</div>';
         });
         html+='</div>';
         overdueEl.innerHTML=html;
@@ -1342,31 +1373,42 @@ function renderDaily(){
     }
   }
 
-  // ── 月小計表（預估 vs 實際）──
+  // ── 月小計表（從 FormResponses01 分期計算）──
   var estTotals={},actTotals={};
   rows.forEach(function(r){
-    var buyCur=(g(r,'buyCur')||'TWD').toUpperCase();
-    var buyAmt=pf(g(r,'buyAmt'));
-    var sellCur=(g(r,'sellCur')||'TWD').toUpperCase();
-    var sellAmt=pf(g(r,'sellAmt'));
-    var bd=(g(r,'buyDate')||'').replace(/\//g,'-');
-    var sd=(g(r,'sellDate')||'').replace(/\//g,'-');
-    if(bd&&buyAmt>0){
-      var o=new Date(bd);
-      if(!isNaN(o)&&o.getFullYear()===yr&&o.getMonth()===mo){
-        if(!estTotals[buyCur])estTotals[buyCur]={sell:0,buy:0};
-        estTotals[buyCur].buy+=buyAmt;
+    var formId = g(r,'formId');
+    if(transferredIds[formId]) return; // 已轉入 Payments 的不算在預估
+    var caseType = g(r,'type');
+    var hasBuy  = caseType.indexOf('採購')>=0;
+    var hasSell = caseType.indexOf('銷售')>=0;
+    for(var pi=1; pi<=3; pi++){
+      if(hasBuy){
+        var bAmt = parseFloat(r['採購期'+pi+'金額'])||0;
+        var bCur = (r['採購期'+pi+'幣別']||'TWD').toUpperCase();
+        var bd   = (r['採購期'+pi+'預計日']||'').replace(/\//g,'-');
+        if(bd&&bAmt>0){
+          var o=new Date(bd);
+          if(!isNaN(o)&&o.getFullYear()===yr&&o.getMonth()===mo){
+            if(!estTotals[bCur])estTotals[bCur]={sell:0,buy:0};
+            estTotals[bCur].buy+=bAmt;
+          }
+        }
       }
-    }
-    if(sd&&sellAmt>0){
-      var o2=new Date(sd);
-      if(!isNaN(o2)&&o2.getFullYear()===yr&&o2.getMonth()===mo){
-        if(!estTotals[sellCur])estTotals[sellCur]={sell:0,buy:0};
-        estTotals[sellCur].sell+=sellAmt;
+      if(hasSell){
+        var sAmt = parseFloat(r['銷售期'+pi+'金額'])||0;
+        var sCur = (r['銷售期'+pi+'幣別']||'TWD').toUpperCase();
+        var sd   = (r['銷售期'+pi+'預計日']||'').replace(/\//g,'-');
+        if(sd&&sAmt>0){
+          var o2=new Date(sd);
+          if(!isNaN(o2)&&o2.getFullYear()===yr&&o2.getMonth()===mo){
+            if(!estTotals[sCur])estTotals[sCur]={sell:0,buy:0};
+            estTotals[sCur].sell+=sAmt;
+          }
+        }
       }
     }
   });
-  // Payments 分頁已標記的加入月小計
+  // Payments 分頁已標記的加入月小計（實際付收）
   PAYMENTS_CACHE.forEach(function(p){
     if(p['已付收']!=='是')return;
     var aDate=(p['實際日期']||'').replace(/\//g,'-');
