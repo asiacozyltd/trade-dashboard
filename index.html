@@ -831,15 +831,15 @@ function loadViaJSONP(){
     if(script.parentNode) script.parentNode.removeChild(script);
     if(d && d.status==='ok' && d.rows && d.rows.length>0){
       rows = d.rows.filter(function(r){return g(r,'staff')!=='';});
-      console.log('✅ JSONP getData 成功，共 '+rows.length+' 筆（FormResponses）');
+      console.log('✅ JSONP getData01 成功，共 '+rows.length+' 筆（FormResponses01）');
       onLoad();
     } else {
       console.warn('⚠️ JSONP 回傳空資料 → 改用 CSV 備援');
       loadCSV();
     }
   };
-  var jsonpUrl = SCRIPT+'?action=getData&callback='+cbName+'&_='+Date.now();
-  console.log('🚀 JSONP 發出請求：', jsonpUrl);
+  var jsonpUrl = SCRIPT+'?action=getData01&callback='+cbName+'&_='+Date.now();
+  console.log('🚀 JSONP 發出請求（FormResponses01）：', jsonpUrl);
   script.src = jsonpUrl;
   script.onerror = function(){
     if(done) return;
