@@ -1819,17 +1819,39 @@ function doAccountingConfirm(rowNum){
   });
 }
 
-// 從案件列資料建立 periods
+// 從 FormResponses01 分期欄位建立 periods（財務轉入 Payments 用）
 function buildPeriodsFromRow(r){
-  var periods=[];
-  var buyCur  = ((r[F.buyCur]||'') ||'TWD').toUpperCase();
-  var buyAmt  = parseFloat((r[F.buyAmt]||'')) ||0;
-  var buyDate = (r[F.buyDate]||'') ||'';
-  var sellCur = ((r[F.sellCur]||'')||'TWD').toUpperCase();
-  var sellAmt = parseFloat((r[F.sellAmt]||''))||0;
-  var sellDate= (r[F.sellDate]||'')||'';
-  if(buyAmt>0)  periods.push({type:'採購',name:'付款',cur:buyCur, amt:buyAmt, date:buyDate, note:''});
-  if(sellAmt>0) periods.push({type:'銷售',name:'收款',cur:sellCur,amt:sellAmt,date:sellDate,note:''});
+  var periods = [];
+  var caseType = g(r,'type');
+  var hasBuy  = caseType.indexOf('採購')>=0;
+  var hasSell = caseType.indexOf('銷售')>=0;
+
+  // 採購分期 1~3
+  if(hasBuy){
+    for(var bi=1; bi<=3; bi++){
+      var bAmt  = parseFloat(r['採購期'+bi+'金額'])||0;
+      var bDate = (r['採購期'+bi+'預計日']||'').toString().trim();
+      var bCur  = (r['採購期'+bi+'幣別']||'TWD').toUpperCase();
+      var bName = r['採購期'+bi+'名稱']||('第'+bi+'期');
+      var bNote = r['採購期'+bi+'備註']||'';
+      if(bAmt>0 && bDate){
+        periods.push({type:'採購', name:bName, cur:bCur, amt:bAmt, date:bDate, note:bNote});
+      }
+    }
+  }
+  // 銷售分期 1~3
+  if(hasSell){
+    for(var si=1; si<=3; si++){
+      var sAmt  = parseFloat(r['銷售期'+si+'金額'])||0;
+      var sDate = (r['銷售期'+si+'預計日']||'').toString().trim();
+      var sCur  = (r['銷售期'+si+'幣別']||'TWD').toUpperCase();
+      var sName = r['銷售期'+si+'名稱']||('第'+si+'期');
+      var sNote = r['銷售期'+si+'備註']||'';
+      if(sAmt>0 && sDate){
+        periods.push({type:'銷售', name:sName, cur:sCur, amt:sAmt, date:sDate, note:sNote});
+      }
+    }
+  }
   return periods;
 }
 
