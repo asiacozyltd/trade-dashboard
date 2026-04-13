@@ -1311,17 +1311,28 @@ function renderDaily(){
   cal+='</tbody></table>';
   document.getElementById('cal-body').innerHTML=cal;
 
-  // 事件委派：點擊往上找有 data-date 的 td
-  document.getElementById('cal-body').onclick=function(e){
-    var el=e.target;
-    while(el && el!==this){
+  // 事件委派：用 document 層級監聽，確保不被任何容器擋住
+  // 先移除舊的監聽器（避免重複綁定）
+  if(window._calClickHandler){
+    document.removeEventListener('click', window._calClickHandler, true);
+  }
+  window._calClickHandler = function(e){
+    var el = e.target;
+    console.log('click 捕捉到:', el.tagName, el.className);
+    // 往上最多找 6 層
+    for(var i=0; i<6; i++){
+      if(!el) break;
+      console.log('  往上第'+i+'層:', el.tagName, 'data-date:', el.getAttribute&&el.getAttribute('data-date'));
       if(el.tagName==='TD' && el.getAttribute('data-date')){
         showDayDetail(el.getAttribute('data-date'));
         return;
       }
-      el=el.parentElement;
+      el = el.parentElement;
     }
+    console.log('  沒找到 td[data-date]');
   };
+  // 用 capture 模式確保最先捕捉到事件
+  document.addEventListener('click', window._calClickHandler, true);
 
   // ── 逾期未付款（預計日 < 今天 且未標記）──
   var overdueEl=document.getElementById('overdue-section');
@@ -1440,6 +1451,7 @@ function renderDaily(){
 // 點擊日曆格子 → 顯示當日案件明細
 function showDayDetail(dateStr){
   var matchDate = (dateStr||'').replace(/\//g,'-');
+  alert('showDayDetail 被呼叫: ' + dateStr);
   console.log('=== showDayDetail ===', dateStr, '→ matchDate:', matchDate, '| rows:', rows.length);
 
 
