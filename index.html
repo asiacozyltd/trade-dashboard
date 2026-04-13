@@ -1311,10 +1311,16 @@ function renderDaily(){
   cal+='</tbody></table>';
   document.getElementById('cal-body').innerHTML=cal;
 
-  // 事件委派：點擊有 data-date 的格子才觸發
+  // 事件委派：點擊往上找有 data-date 的 td
   document.getElementById('cal-body').onclick=function(e){
-    var td=e.target.closest('td[data-date]');
-    if(td) showDayDetail(td.getAttribute('data-date'));
+    var el=e.target;
+    while(el && el!==this){
+      if(el.tagName==='TD' && el.getAttribute('data-date')){
+        showDayDetail(el.getAttribute('data-date'));
+        return;
+      }
+      el=el.parentElement;
+    }
   };
 
   // ── 逾期未付款（預計日 < 今天 且未標記）──
