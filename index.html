@@ -1273,13 +1273,12 @@ function renderDaily(){
         var dayColor=isToday?'#0369a1':(d===0?'#dc2626':d===6?'#0369a1':'var(--ink)');
         var fullDate=yr+'/'+(mo+1<10?'0'+(mo+1):String(mo+1))+'/'+(cellDay<10?'0'+cellDay:String(cellDay));
         var hasData=(estMap[cellDay]||actMap[cellDay]);
-        var tdStyle='background:'+bg+';border:'+border+';height:88px;padding:0;vertical-align:top;position:relative;'+(hasData?'cursor:pointer;':'');
+        var tdStyle='background:'+bg+';border:'+border+';height:88px;padding:0;vertical-align:top;';
         cal+='<td style="'+tdStyle+'">';
-        // 用覆蓋整格的透明 div 捕捉點擊（避免子元素干擾）
-        if(hasData){
-          cal+='<div onclick="showDayDetail(\'' + fullDate + '\')" style="position:absolute;inset:0;z-index:1;"></div>';
-        }
-        cal+='<div style="position:relative;z-index:2;padding:5px;height:100%;">';
+        // 整個內容 div 就是可點擊區域
+        var contentStyle='padding:5px;height:100%;box-sizing:border-box;'+(hasData?'cursor:pointer;':'');
+        var contentClick=hasData?' onclick="showDayDetail(\'' + fullDate + '\')"':'';
+        cal+='<div'+contentClick+' style="'+contentStyle+'">';
         cal+='<div style="font-size:11px;font-weight:700;color:'+dayColor+';margin-bottom:3px;">'+cellDay+(isToday?'<span style="font-size:9px;font-weight:400;color:#0369a1;margin-left:3px;">今</span>':'')+'</div>';
 
         // ── 預估（灰色，上層）──
