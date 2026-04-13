@@ -1221,7 +1221,7 @@ function renderDaily(){
         var bCur  = (r['採購期'+bi+'幣別']||'TWD').toUpperCase();
         var bName = r['採購期'+bi+'名稱']||('第'+bi+'期');
         if(!bAmt||!bDate) continue;
-        var bDateStr = bDate.replace(/\//g,'-');
+        var bDateStr = bDate.replace(/[\/-]/g,'-');
         var bObj = new Date(bDateStr);
         if(isNaN(bObj)||bObj.getFullYear()!==yr||bObj.getMonth()!==mo) continue;
         addEst(bObj.getDate(), 'buy', bCur, bAmt, caseName, formId, bName);
@@ -1235,7 +1235,7 @@ function renderDaily(){
         var sCur  = (r['銷售期'+si+'幣別']||'TWD').toUpperCase();
         var sName = r['銷售期'+si+'名稱']||('第'+si+'期');
         if(!sAmt||!sDate) continue;
-        var sDateStr = sDate.replace(/\//g,'-');
+        var sDateStr = sDate.replace(/[\/-]/g,'-');
         var sObj = new Date(sDateStr);
         if(isNaN(sObj)||sObj.getFullYear()!==yr||sObj.getMonth()!==mo) continue;
         addEst(sObj.getDate(), 'sell', sCur, sAmt, caseName, formId, sName);
@@ -1431,6 +1431,8 @@ function showDayDetail(el){
   var matchDate = dateStr.replace(/\//g,'-');
 
   // 從 FormResponses01 分期欄位找當天的案件
+  // 統一日期格式比對（支援 / 和 - 兩種格式）
+  function normDate(s){ return (s||'').toString().trim().replace(/[\/-]/g,'-').substring(0,10); }
   var dayItems = [];
   rows.forEach(function(r){
     var caseType = g(r,'type');
@@ -1438,7 +1440,7 @@ function showDayDetail(el){
     var hasSell = caseType.indexOf('銷售')>=0;
     for(var pi=1; pi<=3; pi++){
       if(hasBuy){
-        var bDate = (r['採購期'+pi+'預計日']||'').replace(/\//g,'-');
+        var bDate = normDate(r['採購期'+pi+'預計日']);
         var bAmt  = parseFloat(r['採購期'+pi+'金額'])||0;
         if(bDate===matchDate && bAmt>0){
           dayItems.push({r:r,type:'buy',cur:(r['採購期'+pi+'幣別']||'TWD').toUpperCase(),
@@ -1446,7 +1448,7 @@ function showDayDetail(el){
         }
       }
       if(hasSell){
-        var sDate = (r['銷售期'+pi+'預計日']||'').replace(/\//g,'-');
+        var sDate = normDate(r['銷售期'+pi+'預計日']);
         var sAmt  = parseFloat(r['銷售期'+pi+'金額'])||0;
         if(sDate===matchDate && sAmt>0){
           dayItems.push({r:r,type:'sell',cur:(r['銷售期'+pi+'幣別']||'TWD').toUpperCase(),
@@ -1563,21 +1565,22 @@ function showD(rowNum){
   // ── 分期明細 HTML 產生函式 ───────────────────────────
   function makePeriodTable(periods, isBuy){
     if(!periods.length) return '';
-    var hdrBg   = isBuy ? '#fff7ed' : '#f0fdf4';
-    var hdrBdr  = isBuy ? '#fed7aa' : '#bbf7d0';
-    var rowBg   = isBuy ? '#fffbf5' : '#f9fffe';
-    var rowBdr  = isBuy ? '#ffedd5' : '#dcfce7';
-    var amtClr  = isBuy ? '#c2410c' : '#15803d';
+    var hdrBg  = isBuy ? '#ea580c' : '#16a34a';
+    var hdrBdr = isBuy ? '#c2410c' : '#15803d';
+    var rowBg  = isBuy ? '#fff7ed' : '#f0fdf4';
+    var rowBg2 = isBuy ? '#fffbf5' : '#f9fffe';
+    var rowBdr = isBuy ? '#fed7aa' : '#bbf7d0';
+    var amtClr = isBuy ? '#c2410c' : '#15803d';
     var html = '<div style="margin:4px 0 10px;border:1px solid '+hdrBdr+';border-radius:8px;overflow:hidden;">'
-      +'<div style="display:grid;grid-template-columns:1.2fr 1.5fr 1.2fr 1.1fr;background:'+hdrBg+';padding:6px 12px;font-size:10px;font-weight:700;letter-spacing:.04em;border-bottom:1px solid '+hdrBdr+';color:'+amtClr+';">'
+      +'<div style="display:grid;grid-template-columns:1.2fr 1.5fr 1.2fr 1.1fr;background:'+hdrBg+';padding:7px 12px;font-size:10px;font-weight:700;letter-spacing:.04em;color:#fff;">'
       +'<span>期別名稱</span><span>幣別 / 金額</span><span>預計日期</span><span>備註</span></div>';
     periods.forEach(function(p,idx){
-      var bg = idx%2===0 ? rowBg : '#fff';
+      var bg = idx%2===0 ? rowBg : rowBg2;
       html += '<div style="display:grid;grid-template-columns:1.2fr 1.5fr 1.2fr 1.1fr;background:'+bg+';padding:8px 12px;border-top:0.5px solid '+rowBdr+';font-size:12px;">'
-        +'<span style="color:var(--ink);font-weight:500;">'+(p.name||'—')+'</span>'
+        +'<span style="color:var(--ink);font-weight:600;">'+(p.name||'—')+'</span>'
         +'<span style="color:'+amtClr+';font-weight:700;font-family:monospace;">'+(p.cur||'TWD')+' '+fmtN(p.amt)+'</span>'
-        +'<span style="color:var(--muted);">'+(p.date||'—')+'</span>'
-        +'<span style="color:var(--muted);">'+(p.note||'—')+'</span>'
+        +'<span style="color:var(--ink);">'+(p.date||'—')+'</span>'
+        +'<span style="color:var(--ink);">'+(p.note||'—')+'</span>'
         +'</div>';
     });
     html += '</div>';
