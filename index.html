@@ -702,7 +702,14 @@ function pf(v){return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0;
 function cv(v){return v&&v.trim()&&v!=='—'&&v!=='0'&&v!=='-'&&v!=='undefined';}
 function isPend(r){
   // 待補填中的案件不算待審核（補填完成後才讓老闆簽核）
-  if((r[F.fillStatus]||'')==='待補填') return false;
+  var fillStat = (r[F.fillStatus]||r['銷售補填狀態']||'').toString().trim();
+  if(g(r,'formId')==='T20260414729'){
+    console.log('T20260414729 isPend check:',
+      'fillStat=['+fillStat+']',
+      'F.fillStatus='+F.fillStatus,
+      'r[key]=['+r[F.fillStatus]+']');
+  }
+  if(fillStat==='待補填') return false;
   var s=g(r,'status');
   return s===''||s==='否'||s==='待審核'||s==='尚未';
 }
