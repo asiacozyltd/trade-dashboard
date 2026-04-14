@@ -941,9 +941,17 @@ function renderDash(){
     +'<div class="st s3"><div class="stlbl">預估總毛利</div><div class="stval v3">'+fmtM(tP)+'</div><div class="stsub">毛利率 '+mg+'%</div></div>'
     +'<div class="st s4"><div class="stlbl">待審核</div><div class="stval v4">'+pend+'</div><div class="stsub">筆合約</div></div>'
     +'</div>';
+  // 未審核優先，再按新到舊，取前5筆
+  var dashRows = rows.slice().sort(function(a,b){
+    var aPend = isPend(a)?0:1;
+    var bPend = isPend(b)?0:1;
+    if(aPend!==bPend) return aPend-bPend;
+    // 同類別按時間新到舊
+    return (g(b,'time')||'') > (g(a,'time')||'') ? 1 : -1;
+  }).slice(0,5);
   h+='<div class="sec-lbl">最近合約</div>';
   h+='<div class="card-grid">';
-  rows.slice(0,6).forEach(function(r){h+=makeCard(r,false);});
+  dashRows.forEach(function(r){h+=makeCard(r,false);});
   h+='</div>';
   document.getElementById('dc').innerHTML=h;
 }
@@ -974,14 +982,71 @@ function makeCard(r,showApprove){
     +'</div>';
 }
 
-function renderCards(data,targetId,showAll){
-  var el=document.getElementById(targetId);
-  if(!el)return;
-  if(!data.length){el.innerHTML='<div class="empty"><span class="eico">📋</span>查無資料</div>';return;}
-  el.innerHTML=data.map(function(r){return makeCard(r,false);}).join('');
+var _cardPage = 1;
+var _cardSort = 'desc'; // 'desc'=新到舊 'asc'=舊到新
+var _cardData = [];
+var _cardTarget = '';
+var CARDS_PER_PAGE = 10;
+
+function renderCards(data, targetId, showAll){
+  _cardData   = data;
+  _cardTarget = targetId;
+  _cardPage   = 1;
+  _renderCardsPage();
+}
+
+function _renderCardsPage(){
+  var el = document.getElementById(_cardTarget);
+  if(!el) return;
+
+  // 排序
+  var sorted = _cardData.slice().sort(function(a,b){
+    var ta = g(a,'time')||'';
+    var tb = g(b,'time')||'';
+    return _cardSort==='desc' ? (tb>ta?1:-1) : (ta>tb?1:-1);
+  });
+
+  var total = sorted.length;
+  var pages = Math.ceil(total/CARDS_PER_PAGE)||1;
+  if(_cardPage>pages) _cardPage=pages;
+  var start = (_cardPage-1)*CARDS_PER_PAGE;
+  var pageData = sorted.slice(start, start+CARDS_PER_PAGE);
+
+  if(!total){
+    el.innerHTML='<div class="empty"><span class="eico">📋</span>查無資料</div>';
+    return;
+  }
+
+  // 排序控制列
+  var toolbar='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">'    +'<div style="font-size:13px;color:var(--muted);">共 <b style="color:var(--ink);">'+total+'</b> 筆　第 <b style="color:var(--sea);">'+_cardPage+'</b> / '+pages+' 頁</div>'    +'<div style="display:flex;gap:6px;">'    +'<button onclick="setCardSort(0)" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid '+(_cardSort==='desc'?'var(--sea)':'var(--border)')+';background:'+(_cardSort==='desc'?'var(--sea)':'#f8fafc')+';color:'+(_cardSort==='desc'?'#fff':'var(--muted)')+';cursor:pointer;">新→舊</button>'    +'<button onclick="setCardSort(1)" style="padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid '+(_cardSort==='asc'?'var(--sea)':'var(--border)')+';background:'+(_cardSort==='asc'?'var(--sea)':'#f8fafc')+';color:'+(_cardSort==='asc'?'#fff':'var(--muted)')+';cursor:pointer;">舊→新</button>'    +'</div>'    +'</div>';
+
+  // 卡片
+  var cards = pageData.map(function(r){return makeCard(r,false);}).join('');
+
+  // 分頁按鈕
+  var pager='';
+  if(pages>1){
+    pager='<div style="display:flex;justify-content:center;gap:6px;margin-top:14px;flex-wrap:wrap;">';
+    if(_cardPage>1) pager+='<button onclick="_cardPage--;_renderCardsPage();" style="padding:7px 14px;border-radius:8px;background:#f1f5f9;border:1px solid var(--border);font-size:13px;font-weight:700;cursor:pointer;">‹ 上一頁</button>';
+    // 頁碼（最多顯示5個）
+    var startP=Math.max(1,_cardPage-2), endP=Math.min(pages,startP+4);
+    for(var p=startP;p<=endP;p++){
+      pager+='<button onclick="_cardPage='+p+';_renderCardsPage();" style="padding:7px 12px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid '+(p===_cardPage?'var(--sea)':'var(--border)')+';background:'+(p===_cardPage?'var(--sea)':'#f8fafc')+';color:'+(p===_cardPage?'#fff':'var(--ink)')+';">'+p+'</button>';
+    }
+    if(_cardPage<pages) pager+='<button onclick="_cardPage++;_renderCardsPage();" style="padding:7px 14px;border-radius:8px;background:#f1f5f9;border:1px solid var(--border);font-size:13px;font-weight:700;cursor:pointer;">下一頁 ›</button>';
+    pager+='</div>';
+  }
+
+  el.innerHTML = toolbar + '<div class="card-grid">' + cards + '</div>' + pager;
 }
 
 // 待簽核
+function setCardSort(asc){
+  _cardSort = asc ? 'asc' : 'desc';
+  _cardPage = 1;
+  _renderCardsPage();
+}
+
 function renderApproval(){
   var pend=rows.filter(isPend);
   var al=document.getElementById('al');
@@ -1050,6 +1115,9 @@ function loadTransfer(){
     var formId   = (r[F.formId]||'').toString();
     var alreadyIn= payFormIds.indexOf(formId)>=0;
     return approved && !alreadyIn && formId;
+  }).sort(function(a,b){
+    // 新到舊排序
+    return (g(b,'time')||'') > (g(a,'time')||'') ? 1 : -1;
   });
 
   if(!pendingApproved.length){
@@ -2192,6 +2260,9 @@ function loadTransfer(){
     var formId   = (r[F.formId]||'').toString();
     var alreadyIn= payFormIds.indexOf(formId)>=0;
     return approved && !alreadyIn && formId;
+  }).sort(function(a,b){
+    // 新到舊排序
+    return (g(b,'time')||'') > (g(a,'time')||'') ? 1 : -1;
   });
 
   if(!pendingApproved.length){
