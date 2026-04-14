@@ -792,7 +792,7 @@ function buildNav(){
     :role==='staff'
     ?[{i:'dash',l:'📊 總覽'},{i:'mycase',l:'👤 我的案件'},{i:'records',l:'📋 案件列表'},{i:'profile',l:'🔑 我的帳號'}]
     :role==='finance'
-    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'transfer',l:'💳 訂單轉入管理'},{i:'daily',l:'🗓️ 收付日曆'},{i:'payments',l:'💰 款項管理'},{i:'log',l:'🔍 Log'}]
+    ?[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'transfer',l:'💳 訂單轉入管理'},{i:'daily',l:'🗓️ 收付日曆'},{i:'payments',l:'💰 款項管理'},{i:'log',l:'🔍 Log'},{i:'profile',l:'🔑 我的帳號'}]
     :[{i:'dash',l:'📊 總覽'},{i:'records',l:'📋 案件列表'},{i:'daily',l:'🗓️ 收付日曆'},{i:'log',l:'🔍 Log'}];
   document.getElementById('ntabs').innerHTML=tabs.map(function(t){
     return '<div class="nav-tab'+(t.i==='dash'?' on':'')+'" id="nt-'+t.i+'" data-tabid="'+t.i+'" onclick="goTabEl(this)">'
@@ -1102,11 +1102,23 @@ function renderApproval(){
 var _staffScope = 'my'; // 'my' 或 'all'
 
 function isMyCase(r){
-  // 判斷案件是否屬於自己：完全相符 或 業務名稱包含自己（補填後格式）
   if(!curUser || !curUser.staffName) return false;
   var staff = g(r,'staff');
   var myName = curUser.staffName;
-  return staff === myName || staff.indexOf(myName) >= 0;
+  // 支援：完全符合、includes、以及「名稱（角色）」格式
+  // 例：「楊正國（採購）/ 朱嬿琳（銷售）」→ 楊正國 和 朱嬿琳 都能看到
+  var cleanStaff = staff.replace(/（採購）|（銷售）/g,'');
+  var match = staff === myName
+    || staff.indexOf(myName) >= 0
+    || cleanStaff.indexOf(myName) >= 0;
+  if(g(r,'formId')==='T20260410190'){
+    console.log('T20260410190 isMyCase check:',
+      'staff=['+staff+']',
+      'myName=['+myName+']',
+      'cleanStaff=['+cleanStaff+']',
+      'match='+match);
+  }
+  return match;
 }
 
 function renderMyCase(){
