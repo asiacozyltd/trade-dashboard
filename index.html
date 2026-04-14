@@ -725,8 +725,15 @@ function login(){
       return Object.assign({}, u, { pwd: local ? local.pwd : '' });
     });
     if(!merged.length) merged = allLocal.slice();
+    console.log('=== 登入診斷 ===');
+    console.log('選擇角色:', role, '| 輸入密碼長度:', p.length);
+    console.log('從 Sheets 取得帳號數:', accounts.length, '| merged 帳號數:', merged.length);
+    merged.forEach(function(x){
+      console.log(' 帳號:', x.id, '| role:', x.role, '| pwd:', x.pwd, '| pwd===p:', x.pwd===p, '| role match:', x.role===role);
+    });
     var u = merged.find(function(x){ return x.role===role && x.pwd===p; });
     if(!u) u = merged.find(function(x){ return x.pwd===p; });
+    console.log('比對結果:', u ? u.id : '無符合');
     if(u){
       CLOUD_ACCOUNTS = merged;
       doLogin(u);
