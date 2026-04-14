@@ -37,7 +37,11 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 .rb1{background:rgba(212,168,19,.2);color:var(--gold2);border:1px solid rgba(212,168,19,.3);}
 .rb2{background:rgba(14,165,233,.2);color:var(--wave);border:1px solid rgba(14,165,233,.3);}
 .out{font-size:11px;color:#7fa0c0;cursor:pointer;padding:4px 8px;border-radius:6px;}
-.ref-btn{font-size:11px;color:var(--wave);cursor:pointer;padding:4px 10px;border-radius:6px;border:1px solid rgba(14,165,233,.3);background:rgba(14,165,233,.1);}
+.ref-btn{font-size:11px;color:var(--wave);cursor:pointer;padding:4px 10px;border-radius:6px;border:1px solid rgba(14,165,233,.3);background:rgba(14,165,233,.1);transition:all .2s;}
+.ref-btn.spinning{color:#94a3b8;pointer-events:none;}
+.ref-btn.spinning .ref-ico{display:inline-block;animation:spin 0.8s linear infinite;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
 .alert{background:linear-gradient(90deg,#78350f,var(--gold));padding:10px 20px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:#fff;}
 .alert.hide{display:none;}
 /* NAV */
@@ -200,6 +204,11 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 .btn-mark-paid{padding:8px 14px;border-radius:8px;background:var(--jade);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;}
 .btn-mark-unpaid{padding:8px 14px;border-radius:8px;background:#f1f5f9;color:var(--muted);font-size:12px;font-weight:700;border:0.5px solid var(--border);cursor:pointer;white-space:nowrap;}
 #toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;z-index:9999;opacity:0;transition:all .3s cubic-bezier(.175,.885,.32,1.275);pointer-events:none;color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.2);}
+#success-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-60%) scale(.8);background:#fff;border-radius:20px;padding:32px 40px;text-align:center;z-index:10000;opacity:0;pointer-events:none;box-shadow:0 20px 60px rgba(0,0,0,.25);transition:all .3s cubic-bezier(.175,.885,.32,1.275);}
+#success-popup.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+#success-popup .sp-ico{font-size:48px;margin-bottom:12px;}
+#success-popup .sp-txt{font-size:16px;font-weight:700;color:var(--ink);}
+#success-popup .sp-sub{font-size:13px;color:var(--muted);margin-top:6px;}
 #toast.show{opacity:1;}
 .sec-lbl{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
 </style>
@@ -236,7 +245,7 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
     </div>
     <div class="hdr">
       <span class="rbadge" id="rbdg"></span>
-      <span class="ref-btn" onclick="load()">↻ 重新整理</span>
+      <span class="ref-btn" id="ref-btn" onclick="doRefresh()"><span class="ref-ico">↻</span> 重新整理</span>
       <span class="out" onclick="logout()">登出</span>
     </div>
   </div>
@@ -319,14 +328,22 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
       <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--sea),var(--wave));display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>
       <div>
         <div style="font-size:16px;font-weight:700;" id="profile-name">—</div>
-        <div style="font-size:12px;color:var(--muted);">業務員帳號</div>
+        <div style="font-size:12px;color:var(--muted);" id="profile-role">帳號</div>
+      </div>
+    </div>
+    <!-- 目前密碼顯示 -->
+    <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">目前密碼</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input type="password" id="pwd-display" class="linput" style="margin-bottom:0;flex:1;background:#fff;" readonly>
+        <button onclick="togglePwdDisplay()" id="pwd-eye-btn" style="padding:10px 14px;border-radius:8px;background:#eff6ff;border:1px solid #bae6fd;color:#0369a1;font-size:14px;cursor:pointer;white-space:nowrap;">👁 顯示</button>
       </div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:20px;">
       <div style="font-size:14px;font-weight:700;margin-bottom:4px;">修改密碼</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">請輸入目前密碼，再設定新密碼</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">確認目前密碼後設定新密碼</div>
       <div style="margin-bottom:12px;">
-        <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;">目前密碼</label>
+        <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;">目前密碼（驗證用）</label>
         <input type="password" id="pwd-old" class="linput" style="margin-bottom:0;" placeholder="輸入目前密碼">
       </div>
       <div style="margin-bottom:12px;">
@@ -427,6 +444,11 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 </div>
 
 <div id="toast"></div>
+<div id="success-popup">
+  <div class="sp-ico" id="sp-ico">✅</div>
+  <div class="sp-txt" id="sp-txt">儲存成功</div>
+  <div class="sp-sub" id="sp-sub"></div>
+</div>
 
 <script>
 var SCRIPT='https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
@@ -883,6 +905,7 @@ function onLoad(){
   renderCards(filtered,'records-cards',true);
   renderApproval();
   updateAlert();
+  if(window._refreshDone){ window._refreshDone(); window._refreshDone=null; }
   if(document.getElementById('s-daily').classList.contains('on')) renderDaily();
 }
 function showErr(msg){
@@ -2215,9 +2238,18 @@ function renderLog(){
 // Tab
 // 修改密碼（業務員）
 function initProfile(){
+  if(!curUser) return;
   var el=document.getElementById('profile-name');
-  if(el&&curUser)el.textContent=curUser.name;
-  // Clear fields
+  if(el) el.textContent=curUser.name;
+  var roleEl=document.getElementById('profile-role');
+  if(roleEl){
+    var roleMap={boss:'董事長',admin:'管理員',finance:'財務',staff:'業務員'};
+    roleEl.textContent=(roleMap[curUser.role]||curUser.role)+' · '+curUser.id;
+  }
+  var pdisplay=document.getElementById('pwd-display');
+  if(pdisplay){ pdisplay.value=curUser.pwd||''; pdisplay.type='password'; }
+  var eyeBtn=document.getElementById('pwd-eye-btn');
+  if(eyeBtn) eyeBtn.textContent='👁 顯示';
   ['pwd-old','pwd-new','pwd-confirm'].forEach(function(id){
     var el2=document.getElementById(id);if(el2)el2.value='';
   });
@@ -2230,7 +2262,9 @@ function changePwd(){
   var errEl=document.getElementById('pwd-err');
   errEl.textContent='';
   if(!oldP||!newP||!cfP){errEl.textContent='請填寫所有欄位';return;}
-  if(oldP!==curUser.pwd){errEl.textContent='目前密碼錯誤';return;}
+  // 支援明文比對
+  var storedPwd = (curUser.pwd||'').toString().trim();
+  if(oldP.trim()!==storedPwd){errEl.textContent='目前密碼錯誤';return;}
   if(newP.length<6){errEl.textContent='新密碼至少需要6個字元';return;}
   if(newP!==cfP){errEl.textContent='兩次輸入的新密碼不一致';return;}
   // 同步更新到 Google Sheets（跨裝置）
@@ -2240,9 +2274,14 @@ function changePwd(){
     mode:'no-cors'
   }).finally(function(){
     curUser.pwd=newP;
-    fetchAccounts(function(){CU=loadU();});
+    // 更新顯示的密碼
+    var pdisplay=document.getElementById('pwd-display');
+    if(pdisplay){ pdisplay.value=newP; pdisplay.type='password'; }
+    var eyeBtn=document.getElementById('pwd-eye-btn');
+    if(eyeBtn) eyeBtn.textContent='👁 顯示';
+    fetchAccounts(function(){CU=loadU();CLOUD_ACCOUNTS=CU;});
     addLog('修改密碼',curUser.name,'','');
-    toast('✅ 密碼已更新，所有裝置同步生效','#16a34a');
+    showPopup('🔑','密碼更新成功','所有裝置同步生效');
   });
   ['pwd-old','pwd-new','pwd-confirm'].forEach(function(id){
     var el2=document.getElementById(id);if(el2)el2.value='';
@@ -2584,6 +2623,43 @@ function toast(msg,bg){
   var t=document.getElementById('toast');
   t.textContent=msg;t.style.background=bg||'#16a34a';
   t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);
+}
+
+// 頁面中央成功彈窗
+function showPopup(ico, txt, sub){
+  var p=document.getElementById('success-popup');
+  document.getElementById('sp-ico').textContent=ico||'✅';
+  document.getElementById('sp-txt').textContent=txt||'成功';
+  document.getElementById('sp-sub').textContent=sub||'';
+  p.classList.add('show');
+  setTimeout(function(){ p.classList.remove('show'); }, 2200);
+}
+
+// 重新整理（帶旋轉動畫）
+function doRefresh(){
+  var btn=document.getElementById('ref-btn');
+  if(btn) btn.classList.add('spinning');
+  load();
+  // onLoad 完成後移除旋轉
+  var orig=window.onLoadDone;
+  window._refreshDone=function(){
+    if(btn){ setTimeout(function(){ btn.classList.remove('spinning'); }, 400); }
+    if(orig) orig();
+  };
+}
+
+// 顯示/隱藏目前密碼
+function togglePwdDisplay(){
+  var inp=document.getElementById('pwd-display');
+  var btn=document.getElementById('pwd-eye-btn');
+  if(!inp) return;
+  if(inp.type==='password'){
+    inp.type='text';
+    if(btn) btn.textContent='🙈 隱藏';
+  } else {
+    inp.type='password';
+    if(btn) btn.textContent='👁 顯示';
+  }
 }
 try{var sv=localStorage.getItem('tl');if(sv)logs=JSON.parse(sv);}catch(e){}
 // setInterval 在登入後才啟動（在 login() 裡呼叫）
