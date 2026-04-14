@@ -543,36 +543,34 @@ function fetchAccounts(callback){
 }
 function loadU(){
   var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
-  // 雲端帳號：補上本地密碼（若雲端沒有回傳密碼）
+
+  // ── 雲端帳號完全優先（Sheets 為準）──────────────────
+  // 雲端帳號直接用，不限制 id 是否在本地清單
+  // 新增人員只要在 Sheets Accounts 分頁加一列即可生效
   function mergeWithLocal(cloudAccounts){
     return cloudAccounts.map(function(u){
       if(u.pwd) return u; // 有密碼直接用
+      // 若雲端沒有密碼（老舊資料），補上本地對應密碼
       var local = allLocal.find(function(l){ return l.id===u.id; });
-      // 補上本地密碼
       return Object.assign({}, u, { pwd: local ? local.pwd : '' });
-    }).concat(getCU());
+    });
+    // 注意：不再 concat(getCU())，避免自訂帳號與雲端衝突
   }
 
-  // 優先使用雲端帳號
+  // 1. 優先使用雲端帳號（當次載入）
   if(CLOUD_ACCOUNTS && CLOUD_ACCOUNTS.length > 0){
     return mergeWithLocal(CLOUD_ACCOUNTS);
   }
-  // 備用：本地快取
+  // 2. 備用：上次登入的本地快取（離線時使用）
   try{
     var c=localStorage.getItem('cloudAccounts');
     if(c){
       var ca=JSON.parse(c);
       if(ca&&ca.length>0) return mergeWithLocal(ca);
     }
-    // 最後備用：純本地
-    var s=localStorage.getItem('tu');
-    var saved=s?JSON.parse(s):[];
-    var base=allLocal.map(function(u){
-      var ov=saved.find(function(x){return x.id===u.id;});
-      return ov?Object.assign({},u,ov):u;
-    });
-    return base.concat(getCU());
-  }catch(e){ return allLocal.slice(); }
+  }catch(e){}
+  // 3. 最後備用：前端硬編碼（完全無網路時）
+  return allLocal.slice();
 }
 function saveU(arr){
   try{
