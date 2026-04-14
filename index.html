@@ -700,7 +700,12 @@ var F={
 function g(r,k){return(r[F[k]]||'').toString().trim();}
 function pf(v){return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0;}
 function cv(v){return v&&v.trim()&&v!=='—'&&v!=='0'&&v!=='-'&&v!=='undefined';}
-function isPend(r){var s=g(r,'status');return s===''||s==='否'||s==='待審核'||s==='尚未';}
+function isPend(r){
+  // 待補填中的案件不算待審核（補填完成後才讓老闆簽核）
+  if((r[F.fillStatus]||'')==='待補填') return false;
+  var s=g(r,'status');
+  return s===''||s==='否'||s==='待審核'||s==='尚未';
+}
 function isAppr(r){var s=g(r,'status');return s==='是'||s.includes('同意');}
 function isFillPending(r){return (r[F.fillStatus]||'')==='待補填';}
 
@@ -1004,10 +1009,11 @@ function renderDash(){
 
 // 案件卡片
 function makeCard(r,showApprove){
+  var fillWait=(r[F.fillStatus]||'')==='待補填';
   var pend=isPend(r),appr=isAppr(r);
-  var sc2=pend?'p':appr?'a':'r';
-  var bc=pend?'bp':appr?'ba':'br';
-  var sl=pend?'待審核':appr?'已同意':'退回';
+  var sc2=fillWait?'p':pend?'p':appr?'a':'r';
+  var bc=fillWait?'bp':pend?'bp':appr?'ba':'br';
+  var sl=fillWait?'待補填':pend?'待審核':appr?'已同意':'退回';
   var m=calcMargin(r);
   var mgStr=m.isPurchOnly?'—':(m.margin!=='—'?m.margin+'%':'—');
   var rowNum=r._row;
@@ -1096,6 +1102,7 @@ function setCardSort(asc){
 }
 
 function renderApproval(){
+  // isPend 已排除待補填，直接用
   var pend=rows.filter(isPend);
   var al=document.getElementById('al');
   if(!al)return;
@@ -1615,9 +1622,10 @@ function showDayDetail(dateStr){
   body.innerHTML='';
   dayRows.forEach(function(r){
     var fid=g(r,'formId');
+    var fillWait=(r[F.fillStatus]||'')==='待補填';
     var pend=isPend(r),appr=isAppr(r);
-    var bc=pend?'bp':appr?'ba':'br';
-    var sl=pend?'待審核':appr?'已同意':'退回';
+    var bc=fillWait?'bp':pend?'bp':appr?'ba':'br';
+    var sl=fillWait?'⏳ 待補填':pend?'待審核':appr?'已同意':'退回';
     var rowNum = r._row;
     var card=document.createElement('div');
     card.style.cssText='background:var(--card);border:0.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;';
