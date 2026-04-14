@@ -268,8 +268,7 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
       <button class="btn-cl" onclick="clearSearch()">清除</button>
     </div>
   </div>
-  <div class="rc" id="rc"></div>
-  <div class="card-grid" id="records-cards"></div>
+  <div id="records-cards"></div>
 </div>
 <div class="scr" id="s-approval">
   <div class="sec-lbl" style="margin-bottom:12px;">待簽核合約 <span class="pulse" id="pdot" style="display:none;"></span></div>
@@ -1037,7 +1036,9 @@ function _renderCardsPage(){
     pager+='</div>';
   }
 
-  el.innerHTML = toolbar + '<div class="card-grid">' + cards + '</div>' + pager;
+  el.innerHTML = toolbar
+    + '<div class="card-grid" style="margin-bottom:4px;">' + cards + '</div>'
+    + pager;
 }
 
 // 待簽核
@@ -1080,13 +1081,11 @@ function doSearch(){
     if(ft){var d2=new Date(g(r,'time'));if(isNaN(d2)||d2>new Date(ft+'T23:59:59'))return false;}
     return true;
   });
-  document.getElementById('rc').textContent='共 '+filtered.length+' 筆';
   renderCards(filtered,'records-cards',true);
 }
 function clearSearch(){
   ['fs','fst','ff','ft'].forEach(function(id){document.getElementById(id).value='';});
   filtered=rows.slice();
-  document.getElementById('rc').textContent='共 '+filtered.length+' 筆';
   renderCards(filtered,'records-cards',true);
 }
 
@@ -2561,7 +2560,7 @@ function goTab(id){
   if(id==='profile')initProfile();
   if(id==='payments'){loadPayments();}
   if(id==='transfer'){loadTransfer();}
-  if(id==='records'){document.getElementById('rc').textContent='共 '+filtered.length+' 筆';renderCards(filtered,'records-cards',true);}
+  if(id==='records'){renderCards(filtered,'records-cards',true);}
 }
 
 // 工具
