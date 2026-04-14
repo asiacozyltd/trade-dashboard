@@ -915,9 +915,14 @@ function onLoad(){
   // 根據目前顯示的頁籤決定渲染哪個
   var activeScr = document.querySelector('.scr.on');
   var activeId = activeScr ? activeScr.id.replace('s-','') : 'dash';
-  console.log('onLoad active tab:', activeId);
   if(activeId === 'mycase'){
     renderMyCase();
+  } else if(activeId === 'transfer'){
+    loadTransfer();
+  } else if(activeId === 'payments'){
+    loadPayments();
+  } else if(activeId === 'daily'){
+    loadPayments(renderDaily);
   } else {
     renderCards(filtered,'records-cards',true);
   }
