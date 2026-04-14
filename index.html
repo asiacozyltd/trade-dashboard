@@ -344,15 +344,15 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
       <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">確認目前密碼後設定新密碼</div>
       <div style="margin-bottom:12px;">
         <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;">目前密碼（驗證用）</label>
-        <input type="password" id="pwd-old" class="linput" style="margin-bottom:0;" placeholder="輸入目前密碼">
+        <input type="password" id="pwd-old" class="linput" style="margin-bottom:0;" placeholder="輸入目前密碼" autocomplete="off">
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;">新密碼</label>
-        <input type="password" id="pwd-new" class="linput" style="margin-bottom:0;" placeholder="輸入新密碼（至少6字元）">
+        <input type="password" id="pwd-new" class="linput" style="margin-bottom:0;" placeholder="輸入新密碼（至少6字元）" autocomplete="new-password">
       </div>
       <div style="margin-bottom:16px;">
         <label style="font-size:11px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;">確認新密碼</label>
-        <input type="password" id="pwd-confirm" class="linput" style="margin-bottom:0;" placeholder="再輸入一次新密碼">
+        <input type="password" id="pwd-confirm" class="linput" style="margin-bottom:0;" placeholder="再輸入一次新密碼" autocomplete="new-password">
       </div>
       <div style="font-size:12px;color:var(--coral);min-height:16px;margin-bottom:12px;" id="pwd-err"></div>
       <button onclick="changePwd()" style="width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,var(--sea),var(--wave));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;">更新密碼</button>
@@ -2262,9 +2262,14 @@ function changePwd(){
   var errEl=document.getElementById('pwd-err');
   errEl.textContent='';
   if(!oldP||!newP||!cfP){errEl.textContent='請填寫所有欄位';return;}
-  // 支援明文比對
+  // 比對目前密碼（支援明文，trim 去除空白）
   var storedPwd = (curUser.pwd||'').toString().trim();
-  if(oldP.trim()!==storedPwd){errEl.textContent='目前密碼錯誤';return;}
+  var inputOld  = oldP.trim();
+  // 若 storedPwd 是 32 碼 Hash，則比對不到，直接提示聯絡管理員重設
+  if(storedPwd.length === 32){
+    errEl.textContent='密碼格式異常，請聯絡管理員至 Sheets 重設密碼';return;
+  }
+  if(inputOld !== storedPwd){errEl.textContent='目前密碼錯誤';return;}
   if(newP.length<6){errEl.textContent='新密碼至少需要6個字元';return;}
   if(newP!==cfP){errEl.textContent='兩次輸入的新密碼不一致';return;}
   // 同步更新到 Google Sheets（跨裝置）
