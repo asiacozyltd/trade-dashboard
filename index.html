@@ -1093,9 +1093,17 @@ function renderApproval(){
 // 案件總表搜尋
 var _staffScope = 'my'; // 'my' 或 'all'
 
+function isMyCase(r){
+  // 判斷案件是否屬於自己：完全相符 或 業務名稱包含自己（補填後格式）
+  if(!curUser || !curUser.staffName) return false;
+  var staff = g(r,'staff');
+  var myName = curUser.staffName;
+  return staff === myName || staff.indexOf(myName) >= 0;
+}
+
 function renderMyCase(){
   if(!curUser || !curUser.staffName) return;
-  var myRows = rows.filter(function(r){ return g(r,'staff')===curUser.staffName; });
+  var myRows = rows.filter(isMyCase);
 
   // 4格統計
   var tB=0,tS=0,tP=0;
@@ -1149,10 +1157,8 @@ function doSearch(){
   var ff=document.getElementById('ff').value;
   var ft=document.getElementById('ft').value;
   filtered=rows.filter(function(r){
-    // 業務員只能看自己的案件
-    if(curUser&&curUser.role==='staff'&&curUser.staffName){
-      if(g(r,'staff')!==curUser.staffName) return false;
-    }
+    // 業務員在「案件列表」能看全部（my-case 才過濾）
+    // （不限制業務員查詢範圍）
     if(st==='p'&&!isPend(r))return false;
     if(st==='a'&&!isAppr(r))return false;
     if(st==='r'){var s=g(r,'status');if(!s.includes('退')&&s!=='退回')return false;}
@@ -2669,11 +2675,17 @@ function getPaymentsByDate(){
 
 function goTabEl(el){goTab(el.dataset.tabid);}
 function goTab(id){
+  console.log('goTab:', id);
   document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on');});
   document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('on');});
   var s=document.getElementById('s-'+id),t=document.getElementById('nt-'+id);
+  console.log('s-'+id+' element:', s ? 'found' : 'NOT FOUND');
   if(s)s.classList.add('on');
   if(t)t.classList.add('on');
+  // 確認哪些 scr 是 on
+  var onScrs=[];
+  document.querySelectorAll('.scr.on').forEach(function(el){onScrs.push(el.id);});
+  console.log('現在 on 的 scr:', onScrs.join(','));
   if(id==='admin')renderAdmin();
   if(id==='log')renderLog();
   if(id==='daily'){
@@ -2682,7 +2694,11 @@ function goTab(id){
   if(id==='profile')initProfile();
   if(id==='payments'){loadPayments();}
   if(id==='transfer'){loadTransfer();}
-  if(id==='records'){renderCards(filtered,'records-cards',true);}
+  if(id==='records'){
+    // 業務員看案件列表也是全部
+    filtered = rows.slice();
+    renderCards(filtered,'records-cards',true);
+  }
   if(id==='mycase'){renderMyCase();}
 }
 
