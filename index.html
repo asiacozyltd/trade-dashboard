@@ -1992,14 +1992,15 @@ function doDelete(rowNum,name){
 
 // 後台管理
 function renderAdmin(){
-  // 用 DOM 方式建立，避免所有引號衝突
   var ug = document.getElementById('ug');
   if(!ug) return;
   ug.innerHTML = '';
 
-  // 管理員看全部帳號（CU），董事長只看自己
-  var editableUsers = CU.filter(function(u){
-    if(curUser.role==='admin') return ['boss','admin','finance'].indexOf(u.role) >= 0;
+  // 從 CLOUD_ACCOUNTS 讀完整帳號（包含 Sheets 新增的）
+  var allUsers = CLOUD_ACCOUNTS && CLOUD_ACCOUNTS.length > 0 ? CLOUD_ACCOUNTS : CU;
+  var editableUsers = allUsers.filter(function(u){
+    if(curUser.role==='boss') return true; // 董事長看全部
+    if(curUser.role==='admin') return true; // 管理員看全部
     return u.id === curUser.id;
   });
 
@@ -2080,8 +2081,9 @@ function renderStaffUsers(){
   var el=document.getElementById('staff-users');
   if(!el) return;
 
-  // 從 CU（雲端帳號）取業務員清單
-  var staffList = CU.filter(function(u){ return u.role==='staff'; });
+  // 從 CLOUD_ACCOUNTS 取完整業務員清單（含 Sheets 新增的）
+  var allAcc = CLOUD_ACCOUNTS && CLOUD_ACCOUNTS.length > 0 ? CLOUD_ACCOUNTS : CU;
+  var staffList = allAcc.filter(function(u){ return u.role==='staff'; });
   if(!staffList.length) staffList = DEFAULT_STAFF;
 
   var grid = document.createElement('div');
