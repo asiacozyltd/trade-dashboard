@@ -2262,12 +2262,23 @@ function changePwd(){
   var errEl=document.getElementById('pwd-err');
   errEl.textContent='';
   if(!oldP||!newP||!cfP){errEl.textContent='請填寫所有欄位';return;}
-  // 比對目前密碼（支援明文，trim 去除空白）
+  // 診斷比對
   var storedPwd = (curUser.pwd||'').toString().trim();
   var inputOld  = oldP.trim();
-  // 若 storedPwd 是 32 碼 Hash，則比對不到，直接提示聯絡管理員重設
+  console.log('=== changePwd 診斷 ===');
+  console.log('curUser.id:', curUser.id);
+  console.log('storedPwd:', storedPwd, '| 長度:', storedPwd.length);
+  console.log('inputOld:', inputOld,   '| 長度:', inputOld.length);
+  console.log('相符:', inputOld === storedPwd);
+  // charCode 比對
+  var sc=[],ic=[];
+  for(var i=0;i<storedPwd.length;i++) sc.push(storedPwd.charCodeAt(i));
+  for(var j=0;j<inputOld.length;j++)  ic.push(inputOld.charCodeAt(j));
+  console.log('storedPwd charCode:', sc.join(','));
+  console.log('inputOld  charCode:', ic.join(','));
+
   if(storedPwd.length === 32){
-    errEl.textContent='密碼格式異常，請聯絡管理員至 Sheets 重設密碼';return;
+    errEl.textContent='密碼格式異常（Hash），請聯絡管理員至 Sheets 重設密碼';return;
   }
   if(inputOld !== storedPwd){errEl.textContent='目前密碼錯誤';return;}
   if(newP.length<6){errEl.textContent='新密碼至少需要6個字元';return;}
