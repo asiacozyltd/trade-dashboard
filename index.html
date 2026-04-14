@@ -182,7 +182,7 @@ body{background:var(--paper);font-family:'Noto Sans TC',sans-serif;color:var(--i
 .ltag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;}
 .lok{background:#dcfce7;color:#14532d;}.lng{background:#fee2e2;color:#991b1b;}.lin{background:#e0f2fe;color:#075985;}
 .spin{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--wave);border-radius:50%;animation:spin .8s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
+
 .loading{display:flex;flex-direction:column;align-items:center;padding:60px 20px;gap:12px;color:var(--muted);font-size:13px;}
 .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:13px;}
 .eico{font-size:40px;display:block;margin-bottom:10px;opacity:.4;}
@@ -1715,8 +1715,9 @@ function showD(rowNum){
   }
   h+='</div>';
 
-  // 董事長簽核區
-  if(curUser&&(curUser.role==='boss'||curUser.role==='admin')&&isPend(r)){
+  // 董事長簽核區（待審核 或 退回後業務已修改 → 都顯示）
+  var needApprove = isPend(r) || (g(r,'status').includes('退') || g(r,'status')==='退回');
+  if(curUser&&(curUser.role==='boss'||curUser.role==='admin')&&needApprove){
     var isAdmin = curUser.role==='admin';
     h+='<div class="af"><div class="af-t">'+(isAdmin?'🔧 管理員審閱':'👑 董事長簽核')+'</div>'
       +'<label class="af-lbl">簽核備註</label>'
@@ -1970,22 +1971,29 @@ function doEdit(rowNum){
   var caseName = r ? g(r,'name') : 'Row'+rowNum;
   var changeLog = changes.length > 0 ? changes.join(' / ') : '無變動';
 
+  // 重置簽核狀態（讓老闆重新審核）
+  fields[F.status]   = '';   // 老闆已同意 → 清空
+  fields[F.bossNote] = '';   // 老闆備註 → 清空
+  fields[F.signTime] = '';   // 簽核時間 → 清空
+
   fetch(SCRIPT,{
     method:'POST',
     body:JSON.stringify({action:'update',row:rowNum,fields:fields,editor:curUser.name}),
     mode:'no-cors'
   }).finally(function(){
-    if(r) Object.keys(fields).forEach(function(k){r[k]=fields[k];});
-    // 寫入詳細 Log
+    if(r){
+      Object.keys(fields).forEach(function(k){r[k]=fields[k];});
+      // 同步更新本地 rows 的簽核狀態
+      r[F.status]   = '';
+      r[F.bossNote] = '';
+      r[F.signTime] = '';
+    }
     addLog('修改案件',curUser.name, caseName, changeLog);
-
-    // ★ 通知老闆：只有有實質變動才發通知
     if(changes.length > 0){
       notifyBossEdit(r, curUser.name, changes);
     }
-
     closeD();onLoad();
-    toast('💾 修改已儲存，已通知老闆','#0369a1');
+    toast('💾 修改已儲存，老闆需重新審核','#0369a1');
     if(btn){btn.disabled=false;btn.textContent='💾 儲存修改至 Sheets';}
   });
 }
@@ -2655,13 +2663,11 @@ function showPopup(ico, txt, sub){
 function doRefresh(){
   var btn=document.getElementById('ref-btn');
   if(btn) btn.classList.add('spinning');
-  load();
-  // onLoad 完成後移除旋轉
-  var orig=window.onLoadDone;
+  // 設定完成後移除旋轉的 hook
   window._refreshDone=function(){
-    if(btn){ setTimeout(function(){ btn.classList.remove('spinning'); }, 400); }
-    if(orig) orig();
+    if(btn){ btn.classList.remove('spinning'); }
   };
+  load();
 }
 
 // 顯示/隱藏目前密碼
