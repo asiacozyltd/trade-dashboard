@@ -846,6 +846,19 @@ function loadCSV(){
     });
 }
 function onLoad(){
+  // 診斷：印出第一筆資料的關鍵欄位
+  if(rows.length > 0){
+    var r0 = rows[0];
+    console.log('=== onLoad 第一筆診斷 ===');
+    console.log('案件名稱:', r0['案件名稱']);
+    console.log('業務名稱:', r0['業務名稱']);
+    console.log('案件屬性:', r0['案件屬性']);
+    console.log('採購期1金額:', r0['採購期1金額'], typeof r0['採購期1金額']);
+    console.log('銷售期1金額:', r0['銷售期1金額'], typeof r0['銷售期1金額']);
+    console.log('表單編號:', r0['表單編號']);
+    console.log('_row:', r0._row);
+    console.log('欄位總數:', Object.keys(r0).length);
+  }
   // 去重
   var seen={};var deduped=[];
   rows.slice().reverse().forEach(function(r){
