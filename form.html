@@ -1332,36 +1332,58 @@ function checkFillMode(){
     fd.type      = '採購+銷售(三角貿易)';
     fd.formId    = fillId;
     fd.fillPart  = fillPart;   // 記錄補填方向
-    fd.origStaff = row['業務名稱'] || '';  // 原始填單人（存起來，不被覆蓋）
+    fd.origStaff = row['業務名稱'] || '';  // 原始填單人
 
-    // 從 Sheets 讀出已有的欄位存入 fd
+    // 從 FormResponses01 讀出欄位（對應新欄位名稱）
     fd.staff     = row['業務名稱']          ||'';
     fd.caseName  = row['案件名稱']          ||'';
     fd.asst      = row['承辦業助']          ||'';
-    fd.buyCon    = row['合約 [賣方合約（採購）]']||'';
-    fd.sellCon   = row['合約 [買方合約（銷售）]']||'';
+    fd.buyCon    = row['賣方合約（採購）']  ||row['合約 [賣方合約（採購）]']||'';
+    fd.sellCon   = row['買方合約（銷售）']  ||row['合約 [買方合約（銷售）]']||'';
     fd.trade     = row['貿易條件']          ||'';
-    fd.etd       = row['ETD/卸魚日']        ||'';
-    fd.eta       = row['ETA/到貨日']        ||'';
-    fd.origin    = row['出貨地/發貨港口/出貨地點']||'';
-    fd.dest      = row['目的地/收貨港口/收貨地點']||'';
-    // 採購欄位
-    fd.supplier  = row['供應商名稱（賣方）'] ||'';
-    fd.buyCur    = row['採購幣別']           ||'TWD';
-    fd.buyAmt    = parseFloat(row['應付總金額'])||0;
-    fd.buyDate   = row['預計付款日期']       ||'';
-    fd.buyPay    = row['付款條件']           ||'';
-    fd.buyNote   = row['備註（採購）']       ||'';
-    // 轉交業務員名稱（補填人指定名稱）
-    fd.transferTo = row['轉交銷售業務']      || row['轉交業務員'] || '';
-    fd.fillStaff  = fd.transferTo;  // 備用：同一個值
-    // 銷售欄位
-    fd.buyer     = row['客戶名稱（買方）']   ||'';
-    fd.sellCur   = row['銷售幣別']           ||'TWD';
-    fd.sellAmt   = parseFloat(row['應收總金額'])||0;
-    fd.sellDate  = row['預計收款日']         ||'';
-    fd.sellPay   = row['收款條件']           ||'';
-    fd.sellNote  = row['備註（銷售）']       ||'';
+    fd.etd       = row['ETD 出貨日']        ||row['ETD/卸魚日']||'';
+    fd.eta       = row['ETA 到貨日']        ||row['ETA/到貨日']||'';
+    fd.origin    = row['出貨地/發貨港口']   ||row['出貨地/發貨港口/出貨地點']||'';
+    fd.dest      = row['目的地/收貨港口']   ||row['目的地/收貨港口/收貨地點']||'';
+    // 採購欄位（FormResponses01）
+    fd.supplier  = row['供應商（賣方）']    ||row['供應商名稱（賣方）']||'';
+    fd.buyPay    = row['付款條件（採購）']  ||row['付款條件']||'';
+    fd.buyNote   = row['備註（採購）']      ||'';
+    // 採購分期（從期1~3組合 buyPeriods）
+    fd.buyPeriods = [];
+    for(var bpi=1; bpi<=3; bpi++){
+      var bamt = parseFloat(row['採購期'+bpi+'金額'])||0;
+      var bname = row['採購期'+bpi+'名稱']||'';
+      if(bamt||bname) fd.buyPeriods.push({
+        name: bname, cur: row['採購期'+bpi+'幣別']||'TWD',
+        amt: bamt, date: row['採購期'+bpi+'預計日']||'', note: row['採購期'+bpi+'備註']||''
+      });
+    }
+    // 計算採購總額（供 refInfo 顯示）
+    fd.buyAmt  = fd.buyPeriods.length ? fd.buyPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0) : (parseFloat(row['應付總金額'])||0);
+    fd.buyCur  = fd.buyPeriods.length ? fd.buyPeriods[0].cur : (row['採購幣別']||'TWD');
+    fd.buyDate = fd.buyPeriods.length ? fd.buyPeriods[0].date : (row['預計付款日期']||'');
+    // 轉交業務員
+    fd.transferTo = row['轉交銷售業務'] || row['轉交業務員'] || '';
+    fd.fillStaff  = fd.transferTo;
+    // 銷售欄位（FormResponses01）
+    fd.buyer     = row['客戶（買方）']      ||row['客戶名稱（買方）']||'';
+    fd.sellPay   = row['收款條件（銷售）']  ||row['收款條件']||'';
+    fd.sellNote  = row['備註（銷售）']      ||'';
+    // 銷售分期（從期1~3組合 sellPeriods）
+    fd.sellPeriods = [];
+    for(var spi=1; spi<=3; spi++){
+      var samt = parseFloat(row['銷售期'+spi+'金額'])||0;
+      var sname = row['銷售期'+spi+'名稱']||'';
+      if(samt||sname) fd.sellPeriods.push({
+        name: sname, cur: row['銷售期'+spi+'幣別']||'TWD',
+        amt: samt, date: row['銷售期'+spi+'預計日']||'', note: row['銷售期'+spi+'備註']||''
+      });
+    }
+    // 計算銷售總額
+    fd.sellAmt  = fd.sellPeriods.length ? fd.sellPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0) : (parseFloat(row['應收總金額'])||0);
+    fd.sellCur  = fd.sellPeriods.length ? fd.sellPeriods[0].cur : (row['銷售幣別']||'TWD');
+    fd.sellDate = fd.sellPeriods.length ? fd.sellPeriods[0].date : (row['預計收款日']||'');
 
     // 更新橫幅（顯示補填方向）
     banner.style.background = fillColor;
@@ -1383,9 +1405,55 @@ function checkFillMode(){
     var refColor  = fillPart==='銷售' ? '#fef2f2' : '#f0fdf4';
     var refBorder = fillPart==='銷售' ? '#fca5a5' : '#86efac';
     var refTitleC = fillPart==='銷售' ? '#991b1b' : '#15803d';
-    var refInfo   = fillPart==='銷售'
-      ? '<div>供應商：<b>'+fd.supplier+'</b></div><div>採購金額：<b>'+fd.buyCur+' '+Math.round(fd.buyAmt).toLocaleString()+'</b></div><div>付款條件：<b>'+(fd.buyPay||'—')+'</b></div><div>預計付款日：<b>'+(fd.buyDate||'—')+'</b></div>'
-      : '<div>客戶：<b>'+fd.buyer+'</b></div><div>銷售金額：<b>'+fd.sellCur+' '+Math.round(fd.sellAmt).toLocaleString()+'</b></div><div>收款條件：<b>'+(fd.sellPay||'—')+'</b></div><div>預計收款日：<b>'+(fd.sellDate||'—')+'</b></div>';
+    // 從分期計算總金額
+    var refBuyAmt  = 0;
+    var refBuyCur  = fd.buyCur || 'TWD';
+    var refBuyDate = fd.buyDate || '—';
+    if(fd.buyPeriods && fd.buyPeriods.length){
+      refBuyAmt  = fd.buyPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0);
+      refBuyCur  = fd.buyPeriods[0].cur || 'TWD';
+      refBuyDate = fd.buyPeriods[0].date || '—';
+    }
+    var refSellAmt  = 0;
+    var refSellCur  = fd.sellCur || 'TWD';
+    var refSellDate = fd.sellDate || '—';
+    if(fd.sellPeriods && fd.sellPeriods.length){
+      refSellAmt  = fd.sellPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0);
+      refSellCur  = fd.sellPeriods[0].cur || 'TWD';
+      refSellDate = fd.sellPeriods[0].date || '—';
+    }
+
+    function makePeriodRef(periods){
+      if(!periods || !periods.length) return '';
+      return '<div style="margin-top:6px;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:6px;">'
+        + periods.map(function(p,i){
+          return '<div style="padding:3px 0;font-size:12px;">'
+            +'<b>'+(p.name||'第'+(i+1)+'期')+'</b>　'
+            +(p.cur||'TWD')+' '+Math.round(parseFloat(p.amt)||0).toLocaleString()
+            +(p.date?'　<span style="color:#64748b;">'+p.date+'</span>':'')
+            +(p.note?'　<span style="color:#94a3b8;">'+p.note+'</span>':'')
+            +'</div>';
+        }).join('')
+        +'</div>';
+    }
+
+    var refInfo = fillPart==='銷售'
+      ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:13px;">'
+        +'<div>供應商：<b>'+fd.supplier+'</b></div>'
+        +'<div>採購總金額：<b style="color:#dc2626;">'+refBuyCur+' '+Math.round(refBuyAmt).toLocaleString()+'</b></div>'
+        +'<div>付款條件：<b>'+(fd.buyPay||'—')+'</b></div>'
+        +'<div>預計付款日：<b>'+refBuyDate+'</b></div>'
+        +(fd.buyNote?'<div style="grid-column:1/-1;margin-top:4px;color:#7f1d1d;"><b>採購備註：</b>'+fd.buyNote+'</div>':'')
+        +'</div>'
+        + makePeriodRef(fd.buyPeriods)
+      : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:13px;">'
+        +'<div>客戶：<b>'+fd.buyer+'</b></div>'
+        +'<div>銷售總金額：<b style="color:#16a34a;">'+refSellCur+' '+Math.round(refSellAmt).toLocaleString()+'</b></div>'
+        +'<div>收款條件：<b>'+(fd.sellPay||'—')+'</b></div>'
+        +'<div>預計收款日：<b>'+refSellDate+'</b></div>'
+        +(fd.sellNote?'<div style="grid-column:1/-1;margin-top:4px;color:#14532d;"><b>銷售備註：</b>'+fd.sellNote+'</div>':'')
+        +'</div>'
+        + makePeriodRef(fd.sellPeriods)
 
     var infoDiv = document.createElement('div');
     infoDiv.style.cssText = 'background:'+refColor+';border:1px solid '+refBorder+';border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;';
