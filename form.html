@@ -1438,23 +1438,21 @@ function checkFillMode(){
         +'</div>';
     }
 
+    function row2(l1,v1,l2,v2){
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;font-size:13px;">'
+        +'<div><span style="color:#94a3b8;font-size:11px;display:block;">'+l1+'</span><b>'+v1+'</b></div>'
+        +'<div><span style="color:#94a3b8;font-size:11px;display:block;">'+l2+'</span><b>'+v2+'</b></div>'
+        +'</div>';
+    }
     var refInfo = fillPart==='銷售'
-      ? '<div style="font-size:13px;line-height:1.8;">'
-        +'<div>供應商：<b>'+fd.supplier+'</b></div>'
-        +'<div>採購總金額：<b style="color:#dc2626;">'+refBuyCur+' '+Math.round(refBuyAmt).toLocaleString()+'</b></div>'
-        +'<div>付款條件：<b>'+(fd.buyPay||'—')+'</b></div>'
-        +'<div>預計付款日：<b>'+refBuyDate+'</b></div>'
-        +'</div>'
+      ? row2('供應商', fd.supplier||'—', '採購總金額', '<span style="color:#dc2626;">'+refBuyCur+' '+Math.round(refBuyAmt).toLocaleString()+'</span>')
+        + row2('付款條件', fd.buyPay||'—', '預計付款日', refBuyDate||'—')
+        + (fd.buyNote?'<div style="font-size:12px;color:#7f1d1d;margin-bottom:6px;"><b>採購備註：</b>'+fd.buyNote+'</div>':'')
         + makePeriodRef(fd.buyPeriods)
-        +(fd.buyNote?'<div style="margin-top:8px;font-size:13px;color:#7f1d1d;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:6px;"><b>採購備註：</b>'+fd.buyNote+'</div>':'')
-      : '<div style="font-size:13px;line-height:1.8;">'
-        +'<div>客戶：<b>'+fd.buyer+'</b></div>'
-        +'<div>銷售總金額：<b style="color:#16a34a;">'+refSellCur+' '+Math.round(refSellAmt).toLocaleString()+'</b></div>'
-        +'<div>收款條件：<b>'+(fd.sellPay||'—')+'</b></div>'
-        +'<div>預計收款日：<b>'+refSellDate+'</b></div>'
-        +'</div>'
+      : row2('客戶', fd.buyer||'—', '銷售總金額', '<span style="color:#16a34a;">'+refSellCur+' '+Math.round(refSellAmt).toLocaleString()+'</span>')
+        + row2('收款條件', fd.sellPay||'—', '預計收款日', refSellDate||'—')
+        + (fd.sellNote?'<div style="font-size:12px;color:#14532d;margin-bottom:6px;"><b>銷售備註：</b>'+fd.sellNote+'</div>':'')
         + makePeriodRef(fd.sellPeriods)
-        +(fd.sellNote?'<div style="margin-top:8px;font-size:13px;color:#14532d;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:6px;"><b>銷售備註：</b>'+fd.sellNote+'</div>':'')
 
     var infoDiv = document.createElement('div');
     infoDiv.style.cssText = 'background:'+refColor+';border:1px solid '+refBorder+';border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;';
