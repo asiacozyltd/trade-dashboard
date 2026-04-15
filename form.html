@@ -1425,35 +1425,36 @@ function checkFillMode(){
 
     function makePeriodRef(periods){
       if(!periods || !periods.length) return '';
-      return '<div style="margin-top:6px;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:6px;">'
+      return '<div style="margin-top:6px;border-top:0.5px solid rgba(0,0,0,0.15);padding-top:6px;">'
+        +'<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;font-weight:700;letter-spacing:.04em;">分期明細</div>'
         + periods.map(function(p,i){
-          return '<div style="padding:3px 0;font-size:12px;">'
-            +'<b>'+(p.name||'第'+(i+1)+'期')+'</b>　'
-            +(p.cur||'TWD')+' '+Math.round(parseFloat(p.amt)||0).toLocaleString()
-            +(p.date?'　<span style="color:#64748b;">'+p.date+'</span>':'')
-            +(p.note?'　<span style="color:#94a3b8;">'+p.note+'</span>':'')
+          return '<div style="padding:5px 8px;margin-bottom:4px;background:rgba(255,255,255,0.5);border-radius:6px;font-size:12px;">'
+            +'<div style="font-weight:700;">'+(p.name||'第'+(i+1)+'期')
+            +'　<span style="font-weight:400;">'+(p.cur||'TWD')+' '+Math.round(parseFloat(p.amt)||0).toLocaleString()+'</span>'
+            +'</div>'
+            +(p.date?'<div style="color:#64748b;font-size:11px;">預計日：'+p.date+(p.note?'　'+p.note:'')+'</div>':'')
             +'</div>';
         }).join('')
         +'</div>';
     }
 
     var refInfo = fillPart==='銷售'
-      ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:13px;">'
+      ? '<div style="font-size:13px;line-height:1.8;">'
         +'<div>供應商：<b>'+fd.supplier+'</b></div>'
         +'<div>採購總金額：<b style="color:#dc2626;">'+refBuyCur+' '+Math.round(refBuyAmt).toLocaleString()+'</b></div>'
         +'<div>付款條件：<b>'+(fd.buyPay||'—')+'</b></div>'
         +'<div>預計付款日：<b>'+refBuyDate+'</b></div>'
-        +(fd.buyNote?'<div style="grid-column:1/-1;margin-top:4px;color:#7f1d1d;"><b>採購備註：</b>'+fd.buyNote+'</div>':'')
         +'</div>'
         + makePeriodRef(fd.buyPeriods)
-      : '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:13px;">'
+        +(fd.buyNote?'<div style="margin-top:8px;font-size:13px;color:#7f1d1d;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:6px;"><b>採購備註：</b>'+fd.buyNote+'</div>':'')
+      : '<div style="font-size:13px;line-height:1.8;">'
         +'<div>客戶：<b>'+fd.buyer+'</b></div>'
         +'<div>銷售總金額：<b style="color:#16a34a;">'+refSellCur+' '+Math.round(refSellAmt).toLocaleString()+'</b></div>'
         +'<div>收款條件：<b>'+(fd.sellPay||'—')+'</b></div>'
         +'<div>預計收款日：<b>'+refSellDate+'</b></div>'
-        +(fd.sellNote?'<div style="grid-column:1/-1;margin-top:4px;color:#14532d;"><b>銷售備註：</b>'+fd.sellNote+'</div>':'')
         +'</div>'
         + makePeriodRef(fd.sellPeriods)
+        +(fd.sellNote?'<div style="margin-top:8px;font-size:13px;color:#14532d;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:6px;"><b>銷售備註：</b>'+fd.sellNote+'</div>':'')
 
     var infoDiv = document.createElement('div');
     infoDiv.style.cssText = 'background:'+refColor+';border:1px solid '+refBorder+';border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;';
