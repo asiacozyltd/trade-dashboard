@@ -1031,8 +1031,17 @@ function makeCard(r,showApprove){
     +'</div><span class="bdg '+bc+'">'+sl+'</span></div>'
     +'<div class="cc-meta">'+g(r,'staff')+'　·　'+g(r,'time').split(' ')[0]+'</div>'
     +'<div class="cc-nums">'
-    +'<div><div class="cn-lbl">應收 NTD</div><div class="cn-val cv-g">NT$'+fmtN(m.sellNTD)+'</div></div>'
-    +'<div><div class="cn-lbl">應付 NTD</div><div class="cn-val cv-r">NT$'+fmtN(m.buyNTD)+'</div></div>'
+    +(function(){
+      var bp=getPeriods01(r,'buy'), sp=getPeriods01(r,'sell');
+      var sellAmt=sp.length?sp.reduce(function(s,p){return s+(p.amt||0);},0):0;
+      var sellCur=sp.length?(sp[0].cur||'TWD'):'TWD';
+      var buyAmt=bp.length?bp.reduce(function(s,p){return s+(p.amt||0);},0):0;
+      var buyCur=bp.length?(bp[0].cur||'TWD'):'TWD';
+      var sellLbl=sp.length?fmtAmt(sellAmt,sellCur):'—';
+      var buyLbl=bp.length?fmtAmt(buyAmt,buyCur):'—';
+      return '<div><div class="cn-lbl">應收</div><div class="cn-val cv-g">'+sellLbl+'</div></div>'
+        +'<div><div class="cn-lbl">應付</div><div class="cn-val cv-r">'+buyLbl+'</div></div>';
+    })()
     +'<div><div class="cn-lbl">毛利率</div><div class="cn-val '+(parseFloat(m.margin)>=0?'cv-g':'cv-r')+'">'+mgStr+'</div></div>'
     +'</div>'
     +(fillPend && curUser && curUser.staffName && g(r,'transferTo')===curUser.staffName
@@ -1337,13 +1346,11 @@ function renderDaily(){
   }
 
   rows.forEach(function(r){
-    var formId = g(r,'formId');
-    // 已轉入 Payments → 跳過，不顯示在日曆
-    if(transferredIds[formId]) return;
+    var formId   = g(r,'formId');
     var caseName = g(r,'name');
     var caseType = g(r,'type');
-    var hasBuy  = caseType.indexOf('採購')>=0;
-    var hasSell = caseType.indexOf('銷售')>=0;
+    var hasBuy   = caseType.indexOf('採購')>=0;
+    var hasSell  = caseType.indexOf('銷售')>=0;
 
     // 採購分期
     if(hasBuy){
@@ -1475,7 +1482,6 @@ function renderDaily(){
       var overdue = [];
       rows.forEach(function(r){
         var formId   = g(r,'formId');
-        if(transferredIds[formId]) return;
         var caseName = g(r,'name');
         var caseType = g(r,'type');
         var staff    = g(r,'staff');
@@ -1528,7 +1534,6 @@ function renderDaily(){
   var estTotals={},actTotals={};
   rows.forEach(function(r){
     var formId = g(r,'formId');
-    if(transferredIds[formId]) return; // 已轉入 Payments 的不算在預估
     var caseType = g(r,'type');
     var hasBuy  = caseType.indexOf('採購')>=0;
     var hasSell = caseType.indexOf('銷售')>=0;
@@ -1814,6 +1819,28 @@ function showD(rowNum){
       +'</div>';
   }
   h+='</div>';
+
+  // ── 簽核結果顯示（已同意或退回時顯示）────────────────
+  var signStatus = g(r,'status');
+  var signTime2  = r[F.signTime]||'';
+  var bossNote2  = r[F.bossNote]||'';
+  if(signStatus && (isAppr(r) || signStatus.includes('退'))){
+    var isApproved2 = isAppr(r);
+    var siBg    = isApproved2 ? '#f0fdf4' : '#fef2f2';
+    var siBdr   = isApproved2 ? '#86efac' : '#fca5a5';
+    var siColor = isApproved2 ? '#15803d' : '#991b1b';
+    var siIco   = isApproved2 ? '✅' : '❌';
+    var siLabel = isApproved2 ? '老闆已同意' : '退回修改';
+    h+='<div style="background:'+siBg+';border:1px solid '+siBdr+';border-radius:10px;padding:12px 16px;margin-bottom:12px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+      +'<span style="font-size:13px;font-weight:700;color:'+siColor+';">'+siIco+' 簽核結果：'+siLabel+'</span>'
+      +'<span style="font-size:11px;color:var(--muted);">'+( signTime2 || '（時間未記錄）')+'</span>'
+      +'</div>'
+      +(bossNote2
+        ? '<div style="font-size:12px;color:'+siColor+';background:#fff;border-radius:6px;padding:8px 10px;border:0.5px solid '+siBdr+';">老闆備註：'+bossNote2+'</div>'
+        : '<div style="font-size:12px;color:var(--muted);">（無備註）</div>')
+      +'</div>';
+  }
 
   // 董事長簽核區（待審核 或 退回後業務已修改 → 都顯示）
   var needApprove = isPend(r) || (g(r,'status').includes('退') || g(r,'status')==='退回');
