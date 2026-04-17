@@ -1284,8 +1284,8 @@ function checkFillMode(){
   banner.textContent = '⏳ 載入案件資料中...';
   document.body.insertBefore(banner, document.body.firstChild);
 
-  jsonpGet(SCRIPT_URL+'?action=getData', function(d, err){
-    if(err || !d || !d.rows){ banner.textContent='❌ 讀取失敗（'+(err||'無資料')+'），請重新開啟連結'; return; }
+  jsonpGet(SCRIPT_URL+'?action=getData01', function(d, err){
+    if(err || !d || !d.rows){ banner.textContent='❌ 讀取失敗（'+(err||'找不到案件 '+fillId)+'），請確認連結是否正確或重新開啟'; return; }
     var row = d.rows.find(function(r){
       return (r['表單編號']||'').trim() === fillId.trim();
     });
