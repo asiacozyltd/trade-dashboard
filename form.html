@@ -42,10 +42,14 @@ textarea{height:72px;resize:none;line-height:1.6;}
 .ri.sel .rdi{opacity:1;}
 .rg{display:flex;flex-direction:column;gap:8px;}
 .aw{display:flex;gap:8px;}
-.cs{width:110px;flex-shrink:0;}
+.cs{width:100px;flex-shrink:0;}
 .ai{flex:1;}
 /* 費用區塊 */
-.cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+/* ★ 新：費用幣別 select+input 同行 */
+.fee-row{display:flex;gap:8px;align-items:stretch;}
+.fee-cur{width:90px;flex-shrink:0;padding:10px 8px;font-size:14px;}
+.fee-amt{flex:1;padding:10px 12px;font-size:14px;}
+.cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;}
 .cost-field label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:5px;}
 .cost-total{background:linear-gradient(135deg,#eff6ff,#e0f2fe);border:1.5px solid #bae6fd;border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;}
 .ct-lbl{font-size:13px;font-weight:700;color:var(--teal);}
@@ -101,6 +105,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
 .ss2{font-size:14px;color:var(--sub);line-height:1.7;margin-bottom:28px;}
 .bnew{padding:14px 32px;border-radius:12px;background:linear-gradient(135deg,#0369a1,var(--teal));color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 
@@ -118,8 +123,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
   <div class="pi"><div class="di on"></div><div class="di"></div><div class="di"></div><div class="di"></div></div>
   <div class="stitle">基本資訊</div>
   <div class="card">
-
-    <!-- C: 業務名稱 -->
     <div class="field">
       <div class="lbl">負責業務 <span class="req">*</span></div>
       <select id="staff" onchange="toggleOther('staff','staff-other')">
@@ -130,8 +133,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
       </select>
       <input type="text" id="staff-other" class="other-input" placeholder="請輸入業務姓名">
     </div>
-
-    <!-- D: 案件屬性 -->
     <div class="field">
       <div class="lbl">案件屬性 <span class="req">*</span></div>
       <div class="rg">
@@ -140,20 +141,15 @@ textarea{height:72px;resize:none;line-height:1.6;}
         <div class="ri" onclick="selR('type','採購+銷售(三角貿易)',this)"><div class="rd"><div class="rdi"></div></div><span>採購+銷售（三角貿易）</span></div>
       </div>
     </div>
-
-    <!-- E: 案件名稱 -->
     <div class="field">
       <div class="lbl">案件名稱 <span class="req">*</span></div>
       <input type="text" id="case-name" placeholder="例：白帶魚-FISH INT'L-0401">
       <div class="hint">格式建議：品名-客戶-日期</div>
     </div>
-
-    <!-- S: 承辦業助 -->
     <div class="field">
       <div class="lbl">承辦業助 <span class="opt">選填</span></div>
       <input type="text" id="asst" placeholder="若無請留空">
     </div>
-
   </div>
   <div class="navbtns"><button class="bn" onclick="goNext(1)">下一步 →</button></div>
 </div>
@@ -163,7 +159,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
   <div class="pi"><div class="di"></div><div class="di on"></div><div class="di"></div><div class="di"></div></div>
   <div class="stitle">採購 &amp; 銷售資訊</div>
   <div class="card">
-
     <div class="sec-div" id="buy-sec-title">採購（賣方）</div>
     <div id="buy-sec">
     <div class="field">
@@ -201,6 +196,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <textarea id="buy-note" placeholder="採購相關補充說明..."></textarea>
     </div>
     </div><!-- end buy-sec -->
+
     <div class="sec-div" id="sell-sec-title">銷售（買方）</div>
     <div id="sell-sec">
     <div class="field">
@@ -240,19 +236,17 @@ textarea{height:72px;resize:none;line-height:1.6;}
     </div>
     </div><!-- end sell-sec -->
 
-    <!-- 銷售單純案件：成本費用（用於計算毛利率） -->
+    <!-- 銷售單純案件：成本費用 -->
     <div id="sell-cost-sec" style="display:none;">
       <div class="sec-div" style="color:#7c3aed;">成本費用（銷售案件毛利計算用）</div>
-      <div id="sell-cost-inner">
-        <div class="field">
-          <div class="lbl">採購成本 <span class="req">*</span></div>
-          <div class="aw">
-            <select class="cs" id="sell-buy-cur" onchange="calcProfit()">
-              <option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option>
-            </select>
-            <input type="number" class="ai" id="sell-buy-amt" min="0" step="any"
-              inputmode="numeric" placeholder="填入採購成本金額" oninput="calcProfit()">
-          </div>
+      <div class="field">
+        <div class="lbl">採購成本 <span class="req">*</span></div>
+        <div class="aw">
+          <select class="cs" id="sell-buy-cur" onchange="calcProfit()">
+            <option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option>
+          </select>
+          <input type="number" class="ai" id="sell-buy-amt" min="0" step="any"
+            inputmode="numeric" placeholder="填入採購成本金額" oninput="calcProfit()">
         </div>
       </div>
     </div>
@@ -264,7 +258,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <hr class="cb-d">
       <div class="cb-p"><span class="cb-k">預估毛利</span><span class="cb-v" id="c-profit">請填金額</span></div>
     </div>
-
   </div>
   <div class="navbtns">
     <button class="bb" onclick="goBack(2)">← 上一步</button>
@@ -277,8 +270,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
   <div class="pi"><div class="di"></div><div class="di"></div><div class="di on"></div><div class="di"></div></div>
   <div class="stitle">交易細節</div>
   <div class="card">
-
-    <!-- U: 合約[賣方合約（採購）]  V: 合約[買方合約（銷售）] -->
     <div class="sec-div">合約狀態</div>
     <div class="field">
       <div class="lbl">賣方合約（採購）</div>
@@ -296,8 +287,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
         <div class="ri" onclick="selR('sellCon','無',this)"><div class="rd"><div class="rdi"></div></div><span>無</span></div>
       </div>
     </div>
-
-    <!-- W: 貿易條件 -->
     <div class="sec-div">物流資訊</div>
     <div class="field">
       <div class="lbl">貿易條件 <span class="opt">選填</span></div>
@@ -308,8 +297,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
       </select>
       <input type="text" id="trade-other" class="other-input" placeholder="請輸入貿易條件">
     </div>
-
-    <!-- X: ETD  Y: ETA -->
     <div class="field">
       <div class="row2">
         <div>
@@ -322,8 +309,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
         </div>
       </div>
     </div>
-
-    <!-- Z: 出貨地  AA: 目的地 -->
     <div class="field">
       <div class="row2">
         <div>
@@ -336,49 +321,80 @@ textarea{height:72px;resize:none;line-height:1.6;}
         </div>
       </div>
     </div>
-
   </div>
 
-  <!-- ══ 費用區塊 ══ -->
+  <!-- ★ 費用區塊（每個費用有幣別選擇）-->
   <div class="stitle" style="margin-top:4px;">費用明細</div>
   <div class="card">
+    <div class="hint" style="margin-bottom:12px;font-size:12px;color:#64748b;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid var(--border);">
+      各費用可選擇幣別，系統將依即時匯率換算為 NTD 計算毛利
+    </div>
     <div class="cost-grid">
 
-      <!-- AB: 其他費用 -->
+      <!-- 運費 -->
       <div class="cost-field">
-        <label>其他費用（NTD）</label>
-        <input type="number" id="cost-extra" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        <label>運費 <span class="opt" style="font-size:10px;text-transform:none;">(freight)</span></label>
+        <div class="fee-row">
+          <select class="fee-cur" id="fee-freight-cur" onchange="calcCostTotal();calcProfit()">
+            <option value="TWD">TWD</option><option value="USD">USD</option>
+            <option value="CNY">CNY</option><option value="JPY">JPY</option><option value="EUR">EUR</option>
+          </select>
+          <input type="number" class="fee-amt" id="cost-freight" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        </div>
       </div>
 
-      <!-- AC: 運費 -->
+      <!-- 保險費 -->
       <div class="cost-field">
-        <label>運費（NTD）</label>
-        <input type="number" id="cost-freight" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        <label>保險費 <span class="opt" style="font-size:10px;text-transform:none;">(insure)</span></label>
+        <div class="fee-row">
+          <select class="fee-cur" id="fee-insure-cur" onchange="calcCostTotal();calcProfit()">
+            <option value="TWD">TWD</option><option value="USD">USD</option>
+            <option value="CNY">CNY</option><option value="JPY">JPY</option><option value="EUR">EUR</option>
+          </select>
+          <input type="number" class="fee-amt" id="cost-insure" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        </div>
       </div>
 
-      <!-- AD: 規費 -->
+      <!-- 規費 -->
       <div class="cost-field">
-        <label>規費（NTD）</label>
-        <input type="number" id="cost-tax" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        <label>規費 <span class="opt" style="font-size:10px;text-transform:none;">(tax)</span></label>
+        <div class="fee-row">
+          <select class="fee-cur" id="fee-tax-cur" onchange="calcCostTotal();calcProfit()">
+            <option value="TWD">TWD</option><option value="USD">USD</option>
+            <option value="CNY">CNY</option><option value="JPY">JPY</option><option value="EUR">EUR</option>
+          </select>
+          <input type="number" class="fee-amt" id="cost-tax" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        </div>
       </div>
 
-      <!-- AE: 保險費 -->
+      <!-- 佣金 -->
       <div class="cost-field">
-        <label>保險費（NTD）</label>
-        <input type="number" id="cost-insure" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        <label>佣金 <span class="opt" style="font-size:10px;text-transform:none;">(comm)</span></label>
+        <div class="fee-row">
+          <select class="fee-cur" id="fee-comm-cur" onchange="calcCostTotal();calcProfit()">
+            <option value="TWD">TWD</option><option value="USD">USD</option>
+            <option value="CNY">CNY</option><option value="JPY">JPY</option><option value="EUR">EUR</option>
+          </select>
+          <input type="number" class="fee-amt" id="cost-comm" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        </div>
       </div>
 
-      <!-- AF: 佣金 -->
-      <div class="cost-field">
-        <label>佣金（NTD）</label>
-        <input type="number" id="cost-comm" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+      <!-- 其他費用（全欄） -->
+      <div class="cost-field" style="grid-column:1/-1;">
+        <label>其他費用 <span class="opt" style="font-size:10px;text-transform:none;">(extra)</span></label>
+        <div class="fee-row">
+          <select class="fee-cur" id="fee-extra-cur" onchange="calcCostTotal();calcProfit()">
+            <option value="TWD">TWD</option><option value="USD">USD</option>
+            <option value="CNY">CNY</option><option value="JPY">JPY</option><option value="EUR">EUR</option>
+          </select>
+          <input type="number" class="fee-amt" id="cost-extra" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcCostTotal();calcProfit()">
+        </div>
       </div>
-
     </div>
 
-    <!-- 費用加總 -->
+    <!-- 費用加總（NTD 換算後） -->
     <div class="cost-total">
-      <span class="ct-lbl">費用合計（NTD）</span>
+      <span class="ct-lbl">費用合計（≈ NTD）</span>
       <span class="ct-val" id="cost-total-val">0</span>
     </div>
 
@@ -391,7 +407,6 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <hr class="cb-d">
       <div class="cb-p"><span class="cb-k">預估毛利潤</span><span class="cb-v" id="c-profit2">請先填金額</span></div>
     </div>
-
   </div>
 
   <div class="navbtns">
@@ -406,44 +421,39 @@ textarea{height:72px;resize:none;line-height:1.6;}
   <div class="stitle">確認送出</div>
   <div class="card" id="preview-card"></div>
 
-  <!-- 轉交選項 -->
   <div class="card" id="transfer-sec" style="margin-top:12px;border:1.5px solid #e0e7ff;background:#f0f4ff;">
-    <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:10px;">🔄 轉交給其他業務員補填（選填）</div>
+    <div style="font-size:13px;font-weight:700;color:#3730a3;margin-bottom:10px;">轉交給其他業務員補填（選填）</div>
     <div style="font-size:12px;color:#64748b;margin-bottom:12px;">若採購與銷售由不同業務負責，可選擇對方補填另一半內容，對方收到 Email 通知後登入系統完成填寫。</div>
     <div class="field" style="margin-bottom:0;">
       <div class="lbl" id="transfer-to-lbl">轉交業務員 <span class="opt">選填</span></div>
       <select id="transfer-to" onchange="onTransferChange()" style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-family:inherit;font-size:13px;background:#fff;">
         <option value="">— 不轉交，由我自己完成全部填寫 —</option>
-        <option value="黃啓靖" data-email="FILL_HCJ">黃啓靖</option>
-        <option value="楊正國" data-email="FILL_CZK">楊正國</option>
-        <option value="朱嬿琳" data-email="FILL_JYL">朱嬿琳</option>
-        <option value="呂建宏" data-email="FILL_LCH">呂建宏</option>
-        <option value="呂紀萱" data-email="FILL_LJX">呂紀萱</option>
-        <option value="陳彥竹" data-email="FILL_CYC">陳彥竹</option>
-        <option value="SHERRY"  data-email="FILL_SHERRY">SHERRY</option>
+        <option value="黃啓靖">黃啓靖</option>
+        <option value="楊正國">楊正國</option>
+        <option value="朱嬿琳">朱嬿琳</option>
+        <option value="呂建宏">呂建宏</option>
+        <option value="呂紀萱">呂紀萱</option>
+        <option value="陳彥竹">陳彥竹</option>
+        <option value="SHERRY">SHERRY</option>
         <option value="其他">其他業務員（手動輸入）</option>
       </select>
     </div>
-
-    <!-- 顯示對應信箱 / 手填信箱 -->
     <div id="transfer-email-row" style="display:none;margin-top:8px;">
       <div class="lbl">通知信箱</div>
       <div id="transfer-email-display" style="display:none;padding:9px 12px;border-radius:8px;background:#eff6ff;border:1px solid #bae6fd;font-size:13px;color:#1e40af;font-weight:700;"></div>
       <input type="email" id="transfer-email-input" style="display:none;width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;" placeholder="請輸入對方的 Email 地址">
     </div>
-    <!-- 其他：手填姓名 -->
     <div id="transfer-name-row" style="display:none;margin-top:8px;">
       <div class="lbl">業務員姓名（顯示於案件記錄）</div>
       <input type="text" id="transfer-name-input" style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;" placeholder="請輸入對方的姓名">
     </div>
-
     <div id="transfer-note" style="display:none;margin-top:10px;">
       <div class="lbl">備註給對方 <span class="opt">選填</span></div>
       <textarea id="transfer-msg" placeholder="可填寫給銷售業務員的說明..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #cbd5e1;font-size:13px;font-family:inherit;resize:vertical;min-height:70px;"></textarea>
     </div>
   </div>
 
-  <button class="bsub" id="submit-btn" onclick="submitForm()">📤 送出回報（通知老闆審核）</button>
+  <button class="bsub" id="submit-btn" onclick="submitForm()">送出回報（通知老闆審核）</button>
   <div class="navbtns" style="margin-top:10px;">
     <button class="bb" onclick="goBack(4)">← 修改</button>
   </div>
@@ -460,13 +470,261 @@ textarea{height:72px;resize:none;line-height:1.6;}
 </div>
 
 <script>
-var VERSION="form-005"; // 2026/04/11
+// ══════════════════════════════════════════════════════
+// Firebase 設定
+// ══════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://omrhceuzfponqggicton.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tcmhjZXV6ZnBvbnFnZ2ljdG9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MDM4NzAsImV4cCI6MjA5MzE3OTg3MH0.RJExH4Ya7XNBE_kta4dYxKdfdPXsx6q1hSbT35G2k_k';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLgbhqyCZ335e-C3-K-QelNakoBq0nmal94QAsBLW5Cm8cArpZYpnWT4MepI58r0km7Q/exec';
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzviHF0P8eIwBT9EOC66Bt1H6TFc8EF3H5m6QDo4AszaqiF7PDSwB5FShlSnOkRJHYGA/exec';
-const RATE = { USD:30.5, JPY:0.205, EUR:33.5, TWD:1 };
+var _sbClient = null;
+function getSb(){
+  if(_sbClient) return _sbClient;
+  _sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  return _sbClient;
+}
+
+// ★ 幣別匯率（毛利計算用，從 GAS getRates 更新）
+var RATE = { TWD:1, USD:30.5, JPY:0.205, EUR:33.5, CNY:4.2 };
 const fd = {};
 
-// ── JSONP 工具（繞過 CORS）────────────────────────────
+// ══════════════════════════════════════════════════════
+// ★ 案件編號產生（T{YYYYMMDD}{003} 格式，3碼補零）
+// 使用 Supabase RPC next_case_id() 原子遞增，確保號碼唯一且不因刪除而重用
+// ══════════════════════════════════════════════════════
+async function generateFormId(){
+  var now   = new Date();
+  var ymd   = now.getFullYear().toString()
+    + ('0'+(now.getMonth()+1)).slice(-2)
+    + ('0'+now.getDate()).slice(-2);
+  var prefix = 'T' + ymd; // e.g. T20260424
+
+  try {
+    var sb = getSb();
+    // next_case_id() 在 DB 端原子執行 INSERT…ON CONFLICT DO UPDATE RETURNING
+    var res = await sb.rpc('next_case_id', { p_prefix: prefix });
+    if(res.error) throw new Error(res.error.message);
+    return res.data; // e.g. T20260501001
+  } catch(e){
+    console.warn('generateFormId RPC 失敗，使用備援：', e);
+    // 備援：毫秒時間戳 + 隨機碼，避免撞號
+    return prefix + 'X' + String(Date.now()).slice(-3) + String(Math.floor(Math.random()*10));
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// 清除 undefined
+// ══════════════════════════════════════════════════════
+function sanitizeForFirebase(obj){
+  var jsonStr = JSON.stringify(obj, function(key, value){
+    return value === undefined ? '' : value;
+  });
+  return JSON.parse(jsonStr);
+}
+
+// ══════════════════════════════════════════════════════
+// ★ 費用輔助：從 UI 讀取 {amt, cur} 結構
+// ══════════════════════════════════════════════════════
+function getFee(amtId, curId){
+  var amt = parseFloat(document.getElementById(amtId) && document.getElementById(amtId).value) || 0;
+  var cur = (document.getElementById(curId) && document.getElementById(curId).value) || 'TWD';
+  return { amt: amt, cur: cur };
+}
+
+// ══════════════════════════════════════════════════════
+// payload → Firestore 巢狀結構
+// ══════════════════════════════════════════════════════
+function buildFirestoreDoc(payload){
+  var buyPeriods  = (payload.periods||[]).filter(function(p){ return p.type==='採購'; })
+                    .map(function(p){ return { name:p.name||'', currency:p.cur||'TWD', amount:parseFloat(p.amt)||0, expectedDate:p.date||'', note:p.note||'' }; });
+  var sellPeriods = (payload.periods||[]).filter(function(p){ return p.type==='銷售'; })
+                    .map(function(p){ return { name:p.name||'', currency:p.cur||'TWD', amount:parseFloat(p.amt)||0, expectedDate:p.date||'', note:p.note||'' }; });
+  var now = new Date().toLocaleString('zh-TW', {hour12:false});
+  var prefix = 'T' + payload.formId.substring(1,9); // e.g. T20260424
+
+  return {
+    meta: {
+      timestamp:   payload.timestamp || now,
+      staff:       payload.staff     || '',
+      caseType:    payload.type      || '',
+      caseName:    payload.caseName  || '',
+      assistant:   payload.asst      || '',
+      formId:      payload.formId    || '',
+      formIdPrefix:prefix,              // ★ 供查詢當天案件數用
+      createdAt:   now,
+    },
+    purchase: {
+      supplier:     payload.supplier || '',
+      paymentTerms: payload.buyPay   || '',
+      note:         payload.buyNote  || '',
+      contract:     payload.buyCon   || '',
+      periods:      buyPeriods,
+    },
+    sales: {
+      customer:     payload.buyer       || '',
+      paymentTerms: payload.sellPay     || '',
+      note:         payload.sellNote    || '',
+      contract:     payload.sellCon     || '',
+      costAmount:   parseFloat(payload.sellCostAmt) || 0,
+      costCurrency: payload.sellCostCur || 'TWD',
+      periods:      sellPeriods,
+    },
+    logistics: {
+      tradeTerms:  payload.trade   || '',
+      etd:         payload.etd     || '',
+      eta:         payload.eta     || '',
+      origin:      payload.origin  || '',
+      destination: payload.dest    || '',
+    },
+    // ★ 費用改為 {amt, cur} 結構，保留原幣
+    fees: {
+      freight:    payload.freight   || { amt:0, cur:'TWD' },
+      tax:        payload.tax       || { amt:0, cur:'TWD' },
+      insurance:  payload.insure    || { amt:0, cur:'TWD' },
+      commission: payload.comm      || { amt:0, cur:'TWD' },
+      other:      payload.extra     || { amt:0, cur:'TWD' },
+    },
+    approval: {
+      bossApproved:        '',
+      bossNote:            '',
+      approvedAt:          '',
+      accountingConfirmed: '',
+      buyConfirmAmt:       parseFloat(payload.buyConfirmAmt)  || 0,
+      sellConfirmAmt:      parseFloat(payload.sellConfirmAmt) || 0,
+    },
+    transfer: {
+      transferTo:    payload.transferTo    || '',
+      transferEmail: payload.transferEmail || '',
+      transferNote:  payload.transferMsg   || '',
+      fillStatus:    payload.transferTo ? '待補填' : '',
+    },
+  };
+}
+
+// ══════════════════════════════════════════════════════
+// 寫入 Firestore
+// ══════════════════════════════════════════════════════
+async function writeFirebase(payload){
+  var sb = getSb();
+  var doc    = sanitizeForFirebase(buildFirestoreDoc(payload));
+  var formId = payload.formId;
+  if(!formId) throw new Error('formId 為空');
+  console.log('Supabase 寫入中：', formId);
+  var res = await sb.from('cases').upsert({ id: formId, data: doc });
+  if(res.error) throw new Error(res.error.message);
+  console.log('Supabase 寫入成功：' + formId);
+}
+
+// ══════════════════════════════════════════════════════
+// 更新 Supabase（補填用）
+// ══════════════════════════════════════════════════════
+async function updateFirebase(formId, fields){
+  var sb = getSb();
+  var fp = fields.fillPart || '銷售';
+
+  // 先讀取現有資料
+  var res = await sb.from('cases').select('data').eq('id', formId).single();
+  if(res.error) throw new Error(res.error.message);
+  var existing = res.data ? res.data.data : {};
+
+  // 合併更新
+  existing.transfer = existing.transfer || {};
+  existing.transfer.fillStatus = '已完成';
+  existing.meta = existing.meta || {};
+  existing.meta.caseType = '採購+銷售(三角貿易)';
+  existing._fillUpdatedAt = new Date().toLocaleString('zh-TW', {hour12:false});
+
+  existing.logistics = existing.logistics || {};
+  if(fields.trade   !== undefined) existing.logistics.tradeTerms  = fields.trade;
+  if(fields.etd     !== undefined) existing.logistics.etd         = fields.etd;
+  if(fields.eta     !== undefined) existing.logistics.eta         = fields.eta;
+  if(fields.origin  !== undefined) existing.logistics.origin      = fields.origin;
+  if(fields.dest    !== undefined) existing.logistics.destination = fields.dest;
+
+  existing.fees = existing.fees || {};
+  if(fields.extra   !== undefined) existing.fees.other      = fields.extra;
+  if(fields.freight !== undefined) existing.fees.freight    = fields.freight;
+  if(fields.tax     !== undefined) existing.fees.tax        = fields.tax;
+  if(fields.insure  !== undefined) existing.fees.insurance  = fields.insure;
+  if(fields.comm    !== undefined) existing.fees.commission = fields.comm;
+
+  if(fp === '銷售'){
+    existing.sales = existing.sales || {};
+    if(fields.buyer    !== undefined) existing.sales.customer     = fields.buyer;
+    if(fields.sellCon  !== undefined) existing.sales.contract     = fields.sellCon;
+    if(fields.sellPay  !== undefined) existing.sales.paymentTerms = fields.sellPay;
+    if(fields.sellNote !== undefined) existing.sales.note         = fields.sellNote;
+    if(fields.sellPeriods) {
+      existing.sales.periods = fields.sellPeriods.map(function(p){
+        return { name:p.name||'', currency:p.cur||'TWD', amount:parseFloat(p.amt)||0, expectedDate:p.date||'', note:p.note||'' };
+      });
+    }
+  } else {
+    existing.purchase = existing.purchase || {};
+    if(fields.supplier !== undefined) existing.purchase.supplier     = fields.supplier;
+    if(fields.buyCon   !== undefined) existing.purchase.contract     = fields.buyCon;
+    if(fields.buyPay   !== undefined) existing.purchase.paymentTerms = fields.buyPay;
+    if(fields.buyNote  !== undefined) existing.purchase.note         = fields.buyNote;
+    if(fields.buyPeriods) {
+      existing.purchase.periods = fields.buyPeriods.map(function(p){
+        return { name:p.name||'', currency:p.cur||'TWD', amount:parseFloat(p.amt)||0, expectedDate:p.date||'', note:p.note||'' };
+      });
+    }
+  }
+
+  var upd = await sb.from('cases').update({ data: existing }).eq('id', formId);
+  if(upd.error) throw new Error(upd.error.message);
+}
+
+// ══════════════════════════════════════════════════════
+// 讀取單筆 Supabase
+// ══════════════════════════════════════════════════════
+async function readFirebase(formId){
+  var sb = getSb();
+  var res = await sb.from('cases').select('data').eq('id', formId).single();
+  if(res.error) return null;
+  return res.data ? res.data.data : null;
+}
+
+// ══════════════════════════════════════════════════════
+// GAS JSONP 通知
+// ══════════════════════════════════════════════════════
+function notifyGASviaJSONP(payload){
+  var cbName = '_gcb_'+Date.now();
+  var script  = document.createElement('script');
+  var done    = false;
+  var timer   = setTimeout(function(){
+    if(done) return; done = true;
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    console.warn('GAS JSONP 逾時');
+  }, 15000);
+  window[cbName] = function(d){
+    clearTimeout(timer); done = true;
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+    console.log('GAS JSONP 完成：', d);
+  };
+  var qs = '?callback='+cbName+'&payload='+encodeURIComponent(JSON.stringify(payload))+'&_='+Date.now();
+  script.src = SCRIPT_URL + qs;
+  script.onerror = function(){
+    clearTimeout(timer); done = true;
+    delete window[cbName];
+    if(script.parentNode) script.parentNode.removeChild(script);
+  };
+  document.head.appendChild(script);
+}
+
+// GAS POST 備援
+function backupToGAS(payload){
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(payload)
+  }).catch(function(){});
+}
+
+// JSONP 工具
 function jsonpGet(url, cb){
   var cbName='_jcb_'+Date.now()+'_'+Math.floor(Math.random()*9999);
   var script=document.createElement('script');
@@ -493,7 +751,9 @@ function jsonpGet(url, cb){
   document.head.appendChild(script);
 }
 
-// ── 頁面切換 ──
+// ══════════════════════════════════════════════════════
+// 頁面切換
+// ══════════════════════════════════════════════════════
 function goNext(from){
   if(!validate(from)) return;
   collect(from);
@@ -503,28 +763,30 @@ function goNext(from){
 }
 function goBack(from){ showPage(from-1); }
 function showPage(n){
-  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.pg').forEach(function(p){ p.classList.remove('on'); });
   document.getElementById('page-'+(n==='success'?'success':n)).classList.add('on');
-  const pct={1:25,2:50,3:75,4:100}[n]||100;
+  var pct={1:25,2:50,3:75,4:100}[n]||100;
   document.getElementById('pb').style.width=pct+'%';
-  document.getElementById('pl').textContent=n<=4?`第 ${n} 步，共 4 步`:'完成';
+  document.getElementById('pl').textContent=n<=4?('第 '+n+' 步，共 4 步'):'完成';
   window.scrollTo(0,0);
 }
 
-// ── 驗證 ──
+// ══════════════════════════════════════════════════════
+// 驗證
+// ══════════════════════════════════════════════════════
 function validate(n){
-  const errs={
-    1:()=>{
+  var errs={
+    1:function(){
       if(!getStaff()) return '請選擇負責業務';
       if(document.getElementById('staff').value==='其他'&&!v('staff-other')) return '請填入業務姓名';
       if(!fd.type) return '請選擇案件屬性';
       if(!v('case-name')) return '請填入案件名稱';
       return null;
     },
-    2:()=>{
-      const tp=fd.type||'';
-      const needBuy = tp==='採購' || tp==='採購+銷售(三角貿易)';
-      const needSell = tp==='銷售' || tp==='採購+銷售(三角貿易)';
+    2:function(){
+      var tp=fd.type||'';
+      var needBuy  = tp==='採購' || tp==='採購+銷售(三角貿易)';
+      var needSell = tp==='銷售' || tp==='採購+銷售(三角貿易)';
       if(needBuy){
         if(!v('supplier')) return '請填入供應商名稱（採購）';
         if(!getBuyPay())   return '請填入付款條件（採購）';
@@ -541,7 +803,7 @@ function validate(n){
         if(bConfirmRow && bConfirmRow.style.display!=='none'){
           if(!bConfirm || !bConfirm.checked) return '請勾選確認採購總金額無誤';
           if(!bAmtInput || !bAmtInput.value) return '請輸入採購總金額確認數字';
-          if(bAmtInput.className.indexOf('error')>=0) return '採購確認金額與系統計算不符，請重新確認';
+          if(bAmtInput.className.indexOf('error')>=0) return '採購確認金額與系統計算不符';
         }
       }
       if(needSell){
@@ -560,46 +822,38 @@ function validate(n){
         if(sConfirmRow && sConfirmRow.style.display!=='none'){
           if(!sConfirm || !sConfirm.checked) return '請勾選確認銷售總金額無誤';
           if(!sAmtInput || !sAmtInput.value) return '請輸入銷售總金額確認數字';
-          if(sAmtInput.className.indexOf('error')>=0) return '銷售確認金額與系統計算不符，請重新確認';
+          if(sAmtInput.className.indexOf('error')>=0) return '銷售確認金額與系統計算不符';
         }
-        // 純銷售案件成本為選填（不強制）
       }
       return null;
     },
-    3:()=>{
-
-      return null;
-    },
+    3:function(){ return null; },
   };
-  const err=errs[n]&&errs[n]();
+  var err=errs[n]&&errs[n]();
   if(err){alert(err);return false;}
   return true;
 }
 
-function v(id){ return (document.getElementById(id)?.value||'').trim(); }
-function getStaff(){ const s=v('staff'); return s==='其他'?v('staff-other'):s; }
-function getBuyPay(){ const s=v('buy-pay'); return s==='其他'?v('buy-pay-other'):s; }
-function getSellPay(){ const s=v('sell-pay'); return s==='其他'?v('sell-pay-other'):s; }
-function getTrade(){ const s=v('trade-term'); return s==='其他'?v('trade-other'):s; }
-function numV(id){ return parseFloat(document.getElementById(id)?.value)||0; }
+function v(id){ var el=document.getElementById(id); return el?(el.value||'').trim():''; }
+function getStaff(){ var s=v('staff'); return s==='其他'?v('staff-other'):s; }
+function getBuyPay(){ var s=v('buy-pay'); return s==='其他'?v('buy-pay-other'):s; }
+function getSellPay(){ var s=v('sell-pay'); return s==='其他'?v('sell-pay-other'):s; }
+function getTrade(){ var s=v('trade-term'); return s==='其他'?v('trade-other'):s; }
+function numV(id){ var el=document.getElementById(id); return el?(parseFloat(el.value)||0):0; }
 
-// ── 其他欄位顯示 ──
 function toggleOther(selId, inputId){
-  const show=document.getElementById(selId).value==='其他';
+  var show=document.getElementById(selId).value==='其他';
   document.getElementById(inputId).classList.toggle('show',show);
 }
-
-// ── 單選 ──
 function selR(group,val,el){
   fd[group]=val;
-  el.parentElement.querySelectorAll('.ri').forEach(i=>i.classList.remove('sel'));
+  el.parentElement.querySelectorAll('.ri').forEach(function(i){i.classList.remove('sel');});
   el.classList.add('sel');
   if(group==='type') updateSections(val);
 }
-
 function updateSections(tp){
-  var needBuy  = tp==='採購' || tp==='採購+銷售(三角貿易)';
-  var needSell = tp==='銷售' || tp==='採購+銷售(三角貿易)';
+  var needBuy    = tp==='採購' || tp==='採購+銷售(三角貿易)';
+  var needSell   = tp==='銷售' || tp==='採購+銷售(三角貿易)';
   var isSellOnly = tp==='銷售';
   var buyEl  = document.getElementById('buy-sec');
   var buyT   = document.getElementById('buy-sec-title');
@@ -607,37 +861,41 @@ function updateSections(tp){
   var sellT  = document.getElementById('sell-sec-title');
   if(buyEl){ buyEl.style.display=needBuy?'':'none'; buyT.style.display=needBuy?'':'none'; }
   if(sellEl){ sellEl.style.display=needSell?'':'none'; sellT.style.display=needSell?'':'none'; }
-
-  // 銷售單純案件：顯示成本費用欄位（讓業務填成本）
   var costSec = document.getElementById('sell-cost-sec');
   if(costSec) costSec.style.display = isSellOnly ? '' : 'none';
-
-  // 重新計算毛利率
   setTimeout(calcProfit, 50);
 }
 
-// ── 費用加總 ──
+// ★ 費用加總（各費用轉換為 NTD 再加總，供毛利計算用）
+function toNTD(amt, cur){
+  return (parseFloat(amt)||0) * (RATE[(cur||'TWD').toUpperCase()]||1);
+}
 function calcCostTotal(){
-  const total=numV('cost-extra')+numV('cost-freight')+numV('cost-tax')+numV('cost-insure')+numV('cost-comm');
-  document.getElementById('cost-total-val').textContent='NTD '+fmt(total);
+  var fees = [
+    getFee('cost-freight','fee-freight-cur'),
+    getFee('cost-insure', 'fee-insure-cur'),
+    getFee('cost-tax',    'fee-tax-cur'),
+    getFee('cost-comm',   'fee-comm-cur'),
+    getFee('cost-extra',  'fee-extra-cur'),
+  ];
+  var total = fees.reduce(function(s,f){ return s + toNTD(f.amt, f.cur); }, 0);
+  document.getElementById('cost-total-val').textContent = fmt(total);
   return total;
 }
 
-// ── 毛利計算 ──
+// 毛利計算
 function calcProfit(){
   var caseType = fd.type || '';
   var isPurchaseOnly = caseType==='採購';
   var isSellOnly = caseType==='銷售';
 
-  // 從分期計算總金額
   var buyPeriods  = (typeof getPeriods==='function') ? getPeriods('buy')  : [];
   var sellPeriods = (typeof getPeriods==='function') ? getPeriods('sell') : [];
-  var bC = buyPeriods.length  ? buyPeriods[0].cur  : (v('buy-cur')||'TWD');
-  var sC = sellPeriods.length ? sellPeriods[0].cur : (v('sell-cur')||'USD');
+  var bC = buyPeriods.length  ? buyPeriods[0].cur  : 'TWD';
+  var sC = sellPeriods.length ? sellPeriods[0].cur : 'USD';
   var bA = buyPeriods.reduce(function(s,p){ return s+(p.cur===bC?parseFloat(p.amt)||0:0); },0);
   var sA = sellPeriods.reduce(function(s,p){ return s+(p.cur===sC?parseFloat(p.amt)||0:0); },0);
 
-  // 純銷售案件：成本從 sell-cost-sec 欄位讀取
   if(isSellOnly && !bA){
     var sbC = v('sell-buy-cur')||'TWD';
     var sbEl = document.getElementById('sell-buy-amt');
@@ -646,46 +904,39 @@ function calcProfit(){
   }
 
   var fees = calcCostTotal();
-  var bN = bA*(RATE[bC]||1);
-  var sN = sA*(RATE[sC]||1);
+  var bN = toNTD(bA, bC);
+  var sN = toNTD(sA, sC);
   var p  = sN - bN - fees;
 
-  // 採購單純案件：毛利率 = 0
   if(isPurchaseOnly){
-    var c2=document.getElementById('c-cost2');
-    var r2=document.getElementById('c-rev2');
-    var f2=document.getElementById('c-fees');
-    var p2=document.getElementById('c-profit2');
     var el=document.getElementById('c-profit');
-    if(c2)c2.textContent='NTD '+fmt(bN);
-    if(r2)r2.textContent='—';
-    if(f2)f2.textContent='NTD '+fmt(fees);
-    if(p2){p2.textContent='NTD 0（純採購案件）';p2.style.color='#64748b';}
-    if(el){el.textContent='NTD 0（純採購案件）';el.style.color='#64748b';}
+    if(document.getElementById('c-cost2')) document.getElementById('c-cost2').textContent='NTD '+fmt(bN);
+    if(document.getElementById('c-rev2'))  document.getElementById('c-rev2').textContent='—';
+    if(document.getElementById('c-fees'))  document.getElementById('c-fees').textContent='NTD '+fmt(fees);
+    if(document.getElementById('c-profit2')){ document.getElementById('c-profit2').textContent='NTD 0（純採購案件）'; document.getElementById('c-profit2').style.color='#64748b'; }
+    if(document.getElementById('c-cost')) document.getElementById('c-cost').textContent='NTD '+fmt(bN);
+    if(document.getElementById('c-rev'))  document.getElementById('c-rev').textContent='—';
+    if(el){ el.textContent='NTD 0（純採購案件）'; el.style.color='#64748b'; }
     return;
   }
 
-  // 銷售 or 三角貿易：正常計算毛利率
   var pRate = sN>0 ? Math.round((p/sN)*1000)/10 : 0;
-  var cc=document.getElementById('c-cost');
-  var cr=document.getElementById('c-rev');
-  var cel=document.getElementById('c-profit');
-  if(cc)cc.textContent='NTD '+fmt(bN);
-  if(cr)cr.textContent='NTD '+fmt(sN);
-  if(cel){cel.textContent='NTD '+fmt(sN-bN);cel.style.color=(sN-bN)>=0?'#0284c7':'#dc2626';}
-  var c2=document.getElementById('c-cost2');
-  var r2=document.getElementById('c-rev2');
-  var f2=document.getElementById('c-fees');
-  var p2=document.getElementById('c-profit2');
-  if(c2)c2.textContent='NTD '+fmt(bN);
-  if(r2)r2.textContent='NTD '+fmt(sN);
-  if(f2)f2.textContent='NTD '+fmt(fees);
-  if(p2){
-    p2.textContent='NTD '+fmt(p)+' （毛利率 '+pRate+'%）';
-    p2.style.color=p>=0?'#0284c7':'#dc2626';
+  if(document.getElementById('c-cost')) document.getElementById('c-cost').textContent='NTD '+fmt(bN);
+  if(document.getElementById('c-rev'))  document.getElementById('c-rev').textContent='NTD '+fmt(sN);
+  if(document.getElementById('c-profit')){ var cpEl=document.getElementById('c-profit'); cpEl.textContent='NTD '+fmt(sN-bN); cpEl.style.color=(sN-bN)>=0?'#0284c7':'#dc2626'; }
+  if(document.getElementById('c-cost2')) document.getElementById('c-cost2').textContent='NTD '+fmt(bN);
+  if(document.getElementById('c-rev2'))  document.getElementById('c-rev2').textContent='NTD '+fmt(sN);
+  if(document.getElementById('c-fees'))  document.getElementById('c-fees').textContent='NTD '+fmt(fees);
+  if(document.getElementById('c-profit2')){
+    var p2El=document.getElementById('c-profit2');
+    p2El.textContent='NTD '+fmt(p)+' （毛利率 '+pRate+'%）';
+    p2El.style.color=p>=0?'#0284c7':'#dc2626';
   }
 }
-// ── 收集資料 ──
+
+// ══════════════════════════════════════════════════════
+// 收集資料
+// ══════════════════════════════════════════════════════
 function collect(n){
   if(n===1){
     fd.staff    = getStaff();
@@ -693,32 +944,26 @@ function collect(n){
     fd.asst     = v('asst');
   }
   if(n===2){
-    // 補填模式：只更新「有顯示」的那一半，另一半保留 fd 原值
-    var buySec = document.getElementById('buy-sec');
+    var buySec  = document.getElementById('buy-sec');
     var sellSec = document.getElementById('sell-sec');
     var buyVisible  = buySec  && buySec.style.display  !== 'none';
     var sellVisible = sellSec && sellSec.style.display !== 'none';
-
     if(buyVisible){
-      fd.supplier  = v('supplier');
-      fd.buyPay    = getBuyPay();
-      fd.buyNote   = v('buy-note');
+      fd.supplier   = v('supplier');
+      fd.buyPay     = getBuyPay();
+      fd.buyNote    = v('buy-note');
       fd.buyPeriods = getPeriods('buy');
     }
     if(sellVisible){
-      fd.buyer     = v('buyer');
-      fd.sellPay   = getSellPay();
-      fd.sellNote  = v('sell-note');
-      fd.sellPeriods = getPeriods('sell');
+      fd.buyer      = v('buyer');
+      fd.sellPay    = getSellPay();
+      fd.sellNote   = v('sell-note');
+      fd.sellPeriods= getPeriods('sell');
     }
-    // 純銷售案件：成本
     if((fd.type||'')==='銷售'){
-      var sbC = v('sell-buy-cur')||'TWD';
-      var sbEl = document.getElementById('sell-buy-amt');
-      fd.sellCostAmt = sbEl ? parseFloat(sbEl.value)||0 : 0;
-      fd.sellCostCur = sbC;
+      fd.sellCostAmt = numV('sell-buy-amt');
+      fd.sellCostCur = v('sell-buy-cur')||'TWD';
     }
-    // 代表值（主表用第一期）
     if(fd.buyPeriods && fd.buyPeriods.length){
       fd.buyCur  = fd.buyPeriods[0].cur  || 'TWD';
       fd.buyAmt  = fd.buyPeriods.reduce(function(s,p){ return s+(p.cur===fd.buyCur?parseFloat(p.amt)||0:0); },0);
@@ -729,8 +974,8 @@ function collect(n){
       fd.sellAmt  = fd.sellPeriods.reduce(function(s,p){ return s+(p.cur===fd.sellCur?parseFloat(p.amt)||0:0); },0);
       fd.sellDate = fd.sellPeriods[0].date || '';
     }
-    fd.buyNTD  = (fd.buyAmt||0)*(RATE[fd.buyCur||'TWD']||1);
-    fd.sellNTD = (fd.sellAmt||0)*(RATE[fd.sellCur||'TWD']||1);
+    fd.buyNTD  = toNTD(fd.buyAmt||0, fd.buyCur||'TWD');
+    fd.sellNTD = toNTD(fd.sellAmt||0, fd.sellCur||'TWD');
   }
   if(n===3){
     fd.buyCon   = fd.buyCon||'未選';
@@ -740,177 +985,190 @@ function collect(n){
     fd.eta      = v('eta');
     fd.origin   = v('origin');
     fd.dest     = v('dest');
-    fd.extra    = numV('cost-extra');
-    fd.freight  = numV('cost-freight');
-    fd.tax      = numV('cost-tax');
-    fd.insure   = numV('cost-insure');
-    fd.comm     = numV('cost-comm');
-    fd.totalFee = fd.extra+fd.freight+fd.tax+fd.insure+fd.comm;
-    fd.profit   = fd.sellNTD - fd.buyNTD - fd.totalFee;
+    // ★ 費用收集為 {amt, cur} 結構，保留原幣
+    fd.extra    = getFee('cost-extra',   'fee-extra-cur');
+    fd.freight  = getFee('cost-freight', 'fee-freight-cur');
+    fd.tax      = getFee('cost-tax',     'fee-tax-cur');
+    fd.insure   = getFee('cost-insure',  'fee-insure-cur');
+    fd.comm     = getFee('cost-comm',    'fee-comm-cur');
+    // 費用合計（NTD，供毛利計算用）
+    fd.totalFeeNTD = toNTD(fd.freight.amt,fd.freight.cur)
+                   + toNTD(fd.insure.amt, fd.insure.cur)
+                   + toNTD(fd.tax.amt,    fd.tax.cur)
+                   + toNTD(fd.comm.amt,   fd.comm.cur)
+                   + toNTD(fd.extra.amt,  fd.extra.cur);
+    fd.profit   = fd.sellNTD - fd.buyNTD - fd.totalFeeNTD;
     fd.margin   = fd.sellNTD > 0 ? (fd.profit/fd.sellNTD*100).toFixed(1) : 0;
   }
 }
 
-// ── 預覽 ──
+// ══════════════════════════════════════════════════════
+// 預覽
+// ══════════════════════════════════════════════════════
+function fmtFee(feeObj){
+  if(!feeObj || !feeObj.amt) return '—';
+  return (feeObj.cur||'TWD') + ' ' + fmt(feeObj.amt);
+}
 function buildPreview(){
-  const rows=[
+  var rows=[
     ['負責業務',   fd.staff],
     ['案件屬性',   fd.type],
     ['案件名稱',   fd.caseName],
     ['承辦業助',   fd.asst||'—'],
-    ['供應商',     fd.supplier],
-    ['採購期數',    fd.buyPeriods?fd.buyPeriods.map(function(p){return p.name+' '+p.cur+' '+fmt(p.amt);}).join(' / '):'—'],
-    ['預計付款日', fd.buyDate],
-    ['付款條件',   fd.buyPay],
+    ['供應商',     fd.supplier||'—'],
+    ['採購期數',   fd.buyPeriods?fd.buyPeriods.map(function(p){return p.name+' '+p.cur+' '+fmt(p.amt);}).join(' / '):'—'],
+    ['付款條件',   fd.buyPay||'—'],
     ['備註（採購）',fd.buyNote||'—'],
-    ['客戶',       fd.buyer],
-    ['收款期數',    fd.sellPeriods?fd.sellPeriods.map(function(p){return p.name+' '+p.cur+' '+fmt(p.amt);}).join(' / '):'—'],
-    ['預計收款日', fd.sellDate],
-    ['收款條件',   fd.sellPay],
+    ['客戶',       fd.buyer||'—'],
+    ['收款期數',   fd.sellPeriods?fd.sellPeriods.map(function(p){return p.name+' '+p.cur+' '+fmt(p.amt);}).join(' / '):'—'],
+    ['收款條件',   fd.sellPay||'—'],
     ['備註（銷售）',fd.sellNote||'—'],
-    ['賣方合約',   fd.buyCon],
-    ['買方合約',   fd.sellCon],
-    ['貿易條件',   fd.trade],
-    ['ETD',        fd.etd],
-    ['ETA',        fd.eta],
+    ['賣方合約',   fd.buyCon||'—'],
+    ['買方合約',   fd.sellCon||'—'],
+    ['貿易條件',   fd.trade||'—'],
+    ['ETD',        fd.etd||'—'],
+    ['ETA',        fd.eta||'—'],
     ['出貨地',     fd.origin||'—'],
     ['目的地',     fd.dest||'—'],
-    ['其他費用',   'NTD '+fmt(fd.extra)],
-    ['運費',       'NTD '+fmt(fd.freight)],
-    ['規費',       'NTD '+fmt(fd.tax)],
-    ['保險費',     'NTD '+fmt(fd.insure)],
-    ['佣金',       'NTD '+fmt(fd.comm)],
-    ['費用合計',   'NTD '+fmt(fd.totalFee)],
-    ['預估毛利潤', '<b style="color:#0284c7">NTD '+fmt(fd.profit)+' ('+fd.margin+'%)</b>'],
+    ['運費',       fmtFee(fd.freight)],
+    ['保險費',     fmtFee(fd.insure)],
+    ['規費',       fmtFee(fd.tax)],
+    ['佣金',       fmtFee(fd.comm)],
+    ['其他費用',   fmtFee(fd.extra)],
+    ['費用合計（≈NTD）', fmt(fd.totalFeeNTD||0)],
+    ['預估毛利潤', '<b style="color:#0284c7">NTD '+fmt(fd.profit||0)+' ('+fd.margin+'%)</b>'],
   ];
-  document.getElementById('preview-card').innerHTML=rows.map(r=>`
-    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">
-      <span style="color:#64748b;flex-shrink:0;margin-right:8px;">${r[0]}</span>
-      <span style="color:#1e293b;font-weight:500;text-align:right;">${r[1]||'—'}</span>
-    </div>`).join('');
+  document.getElementById('preview-card').innerHTML=rows.map(function(r){
+    return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">'
+      +'<span style="color:#64748b;flex-shrink:0;margin-right:8px;">'+r[0]+'</span>'
+      +'<span style="color:#1e293b;font-weight:500;text-align:right;">'+(r[1]||'—')+'</span>'
+      +'</div>';
+  }).join('');
 }
 
-// ── 送出（欄位順序對應試算表）──
+// ══════════════════════════════════════════════════════
+// 送出
+// ══════════════════════════════════════════════════════
 async function submitForm(){
-  const btn=document.getElementById('submit-btn');
+  var btn=document.getElementById('submit-btn');
   btn.disabled=true; btn.textContent='送出中...';
   fd.timestamp=new Date().toLocaleString('zh-TW');
-  fd.formId='T'+new Date().toISOString().slice(0,10).replace(/-/g,'')+String(Date.now()).slice(-3);
 
-  // ★ 欄位順序完全對應試算表欄位 A~AF ★
-  // A: 時間戳記  B: 電子郵件  C: 業務名稱  D: 案件屬性  E: 案件名稱
-  // F: 供應商    G: 採購幣別  H: 應付總金額 I: 預計付款日期 J: 付款條件
-  // K: 備註採購  (L: 是否有銷售對象)  M: 客戶  N: 銷售幣別  O: 應收總金額
-  // P: 預計收款日 Q: 收款條件  (R: 備註銷售)  S: 承辦業助  T: 預估毛利潤
-  // U: 賣方合約  V: 買方合約  W: 貿易條件  X: ETD  Y: ETA
-  // Z: 出貨地  AA: 目的地  AB: 其他費用  AC: 運費  AD: 規費  AE: 保險費  AF: 佣金
+  // ★ 新案件編號：TYYYYMMDDA01 格式
+  try {
+    fd.formId = await generateFormId();
+  } catch(e){
+    var now2 = new Date();
+    var ymd2 = now2.getFullYear().toString()
+      + ('0'+(now2.getMonth()+1)).slice(-2)
+      + ('0'+now2.getDate()).slice(-2);
+    fd.formId = 'T'+ymd2+'A'+String(Date.now()).slice(-4);
+  }
 
-  const payload={
-    timestamp: fd.timestamp,        // A
-    email:     '',                   // B
-    staff:     fd.staff,             // C
-    type:      fd.type,              // D
-    caseName:  fd.caseName,          // E
-    supplier:  fd.supplier,          // F
-    buyCur:    fd.buyCur,            // G
-    buyAmt:    fd.buyAmt,            // H
-    buyDate:   fd.buyDate,           // I
-    buyPay:    fd.buyPay,            // J
-    buyNote:   fd.buyNote,           // K
-    hasBuyer:  (fd.type==='銷售'||fd.type==='採購+銷售(三角貿易)')?'是':'否', // L
-    buyer:     fd.buyer,             // M
-    sellCur:   fd.sellCur,           // N
-    sellAmt:   fd.sellAmt,           // O
-    sellDate:  fd.sellDate,          // P
-    sellPay:   fd.sellPay,           // Q
-    sellNote:  fd.sellNote,          // R
-    asst:      fd.asst||'',          // S
-    profit:    fd.profit||0,                  // T 預估毛利潤（數字）
-    buyCon:    fd.buyCon,            // U
-    sellCon:   fd.sellCon,           // V
-    trade:     fd.trade,             // W
-    etd:       fd.etd,               // X
-    eta:       fd.eta,               // Y
-    origin:    fd.origin||'',        // Z
-    dest:      fd.dest||'',          // AA
-    extra:     fd.extra||0,          // AB
-    freight:   fd.freight||0,        // AC
-    tax:       fd.tax||0,            // AD
-    insure:    fd.insure||0,         // AE
-    comm:      fd.comm||0,           // AF
-    formId:      fd.formId,
-    sellCostAmt: fd.sellCostAmt||0,
-    sellCostCur: fd.sellCostCur||'TWD',
-    transferTo:    (function(){
-      var el=document.getElementById('transfer-to');
-      var val=el?el.value:'';
-      // 若選「其他」，使用手填姓名；否則用選單值
-      if(val==='其他'){
-        var nameEl=document.getElementById('transfer-name-input');
-        return nameEl&&nameEl.value.trim() ? nameEl.value.trim() : '指定人員';
-      }
-      return val;
-    })(),
-    transferType:  fd.type||'',  // 記錄原始案件類型，讓對方知道要補填哪個部分
-    transferEmail:(function(){
-      var sel=document.getElementById('transfer-to');
-      var val=sel?sel.value:'';
-      if(!val||val==='其他'){
-        var inp=document.getElementById('transfer-email-input');
-        return inp?inp.value.trim():'';
-      }
-      return STAFF_EMAILS[val]||'';
-    })(),
-    transferMsg: (function(){ var el=document.getElementById('transfer-msg'); return el?el.value:''; })(),
-    // 確認金額（勾選後手動輸入的驗證金額）
+  var transferTo = (function(){
+    var el=document.getElementById('transfer-to');
+    var val=el?el.value:'';
+    if(val==='其他'){
+      var nameEl=document.getElementById('transfer-name-input');
+      return nameEl&&nameEl.value.trim() ? nameEl.value.trim() : '指定人員';
+    }
+    return val;
+  })();
+
+  var transferEmail = (function(){
+    var inp=document.getElementById('transfer-email-input');
+    return inp?inp.value.trim():'';
+  })();
+
+  var payload={
+    timestamp:     fd.timestamp,
+    staff:         fd.staff          ||'',
+    type:          fd.type           ||'',
+    caseName:      fd.caseName       ||'',
+    supplier:      fd.supplier       ||'',
+    buyCur:        fd.buyCur         ||'TWD',
+    buyAmt:        fd.buyAmt         ||0,
+    buyDate:       fd.buyDate        ||'',
+    buyPay:        fd.buyPay         ||'',
+    buyNote:       fd.buyNote        ||'',
+    hasBuyer:      (fd.type==='銷售'||fd.type==='採購+銷售(三角貿易)')?'是':'否',
+    buyer:         fd.buyer          ||'',
+    sellCur:       fd.sellCur        ||'TWD',
+    sellAmt:       fd.sellAmt        ||0,
+    sellDate:      fd.sellDate       ||'',
+    sellPay:       fd.sellPay        ||'',
+    sellNote:      fd.sellNote       ||'',
+    asst:          fd.asst           ||'',
+    profit:        fd.profit         ||0,
+    buyCon:        fd.buyCon         ||'',
+    sellCon:       fd.sellCon        ||'',
+    trade:         fd.trade          ||'',
+    etd:           fd.etd            ||'',
+    eta:           fd.eta            ||'',
+    origin:        fd.origin         ||'',
+    dest:          fd.dest           ||'',
+    // ★ 費用為 {amt, cur} 結構
+    extra:         fd.extra          ||{amt:0,cur:'TWD'},
+    freight:       fd.freight        ||{amt:0,cur:'TWD'},
+    tax:           fd.tax            ||{amt:0,cur:'TWD'},
+    insure:        fd.insure         ||{amt:0,cur:'TWD'},
+    comm:          fd.comm           ||{amt:0,cur:'TWD'},
+    formId:        fd.formId,
+    sellCostAmt:   fd.sellCostAmt    ||0,
+    sellCostCur:   fd.sellCostCur    ||'TWD',
+    transferTo:    transferTo,
+    transferType:  fd.type           ||'',
+    transferEmail: transferEmail,
+    transferMsg:   (function(){ var el=document.getElementById('transfer-msg'); return el?el.value:''; })(),
     buyConfirmAmt:  parseFloat((document.getElementById('buy-confirm-amt')||{}).value)||0,
     sellConfirmAmt: parseFloat((document.getElementById('sell-confirm-amt')||{}).value)||0,
-    // 分期付款資料
-    periods:   (fd.buyPeriods||[]).map(function(p){return Object.assign({type:'採購'},p);})
-               .concat((fd.sellPeriods||[]).map(function(p){return Object.assign({type:'銷售'},p);})),
+    periods: (fd.buyPeriods||[]).map(function(p){return Object.assign({type:'採購'},p);})
+             .concat((fd.sellPeriods||[]).map(function(p){return Object.assign({type:'銷售'},p);})),
+    '銷售補填狀態': transferTo ? '待補填' : '',
+    '老闆已同意': '',
+    '老闆備註':   '',
+    '簽核時間':   '',
+    '會計確認':   '',
+    // ★ 流程狀態：有 transferTo 表示待補填，不可通知老闆
+    status: transferTo ? '待補填' : '',
   };
 
-  try{
-    fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
-    setTimeout(()=>showPage('success'),800);
-  }catch(e){showPage('success');}
+  try {
+    await writeFirebase(payload);
+    // ★ 只有資料完整（非待補填）才通知老闆
+    var gasAction = transferTo ? 'transfer' : 'newCase';
+    var gasPayload = Object.assign({}, payload, { action: gasAction });
+    notifyGASviaJSONP(gasPayload);
+    showPage('success');
+  } catch(e) {
+    console.error('Supabase 寫入失敗：', e);
+    var errMsg = e.message || e.toString();
+    alert('資料送出失敗：' + errMsg);
+    var fallbackPayload = Object.assign({}, payload, { action: transferTo?'transfer':'newCase' });
+    notifyGASviaJSONP(fallbackPayload);
+    showPage('success');
+  }
   btn.disabled=false;
-  btn.innerHTML='📤 送出回報（通知老闆審核）';
+  btn.textContent='送出回報（通知老闆審核）';
 }
 
 function resetForm(){
-  document.querySelectorAll('input,select,textarea').forEach(el=>el.value='');
-  document.querySelectorAll('.ri').forEach(el=>el.classList.remove('sel'));
-  document.querySelectorAll('.other-input').forEach(el=>el.classList.remove('show'));
-  Object.keys(fd).forEach(k=>delete fd[k]);
+  document.querySelectorAll('input,select,textarea').forEach(function(el){ el.value=''; });
+  document.querySelectorAll('.ri').forEach(function(el){ el.classList.remove('sel'); });
+  document.querySelectorAll('.other-input').forEach(function(el){ el.classList.remove('show'); });
+  Object.keys(fd).forEach(function(k){ delete fd[k]; });
   document.getElementById('cost-total-val').textContent='0';
   showPage(1);
 }
 
 function fmt(n){ return Math.round(n||0).toLocaleString('zh-TW'); }
 
-// 業務員信箱對照表（請填入真實 Email）
-// ★ 業務員信箱：直接在這裡填入，或到 Google Sheets「Accounts」分頁的「email」欄設定
-// （Accounts 分頁優先，若有設定會自動覆蓋此處的值）
+// ══════════════════════════════════════════════════════
+// 業務員信箱
+// ══════════════════════════════════════════════════════
 var STAFF_EMAILS = {
-  '黃啓靖': '',
-  '楊正國': '',
-  '朱嬿琳': '',
-  '呂建宏': '',
-  '呂紀萱': '',
-  '陳彥竹': '',
-  'SHERRY':  '',
+  '黃啓靖':'', '楊正國':'', '朱嬿琳':'', '呂建宏':'', '呂紀萱':'', '陳彥竹':'', 'SHERRY':'',
 };
-
-// 從雲端帳號同步信箱（若 Accounts 分頁有設定 email 欄）
-function syncStaffEmailsFromCloud(){
-  if(!CLOUD_ACCOUNTS) return;
-  CLOUD_ACCOUNTS.forEach(function(u){
-    if(u.email && u.staffName && STAFF_EMAILS.hasOwnProperty(u.staffName)){
-      STAFF_EMAILS[u.staffName] = u.email;
-    }
-  });
-}
 
 function onTransferChange(){
   var sel      = document.getElementById('transfer-to');
@@ -923,47 +1181,43 @@ function onTransferChange(){
   var btn      = document.getElementById('submit-btn');
   var val      = sel ? sel.value : '';
 
-  // 清空狀態
   if(nameRow) nameRow.style.display='none';
   if(nameInp) nameInp.value='';
 
   if(!val){
     emailRow.style.display='none';
     note.style.display='none';
-    btn.textContent='📤 送出回報（通知老闆審核）';
+    btn.textContent='送出回報（通知老闆審核）';
     btn.style.background='';
     return;
   }
-
   emailRow.style.display='block';
   note.style.display='block';
   btn.style.background='#4f46e5';
 
   if(val==='其他'){
-    // 手動輸入信箱 + 姓名
     emailDisp.style.display='none';
     emailInp.style.display='block';
     emailInp.value='';
     if(nameRow) nameRow.style.display='block';
-    btn.textContent='📤 送出並通知對方補填';
+    btn.textContent='送出並通知對方補填';
   } else {
-    // 顯示對應信箱，隱藏姓名欄
-    var email = STAFF_EMAILS[val]||'（尚未設定信箱）';
+    var email = STAFF_EMAILS[val]||'';
     emailDisp.style.display='block';
-    emailDisp.textContent='📧 ' + email;
+    emailDisp.textContent = email ? '信箱：'+email : '尚未設定信箱，請至 Firebase Accounts 補齊 email 欄位';
+    emailDisp.style.color = email ? '#1e40af' : '#dc2626';
     emailInp.style.display='none';
-    btn.textContent='📤 送出並通知 '+val+' 補填';
+    emailInp.value = email;
+    btn.textContent='送出並通知 '+val+' 補填';
   }
 }
 
 function initTransfer(){
   var sel = document.getElementById('transfer-to');
   if(!sel) return;
-  // 更新 email 對應
   Array.from(sel.options).forEach(function(opt){
     if(STAFF_EMAILS[opt.value]) opt.setAttribute('data-email', STAFF_EMAILS[opt.value]);
   });
-  // 依案件屬性動態更新標籤說明
   var caseType = fd.type || '';
   var lbl = document.getElementById('transfer-to-lbl');
   var desc = document.querySelector('#transfer-sec div[style*="color:#64748b"]');
@@ -979,22 +1233,19 @@ function initTransfer(){
   }
 }
 
-// ── 分期付款功能 ──
+// ══════════════════════════════════════════════════════
+// 分期付款
+// ══════════════════════════════════════════════════════
 var MAX_PERIODS = 3;
-
 function addPeriod(type){
   var container = document.getElementById(type+'-periods');
   var existing  = container.querySelectorAll('.period-card').length;
-  if(existing >= MAX_PERIODS){
-    alert('最多只能新增 '+MAX_PERIODS+' 期');
-    return;
-  }
+  if(existing >= MAX_PERIODS){ alert('最多只能新增 '+MAX_PERIODS+' 期'); return; }
   var n = existing + 1;
   var card = document.createElement('div');
   card.className = 'period-card';
   card.setAttribute('data-period', n);
 
-  // Build inner HTML using DOM to avoid quote issues
   var hd = document.createElement('div'); hd.className='period-hd';
   var num = document.createElement('div'); num.className='period-num';
   num.textContent = '第 '+n+' 期';
@@ -1007,7 +1258,6 @@ function addPeriod(type){
   }
   card.appendChild(hd);
 
-  // Row1: 期別名稱 + 金額 + 幣別
   var r1 = document.createElement('div'); r1.className='pr3';
   r1.innerHTML =
     '<div><div class="lbl">期別名稱 <span class="req">*</span></div>'
@@ -1016,11 +1266,10 @@ function addPeriod(type){
     +'<input type="number" class="period-amt" min="0" step="any" inputmode="numeric" placeholder="0" oninput="calcPeriodTotalFromEl(this)"></div>'
     +'<div><div class="lbl">幣別</div>'
     +'<select class="period-cur" onchange="calcPeriodTotalFromEl(this)">'
-    +'<option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option>'
+    +'<option>TWD</option><option>USD</option><option>CNY</option><option>JPY</option><option>EUR</option>'
     +'</select></div>';
   card.appendChild(r1);
 
-  // Row2: 預計日期 + 備註
   var r2 = document.createElement('div'); r2.className='pr2';
   r2.innerHTML =
     '<div><div class="lbl">預計'+(type==='buy'?'付款':'收款')+'日 <span class="req">*</span></div>'
@@ -1030,7 +1279,6 @@ function addPeriod(type){
   card.appendChild(r2);
   container.appendChild(card);
 
-  // Update add button visibility
   var addBtn = document.getElementById('add-'+type+'-btn');
   if(addBtn) addBtn.style.display = container.querySelectorAll('.period-card').length >= MAX_PERIODS ? 'none' : 'block';
   calcPeriodTotal(type);
@@ -1039,7 +1287,6 @@ function addPeriod(type){
 function removePeriod(btn, type){
   var card = btn.closest('.period-card');
   card.parentNode.removeChild(card);
-  // Renumber
   var container = document.getElementById(type+'-periods');
   container.querySelectorAll('.period-card').forEach(function(c,i){
     var numEl = c.querySelector('.period-num');
@@ -1052,9 +1299,8 @@ function removePeriod(btn, type){
 }
 
 function calcPeriodTotalFromEl(el){
-  var card = el.closest('#buy-periods');
-  if(card) { calcPeriodTotal('buy'); return; }
-  calcPeriodTotal('sell');
+  if(el.closest('#buy-periods')) { calcPeriodTotal('buy'); calcProfit(); return; }
+  calcPeriodTotal('sell'); calcProfit();
 }
 function calcPeriodTotal(type){
   var container = document.getElementById(type+'-periods');
@@ -1076,7 +1322,6 @@ function calcPeriodTotal(type){
     return;
   }
   totalEl.textContent = keys.map(function(c){ return c+' '+fmt(totals[c]); }).join(' + ');
-  // 金額有變動就重置勾選，顯示確認框
   if(confirmRow){ confirmRow.style.display='flex'; }
   if(confirmBox){ confirmBox.checked = false; onTotalConfirm(type); }
 }
@@ -1088,7 +1333,6 @@ function onTotalConfirm(type){
   var hint        = document.getElementById(type+'-confirm-hint');
   if(!confirmBox) return;
   var checked = confirmBox.checked;
-  // 勾選後顯示輸入欄，取消勾選則清空隱藏
   if(inputRow){
     inputRow.className = 'total-confirm-input-row' + (checked ? ' show' : '');
     if(!checked && amtInput){ amtInput.value=''; amtInput.className='total-confirm-amt'; }
@@ -1099,12 +1343,10 @@ function onTotalConfirm(type){
     else confirmRow.classList.remove('confirmed');
   }
 }
-
 function checkConfirmAmt(type){
   var amtInput = document.getElementById(type+'-confirm-amt');
   var hint     = document.getElementById(type+'-confirm-hint');
   if(!amtInput) return;
-  // 計算實際總金額（所有期同幣別加總）
   var container = document.getElementById(type+'-periods');
   var totals = {};
   container.querySelectorAll('.period-card').forEach(function(card){
@@ -1118,13 +1360,10 @@ function checkConfirmAmt(type){
   var match = Math.abs(inputVal - totalSum) < 0.01;
   amtInput.className = 'total-confirm-amt ' + (match ? 'ok' : 'error');
   if(hint){
-    hint.textContent = match
-      ? '✓ 金額吻合'
-      : '✗ 金額不符，系統計算為 ' + fmt(totalSum) + '，請重新確認';
+    hint.textContent = match ? '✓ 金額吻合' : '✗ 金額不符，系統計算為 ' + fmt(totalSum) + '，請重新確認';
     hint.style.color = match ? '#16a34a' : '#dc2626';
   }
 }
-
 function getPeriods(type){
   var container = document.getElementById(type+'-periods');
   if(!container) return [];
@@ -1139,114 +1378,83 @@ function getPeriods(type){
   });
   return result;
 }
-
-// 初始化：自動加入第一期
 function initPeriods(){
-  if(!document.getElementById('buy-periods').querySelector('.period-card')){
-    addPeriod('buy');
-  }
-  if(!document.getElementById('sell-periods').querySelector('.period-card')){
-    addPeriod('sell');
-  }
+  if(!document.getElementById('buy-periods').querySelector('.period-card')) addPeriod('buy');
+  if(!document.getElementById('sell-periods').querySelector('.period-card')) addPeriod('sell');
 }
-// ── 補填銷售模式 ──────────────────────────────────────
+
+// ══════════════════════════════════════════════════════
+// 補填模式
+// ══════════════════════════════════════════════════════
 var FILL_MODE   = false;
 var FILL_FORMID = '';
 
-// ── 補填模式：回填表單欄位 ────────────────────────────
 function fillFieldIfExists(id, val){
   if(!val || !val.toString().trim()) return;
   var el = document.getElementById(id);
   if(el) el.value = val.toString().trim();
 }
-
 function fillNumberIfExists(id, val){
   var n = parseFloat(val);
   if(!n || n <= 0) return;
   var el = document.getElementById(id);
   if(el) el.value = n;
 }
-
-// selR 的 id 版本（radio button 自動選取）
 function selRById(group, val){
-  var containers = {'buyCon':'#page-3', 'sellCon':'#page-3'};
-  var scope = document.querySelector(containers[group] || 'body');
-  if(!scope) return;
-  scope.querySelectorAll('.ri').forEach(function(el){
-    if(el.closest('[data-group="'+group+'"]') || el.parentElement){
+  document.querySelectorAll('.ri').forEach(function(el){
+    var onclick = el.getAttribute('onclick');
+    if(onclick && onclick.indexOf("'"+group+"'")>=0){
       var span = el.querySelector('span');
-      if(span && span.textContent.trim() === val){
-        // 找到對應的 ri
-        if(el.closest('.rg')){
-          var rg = el.closest('.rg');
-          // 確認這個 rg 是屬於 group 的
-          var onclick = el.getAttribute('onclick');
-          if(onclick && onclick.indexOf("'"+group+"'") >= 0){
-            el.parentElement.querySelectorAll('.ri').forEach(function(i){i.classList.remove('sel');});
-            el.classList.add('sel');
-            fd[group] = val;
-          }
-        }
+      if(span && span.textContent.trim()===val){
+        el.parentElement.querySelectorAll('.ri').forEach(function(i){i.classList.remove('sel');});
+        el.classList.add('sel');
+        fd[group] = val;
       }
     }
   });
 }
 
 function fillPeriodsFromSheets(type, row){
-  // 從 Sheets 讀取期數資料（FormResponses 欄位：付款條件/收款條件不含期數，
-  // 期數存在 Payments 分頁，這裡用單筆總金額 + 日期回填第1期作為參考）
   var container = document.getElementById(type+'-periods');
   if(!container) return;
-
   var hasData = false;
   if(type==='sell'){
     var amt  = parseFloat(row['應收總金額'])||0;
     var cur  = (row['銷售幣別']||'TWD').trim().toUpperCase();
     var date = (row['預計收款日']||'').trim();
-    // 只有當金額 > 0 才回填
     if(amt > 0){
       hasData = true;
       if(!container.querySelector('.period-card')) addPeriod('sell');
       var card = container.querySelector('.period-card');
       if(card){
-        var nameEl = card.querySelector('.period-name');
-        var amtEl  = card.querySelector('.period-amt');
-        var curEl  = card.querySelector('.period-cur');
-        var dateEl = card.querySelector('.period-date');
-        if(nameEl && !nameEl.value) nameEl.value = '收款';
-        if(amtEl){ amtEl.value = amt; amtEl.dispatchEvent(new Event('input')); }
-        if(curEl){ curEl.value = cur; curEl.dispatchEvent(new Event('change')); }
-        if(dateEl && date) dateEl.value = date.substring(0,10).replace(/\//g,'-');
+        var nameEl=card.querySelector('.period-name'); if(nameEl&&!nameEl.value) nameEl.value='收款';
+        var amtEl=card.querySelector('.period-amt'); if(amtEl){ amtEl.value=amt; amtEl.dispatchEvent(new Event('input')); }
+        var curEl=card.querySelector('.period-cur'); if(curEl){ curEl.value=cur; curEl.dispatchEvent(new Event('change')); }
+        var dateEl=card.querySelector('.period-date'); if(dateEl&&date) dateEl.value=date.substring(0,10).replace(/\//g,'-');
         calcPeriodTotal('sell');
       }
     }
   } else {
-    var bAmt  = parseFloat(row['應付總金額'])||0;
-    var bCur  = (row['採購幣別']||'TWD').trim().toUpperCase();
-    var bDate = (row['預計付款日期']||'').trim();
-    if(bAmt > 0){
-      hasData = true;
+    var bAmt=parseFloat(row['應付總金額'])||0;
+    var bCur=(row['採購幣別']||'TWD').trim().toUpperCase();
+    var bDate=(row['預計付款日期']||'').trim();
+    if(bAmt>0){
+      hasData=true;
       if(!container.querySelector('.period-card')) addPeriod('buy');
-      var bCard = container.querySelector('.period-card');
+      var bCard=container.querySelector('.period-card');
       if(bCard){
-        var bNameEl = bCard.querySelector('.period-name');
-        var bAmtEl  = bCard.querySelector('.period-amt');
-        var bCurEl  = bCard.querySelector('.period-cur');
-        var bDateEl = bCard.querySelector('.period-date');
-        if(bNameEl && !bNameEl.value) bNameEl.value = '付款';
-        if(bAmtEl){ bAmtEl.value = bAmt; bAmtEl.dispatchEvent(new Event('input')); }
-        if(bCurEl){ bCurEl.value = bCur; bCurEl.dispatchEvent(new Event('change')); }
-        if(bDateEl && bDate) bDateEl.value = bDate.substring(0,10).replace(/\//g,'-');
+        var bNameEl=bCard.querySelector('.period-name'); if(bNameEl&&!bNameEl.value) bNameEl.value='付款';
+        var bAmtEl=bCard.querySelector('.period-amt'); if(bAmtEl){ bAmtEl.value=bAmt; bAmtEl.dispatchEvent(new Event('input')); }
+        var bCurEl=bCard.querySelector('.period-cur'); if(bCurEl){ bCurEl.value=bCur; bCurEl.dispatchEvent(new Event('change')); }
+        var bDateEl=bCard.querySelector('.period-date'); if(bDateEl&&bDate) bDateEl.value=bDate.substring(0,10).replace(/\//g,'-');
         calcPeriodTotal('buy');
       }
     }
   }
-
-  // 如果有回填資料，在表單頂部顯示提示
   if(hasData){
     var hint = document.createElement('div');
-    hint.style.cssText = 'background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e;font-weight:700;';
-    hint.textContent = '📋 已自動帶入上次填寫的資料，請確認後修改或直接送出';
+    hint.style.cssText='background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e;font-weight:700;';
+    hint.textContent='已自動帶入上次填寫的資料，請確認後修改或直接送出';
     container.parentNode.insertBefore(hint, container);
   }
 }
@@ -1263,7 +1471,6 @@ function showFillDone(fillId, caseName, banner, msg){
     +'<div style="color:#64748b;font-size:13px;margin-top:16px;">若需修改，請聯繫系統管理員</div>';
   document.body.appendChild(doneDiv);
 }
-
 function clearLocalAndContinue(fillId){
   try{ localStorage.removeItem('fill_submitted_'+fillId); }catch(e){}
   location.reload();
@@ -1273,441 +1480,444 @@ function checkFillMode(){
   var params = new URLSearchParams(window.location.search);
   var fillId = params.get('fill');
   if(!fillId) return;
-
   FILL_MODE   = true;
   FILL_FORMID = fillId;
 
-  // 顯示載入中提示
   var banner = document.createElement('div');
   banner.id = 'fill-banner';
-  banner.style.cssText = 'background:#4f46e5;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;text-align:center;position:sticky;top:0;z-index:999;';
-  banner.textContent = '⏳ 載入案件資料中...';
+  banner.style.cssText='background:#4f46e5;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;text-align:center;position:sticky;top:0;z-index:999;';
+  banner.textContent='載入案件資料中...';
   document.body.insertBefore(banner, document.body.firstChild);
 
-  jsonpGet(SCRIPT_URL+'?action=getData01', function(d, err){
-    if(err || !d || !d.rows){ banner.textContent='❌ 讀取失敗（'+(err||'找不到案件 '+fillId)+'），請確認連結是否正確或重新開啟'; return; }
-    var row = d.rows.find(function(r){
-      return (r['表單編號']||'').trim() === fillId.trim();
-    });
-    if(!row){ banner.textContent='❌ 找不到案件 '+fillId+'，請確認連結是否正確'; return; }
-
-    // ── 防重複：Sheets 狀態檢查（已完成）──
-    var fillStat = (row['銷售補填狀態']||'').trim();
-    if(fillStat === '已完成'){
-      showFillDone(fillId, row['案件名稱']||'', banner, '此案件已補填完成，資料已送出。');
-      return;
-    }
-
-    // ── 防重複：localStorage 本機已送出記錄 ──
-    var localKey = 'fill_submitted_' + fillId;
-    var localRecord = null;
-    try { localRecord = JSON.parse(localStorage.getItem(localKey)||'null'); } catch(e){}
-    if(localRecord && localRecord.submitted){
-      // 本機記錄有送出，但 Sheets 尚未更新（可能還在處理）
-      // 顯示警告讓使用者確認，而不是直接阻擋
-      banner.style.background = '#b45309';
-      banner.textContent = '⚠️ 偵測到本機記錄：此案件已在 '+localRecord.time+' 送出過，請勿重複填寫！';
-      document.querySelectorAll('.pg').forEach(function(p){ p.style.display='none'; });
-      var warnDiv = document.createElement('div');
-      warnDiv.style.cssText = 'max-width:480px;margin:40px auto;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:14px;padding:28px 24px;text-align:center;';
-      warnDiv.innerHTML = '<div style="font-size:40px;margin-bottom:12px;">⚠️</div>'
-        + '<div style="font-weight:700;color:#92400e;font-size:18px;margin-bottom:8px;">您已填寫並送出此案件</div>'
-        + '<div style="color:#374151;margin-bottom:6px;">案件編號：<b>'+fillId+'</b></div>'
-        + '<div style="color:#374151;margin-bottom:6px;">案件名稱：<b>'+(row['案件名稱']||'')+'</b></div>'
-        + '<div style="color:#92400e;font-size:13px;margin-bottom:16px;">送出時間：'+localRecord.time+'</div>'
-        + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button data-fid="'+fillId+'" onclick="clearLocalAndContinue(this.dataset.fid)" style="padding:10px 20px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">忽略警告，重新填寫</button>'
-        + '</div>'
-        + '<div style="color:#64748b;font-size:12px;margin-top:12px;">如確認已送出，請關閉此頁面即可</div>';
-      document.body.appendChild(warnDiv);
-      return;
-    }
-
-    // 判斷原始案件類型 → 決定要補填哪個部分
-    var origType   = (row['案件屬性']||'').toString().trim();
-    // 原始是「採購」→ 補填「銷售」；原始是「銷售」→ 補填「採購」
-    var fillPart   = origType === '銷售' ? '採購' : '銷售';
-    var fillColor  = fillPart === '採購' ? '#991b1b' : '#4f46e5';
-
-    document.title = '補填'+fillPart+'內容｜貿易大漁';
-    fd.type      = '採購+銷售(三角貿易)';
-    fd.formId    = fillId;
-    fd.fillPart  = fillPart;   // 記錄補填方向
-    fd.origStaff = row['業務名稱'] || '';  // 原始填單人
-
-    // 從 FormResponses01 讀出欄位（對應新欄位名稱）
-    fd.staff     = row['業務名稱']          ||'';
-    fd.caseName  = row['案件名稱']          ||'';
-    fd.asst      = row['承辦業助']          ||'';
-    fd.buyCon    = row['賣方合約（採購）']  ||row['合約 [賣方合約（採購）]']||'';
-    fd.sellCon   = row['買方合約（銷售）']  ||row['合約 [買方合約（銷售）]']||'';
-    fd.trade     = row['貿易條件']          ||'';
-    fd.etd       = row['ETD 出貨日']        ||row['ETD/卸魚日']||'';
-    fd.eta       = row['ETA 到貨日']        ||row['ETA/到貨日']||'';
-    fd.origin    = row['出貨地/發貨港口']   ||row['出貨地/發貨港口/出貨地點']||'';
-    fd.dest      = row['目的地/收貨港口']   ||row['目的地/收貨港口/收貨地點']||'';
-    // 採購欄位（FormResponses01）
-    fd.supplier  = row['供應商（賣方）']    ||row['供應商名稱（賣方）']||'';
-    fd.buyPay    = row['付款條件（採購）']  ||row['付款條件']||'';
-    fd.buyNote   = row['備註（採購）']      ||'';
-    // 採購分期（從期1~3組合 buyPeriods）
-    fd.buyPeriods = [];
-    for(var bpi=1; bpi<=3; bpi++){
-      var bamt = parseFloat(row['採購期'+bpi+'金額'])||0;
-      var bname = row['採購期'+bpi+'名稱']||'';
-      if(bamt||bname) fd.buyPeriods.push({
-        name: bname, cur: row['採購期'+bpi+'幣別']||'TWD',
-        amt: bamt, date: row['採購期'+bpi+'預計日']||'', note: row['採購期'+bpi+'備註']||''
-      });
-    }
-    // 計算採購總額（供 refInfo 顯示）
-    fd.buyAmt  = fd.buyPeriods.length ? fd.buyPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0) : (parseFloat(row['應付總金額'])||0);
-    fd.buyCur  = fd.buyPeriods.length ? fd.buyPeriods[0].cur : (row['採購幣別']||'TWD');
-    fd.buyDate = fd.buyPeriods.length ? fd.buyPeriods[0].date : (row['預計付款日期']||'');
-    // 轉交業務員
-    fd.transferTo = row['轉交銷售業務'] || row['轉交業務員'] || '';
-    fd.fillStaff  = fd.transferTo;
-    // 銷售欄位（FormResponses01）
-    fd.buyer     = row['客戶（買方）']      ||row['客戶名稱（買方）']||'';
-    fd.sellPay   = row['收款條件（銷售）']  ||row['收款條件']||'';
-    fd.sellNote  = row['備註（銷售）']      ||'';
-    // 銷售分期（從期1~3組合 sellPeriods）
-    fd.sellPeriods = [];
-    for(var spi=1; spi<=3; spi++){
-      var samt = parseFloat(row['銷售期'+spi+'金額'])||0;
-      var sname = row['銷售期'+spi+'名稱']||'';
-      if(samt||sname) fd.sellPeriods.push({
-        name: sname, cur: row['銷售期'+spi+'幣別']||'TWD',
-        amt: samt, date: row['銷售期'+spi+'預計日']||'', note: row['銷售期'+spi+'備註']||''
-      });
-    }
-    // 計算銷售總額
-    fd.sellAmt  = fd.sellPeriods.length ? fd.sellPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0) : (parseFloat(row['應收總金額'])||0);
-    fd.sellCur  = fd.sellPeriods.length ? fd.sellPeriods[0].cur : (row['銷售幣別']||'TWD');
-    fd.sellDate = fd.sellPeriods.length ? fd.sellPeriods[0].date : (row['預計收款日']||'');
-
-    // 更新橫幅（顯示補填方向）
-    banner.style.background = fillColor;
-    banner.textContent = '✍️ 補填'+fillPart+'內容｜' + fd.caseName + '（' + fillId + '）由 ' + fd.staff + ' 轉交';
-
-      // 同步業務員信箱（從 Accounts 分頁，讓轉交選單顯示正確信箱）
-      jsonpGet(SCRIPT_URL+'?action=getAccounts', function(accData, accErr){
-        if(accData && accData.status==='ok' && accData.accounts){
-          accData.accounts.forEach(function(u){
-            if(u.email && u.staffName && STAFF_EMAILS.hasOwnProperty(u.staffName)){
-              STAFF_EMAILS[u.staffName] = u.email;
-            }
-          });
-        }
-      });
-
-    // 顯示對方已填的資訊摘要
-    var refTitle  = fillPart==='銷售' ? '採購' : '銷售';
-    var refColor  = fillPart==='銷售' ? '#fef2f2' : '#f0fdf4';
-    var refBorder = fillPart==='銷售' ? '#fca5a5' : '#86efac';
-    var refTitleC = fillPart==='銷售' ? '#991b1b' : '#15803d';
-    // 從分期計算總金額
-    var refBuyAmt  = 0;
-    var refBuyCur  = fd.buyCur || 'TWD';
-    var refBuyDate = fd.buyDate || '—';
-    if(fd.buyPeriods && fd.buyPeriods.length){
-      refBuyAmt  = fd.buyPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0);
-      refBuyCur  = fd.buyPeriods[0].cur || 'TWD';
-      refBuyDate = fd.buyPeriods[0].date || '—';
-    }
-    var refSellAmt  = 0;
-    var refSellCur  = fd.sellCur || 'TWD';
-    var refSellDate = fd.sellDate || '—';
-    if(fd.sellPeriods && fd.sellPeriods.length){
-      refSellAmt  = fd.sellPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0);
-      refSellCur  = fd.sellPeriods[0].cur || 'TWD';
-      refSellDate = fd.sellPeriods[0].date || '—';
-    }
-
-    function makePeriodRef(periods){
-      if(!periods || !periods.length) return '';
-      return '<div style="margin-top:6px;border-top:0.5px solid rgba(0,0,0,0.15);padding-top:6px;">'
-        +'<div style="font-size:11px;color:#94a3b8;margin-bottom:4px;font-weight:700;letter-spacing:.04em;">分期明細</div>'
-        + periods.map(function(p,i){
-          return '<div style="padding:5px 8px;margin-bottom:4px;background:rgba(255,255,255,0.5);border-radius:6px;font-size:12px;">'
-            +'<div style="font-weight:700;">'+(p.name||'第'+(i+1)+'期')
-            +'　<span style="font-weight:400;">'+(p.cur||'TWD')+' '+Math.round(parseFloat(p.amt)||0).toLocaleString()+'</span>'
-            +'</div>'
-            +(p.date?'<div style="color:#64748b;font-size:11px;">預計日：'+p.date+(p.note?'　'+p.note:'')+'</div>':'')
-            +'</div>';
-        }).join('')
-        +'</div>';
-    }
-
-    function row2(l1,v1,l2,v2){
-      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;font-size:13px;">'
-        +'<div><span style="color:#94a3b8;font-size:11px;display:block;">'+l1+'</span><b>'+v1+'</b></div>'
-        +'<div><span style="color:#94a3b8;font-size:11px;display:block;">'+l2+'</span><b>'+v2+'</b></div>'
-        +'</div>';
-    }
-    var refInfo = (function(){
-      var _td = 'width:50%;padding:0 8px 6px 0;vertical-align:top;';
-      var _lbl = 'display:block;font-size:10px;color:#94a3b8;margin-bottom:1px;';
-      var _val = 'display:block;font-weight:500;color:#1e293b;font-size:13px;';
-      function tbl(r1c1lbl,r1c1val,r1c1style, r1c2lbl,r1c2val,r1c2style,
-                   r2c1lbl,r2c1val,             r2c2lbl,r2c2val){
-        return '<table style="width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:6px;">'
-          +'<tr>'
-          +'<td style="'+_td+'"><span style="'+_lbl+'">'+r1c1lbl+'</span><span style="'+_val+(r1c1style?';'+r1c1style:'')+'">'+r1c1val+'</span></td>'
-          +'<td style="'+_td+'"><span style="'+_lbl+'">'+r1c2lbl+'</span><span style="'+_val+(r1c2style?';'+r1c2style:'')+'">'+r1c2val+'</span></td>'
-          +'</tr><tr>'
-          +'<td style="'+_td+'"><span style="'+_lbl+'">'+r2c1lbl+'</span><span style="'+_val+'">'+r2c1val+'</span></td>'
-          +'<td style="'+_td+'"><span style="'+_lbl+'">'+r2c2lbl+'</span><span style="'+_val+'">'+r2c2val+'</span></td>'
-          +'</tr></table>';
-      }
-      if(fillPart==='銷售'){
-        return tbl(
-          '供應商',    fd.supplier||'—', '',
-          '採購總金額', refBuyCur+' '+Math.round(refBuyAmt).toLocaleString(), 'color:#dc2626;font-size:14px;',
-          '付款條件',   fd.buyPay||'—',
-          '預計付款日', refBuyDate||'—'
-        )
-        + makePeriodRef(fd.buyPeriods)
-        +(fd.buyNote?'<div style="margin-top:6px;font-size:12px;color:#7f1d1d;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:6px;"><b>採購備註：</b>'+fd.buyNote+'</div>':'');
+  readFirebase(fillId)
+    .then(function(row){
+      if(row){
+        processFillRow(row, fillId, banner);
       } else {
-        return tbl(
-          '客戶',      fd.buyer||'—', '',
-          '銷售總金額', refSellCur+' '+Math.round(refSellAmt).toLocaleString(), 'color:#16a34a;font-size:14px;',
-          '收款條件',   fd.sellPay||'—',
-          '預計收款日', refSellDate||'—'
-        )
-        + makePeriodRef(fd.sellPeriods)
-        +(fd.sellNote?'<div style="margin-top:6px;font-size:12px;color:#14532d;border-top:0.5px solid rgba(0,0,0,0.1);padding-top:6px;"><b>銷售備註：</b>'+fd.sellNote+'</div>':'');
+        loadFillFromGAS(fillId, banner);
       }
-    })()
-
-    var infoDiv = document.createElement('div');
-    infoDiv.style.cssText = 'background:'+refColor+';border:1px solid '+refBorder+';border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;';
-    infoDiv.innerHTML = '<div style="font-weight:700;color:'+refTitleC+';margin-bottom:8px;">📋 '+refTitle+'資訊（對方已填，僅供參考）</div>'
-      + refInfo;
-
-    // 跳到第2步
-    showPage(2);
-    updateSections('採購+銷售(三角貿易)');
-
-    if(fillPart==='銷售'){
-      // 補填銷售：隱藏採購區塊，顯示銷售
-      var buySec=document.getElementById('buy-sec');
-      var buyT=document.getElementById('buy-sec-title');
-      if(buySec) buySec.style.display='none';
-      if(buyT)   buyT.style.display='none';
-      var sellSec=document.getElementById('sell-sec');
-      if(sellSec) sellSec.parentNode.insertBefore(infoDiv, sellSec);
-      // 回填銷售欄位（若 Sheets 已有資料）
-      fillFieldIfExists('buyer',    row['客戶名稱（買方）']);
-      fillFieldIfExists('sell-pay', row['收款條件']);
-      fillFieldIfExists('sell-note',row['備註（銷售）']);
-      fillPeriodsFromSheets('sell', row);
-      if(!document.getElementById('sell-periods').querySelector('.period-card')) addPeriod('sell');
-    } else {
-      // 補填採購：隱藏銷售區塊，顯示採購
-      var sellSec2=document.getElementById('sell-sec');
-      var sellT=document.getElementById('sell-sec-title');
-      var sellCostSec=document.getElementById('sell-cost-sec');
-      if(sellSec2)    sellSec2.style.display='none';
-      if(sellT)       sellT.style.display='none';
-      if(sellCostSec) sellCostSec.style.display='none';
-      var buySec2=document.getElementById('buy-sec');
-      if(buySec2) buySec2.parentNode.insertBefore(infoDiv, buySec2);
-      // 回填採購欄位（若 Sheets 已有資料）
-      fillFieldIfExists('supplier', row['供應商名稱（賣方）']);
-      fillFieldIfExists('buy-pay',  row['付款條件']);
-      fillFieldIfExists('buy-note', row['備註（採購）']);
-      fillPeriodsFromSheets('buy', row);
-      if(!document.getElementById('buy-periods').querySelector('.period-card')) addPeriod('buy');
-    }
-
-    // 按鈕文字更新（onclick 已直接寫在 HTML 按鈕，FILL_MODE 判斷）
-    var nextBtn2 = document.getElementById('p2-next-btn');
-    if(nextBtn2){
-      nextBtn2.textContent = '下一步：交易細節 →';
-      nextBtn2.style.background = fillColor;
-    }
-    var nextBtn3 = document.getElementById('p3-next-btn');
-    if(nextBtn3){
-      nextBtn3.textContent = '送出補填內容（通知老闆審核）';
-      nextBtn3.style.background = fillColor;
-    }
-
-    // ── page-3 交易細節回填（若 Sheets 已有資料）────────
-    setTimeout(function(){
-      // 合約狀態（radio button）
-      var bCon = row['合約 [賣方合約（採購）]'] || '';
-      var sCon = row['合約 [買方合約（銷售）]'] || '';
-      if(bCon) selRById('buyCon', bCon);
-      if(sCon) selRById('sellCon', sCon);
-      // 貿易條件
-      var trade = row['貿易條件'] || '';
-      if(trade){
-        var trSel = document.getElementById('trade-term');
-        if(trSel){
-          var found = false;
-          for(var oi=0; oi<trSel.options.length; oi++){
-            if(trSel.options[oi].value === trade || trSel.options[oi].text === trade){
-              trSel.value = trSel.options[oi].value;
-              found = true; break;
-            }
-          }
-          if(!found){
-            trSel.value = '其他';
-            fillFieldIfExists('trade-other', trade);
-            var to = document.getElementById('trade-other');
-            if(to) to.classList.add('show');
-          }
-        }
-        fd.trade = trade;
-      }
-      // 日期欄位（需轉成 yyyy-MM-dd 格式給 input[type=date]）
-      var etdVal = (row['ETD/卸魚日']||'').toString().trim();
-      var etaVal = (row['ETA/到貨日']||'').toString().trim();
-      if(etdVal){ var etdEl=document.getElementById('etd'); if(etdEl) etdEl.value=etdVal.substring(0,10).replace(/\//g,'-'); }
-      if(etaVal){ var etaEl=document.getElementById('eta'); if(etaEl) etaEl.value=etaVal.substring(0,10).replace(/\//g,'-'); }
-      // 出貨地/目的地
-      fillFieldIfExists('origin', row['出貨地/發貨港口/出貨地點']);
-      fillFieldIfExists('dest',   row['目的地/收貨港口/收貨地點']);
-      // 費用
-      fillNumberIfExists('cost-extra',   row['其他費用']);
-      fillNumberIfExists('cost-freight', row['運費']);
-      fillNumberIfExists('cost-tax',     row['規費']);
-      fillNumberIfExists('cost-insure',  row['保險費']);
-      fillNumberIfExists('cost-comm',    row['佣金']);
-      calcCostTotal();
-    }, 100);
-
-  }); // end jsonpGet
+    })
+    .catch(function(e){
+      loadFillFromGAS(fillId, banner);
+    });
 }
 
-// 補填模式：page-2 → page-3（只驗證補填的那一半）
+// ★ 修正：改呼叫 GAS action=getCase 直接查單筆案件（備援）
+function loadFillFromGAS(fillId, banner){
+  banner.textContent = '從備援管道載入中...';
+  jsonpGet(SCRIPT_URL + '?action=getCase&caseId=' + encodeURIComponent(fillId), function(d, err){
+    if(err || !d || d.status !== 'ok' || !d.row){
+      banner.style.background = '#dc2626';
+      banner.textContent = '讀取失敗（案件資料不存在或連結有誤），請確認案件編號：' + fillId;
+      return;
+    }
+    processFillRow(d.row, fillId, banner);
+  });
+}
+
+function processFillRow(row, fillId, banner){
+  var fillStat = (row['銷售補填狀態']||'').trim();
+  if(fillStat==='已完成'){
+    showFillDone(fillId, row['案件名稱']||'', banner, '此案件已補填完成，資料已送出。');
+    return;
+  }
+  var localKey = 'fill_submitted_' + fillId;
+  var localRecord = null;
+  try{ localRecord = JSON.parse(localStorage.getItem(localKey)||'null'); }catch(e){}
+  if(localRecord && localRecord.submitted){
+    banner.style.background='#b45309';
+    banner.textContent='偵測到本機記錄：此案件已在 '+localRecord.time+' 送出過，請勿重複填寫！';
+    document.querySelectorAll('.pg').forEach(function(p){ p.style.display='none'; });
+    var warnDiv=document.createElement('div');
+    warnDiv.style.cssText='max-width:480px;margin:40px auto;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:14px;padding:28px 24px;text-align:center;';
+    warnDiv.innerHTML='<div style="font-size:40px;margin-bottom:12px;">⚠️</div>'
+      +'<div style="font-weight:700;color:#92400e;font-size:18px;margin-bottom:8px;">您已填寫並送出此案件</div>'
+      +'<div style="color:#374151;margin-bottom:6px;">案件編號：<b>'+fillId+'</b></div>'
+      +'<div style="color:#374151;margin-bottom:6px;">案件名稱：<b>'+(row['案件名稱']||row.meta&&row.meta.caseName||'')+'</b></div>'
+      +'<div style="color:#92400e;font-size:13px;margin-bottom:16px;">送出時間：'+localRecord.time+'</div>'
+      +'<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"><button data-fid="'+fillId+'" onclick="clearLocalAndContinue(this.dataset.fid)" style="padding:10px 20px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">忽略警告，重新填寫</button></div>'
+      +'<div style="color:#64748b;font-size:12px;margin-top:12px;">如確認已送出，請關閉此頁面即可</div>';
+    document.body.appendChild(warnDiv);
+    return;
+  }
+
+  // Firebase 巢狀結構或舊 Sheets 格式，統一讀取
+  var meta     = row.meta     || {};
+  var purchase = row.purchase || {};
+  var sales    = row.sales    || {};
+  var logistics= row.logistics|| {};
+  var transfer = row.transfer || {};
+
+  var origType = meta.caseType || (row['案件屬性']||'');
+  var fillPart = origType==='銷售' ? '採購' : '銷售';
+  var fillColor= fillPart==='採購' ? '#991b1b' : '#4f46e5';
+
+  document.title = '補填'+fillPart+'內容｜貿易大漁';
+  fd.type      = '採購+銷售(三角貿易)';
+  fd.formId    = fillId;
+  fd.fillPart  = fillPart;
+  fd.origStaff = meta.staff || (row['業務名稱']||'');
+  fd.staff     = fd.origStaff;
+  fd.caseName  = meta.caseName || (row['案件名稱']||'');
+  fd.asst      = meta.assistant || (row['承辦業助']||'');
+  fd.buyCon    = purchase.contract || (row['賣方合約（採購）']||'');
+  fd.sellCon   = sales.contract    || (row['買方合約（銷售）']||'');
+  fd.trade     = logistics.tradeTerms || (row['貿易條件']||'');
+  fd.etd       = logistics.etd        || (row['ETD 出貨日']||'');
+  fd.eta       = logistics.eta        || (row['ETA 到貨日']||'');
+  fd.origin    = logistics.origin     || (row['出貨地/發貨港口']||'');
+  fd.dest      = logistics.destination|| (row['目的地/收貨港口']||'');
+
+  // 採購
+  fd.supplier  = purchase.supplier     || (row['供應商（賣方）']||'');
+  fd.buyPay    = purchase.paymentTerms || (row['付款條件（採購）']||'');
+  fd.buyNote   = purchase.note         || (row['備註（採購）']||'');
+  fd.buyPeriods= [];
+  if(purchase.periods && purchase.periods.length){
+    fd.buyPeriods = purchase.periods.map(function(p){
+      return {name:p.name||'', cur:p.currency||'TWD', amt:p.amount||0, date:p.expectedDate||'', note:p.note||''};
+    });
+  } else {
+    for(var bpi=1;bpi<=3;bpi++){
+      var bamt=parseFloat(row['採購期'+bpi+'金額'])||0;
+      var bname=row['採購期'+bpi+'名稱']||'';
+      if(bamt||bname) fd.buyPeriods.push({
+        name:bname, cur:row['採購期'+bpi+'幣別']||'TWD',
+        amt:bamt, date:row['採購期'+bpi+'預計日']||'', note:row['採購期'+bpi+'備註']||''
+      });
+    }
+  }
+  fd.buyAmt  = fd.buyPeriods.length ? fd.buyPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0) : 0;
+  fd.buyCur  = fd.buyPeriods.length ? fd.buyPeriods[0].cur : 'TWD';
+  fd.buyDate = fd.buyPeriods.length ? fd.buyPeriods[0].date : '';
+
+  // 銷售
+  fd.buyer     = sales.customer     || (row['客戶（買方）']||'');
+  fd.sellPay   = sales.paymentTerms || (row['收款條件（銷售）']||'');
+  fd.sellNote  = sales.note         || (row['備註（銷售）']||'');
+  fd.sellPeriods=[];
+  if(sales.periods && sales.periods.length){
+    fd.sellPeriods = sales.periods.map(function(p){
+      return {name:p.name||'', cur:p.currency||'TWD', amt:p.amount||0, date:p.expectedDate||'', note:p.note||''};
+    });
+  } else {
+    for(var spi=1;spi<=3;spi++){
+      var samt=parseFloat(row['銷售期'+spi+'金額'])||0;
+      var sname=row['銷售期'+spi+'名稱']||'';
+      if(samt||sname) fd.sellPeriods.push({
+        name:sname, cur:row['銷售期'+spi+'幣別']||'TWD',
+        amt:samt, date:row['銷售期'+spi+'預計日']||'', note:row['銷售期'+spi+'備註']||''
+      });
+    }
+  }
+  fd.sellAmt  = fd.sellPeriods.length ? fd.sellPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0) : 0;
+  fd.sellCur  = fd.sellPeriods.length ? fd.sellPeriods[0].cur : 'TWD';
+  fd.sellDate = fd.sellPeriods.length ? fd.sellPeriods[0].date : '';
+  fd.transferTo = transfer.transferTo || (row['轉交銷售業務']||'');
+
+  banner.style.background = fillColor;
+  banner.textContent = '補填'+fillPart+'內容｜' + fd.caseName + '（' + fillId + '）由 ' + fd.staff + ' 轉交';
+
+  // 同步信箱（從 Supabase accounts 讀取）
+  try {
+    var sb = getSb();
+    sb.from('accounts').select('data').then(function(res){
+      if(res.data) res.data.forEach(function(row){
+        var u = row.data || {};
+        if(u.email && u.staffName) STAFF_EMAILS[u.staffName] = u.email;
+      });
+    });
+  } catch(e){}
+
+  // 顯示已填內容完整摘要（卡片版）
+  var refTitleC = fillPart==='銷售' ? '#991b1b' : '#15803d';
+  var refAccent = fillPart==='銷售' ? '#dc2626' : '#16a34a';
+  var refBg     = fillPart==='銷售' ? '#fff5f5' : '#f0fdf4';
+  var refBorder = fillPart==='銷售' ? '#fca5a5' : '#86efac';
+  var refAmtC   = fillPart==='銷售' ? '#dc2626' : '#16a34a';
+
+  var refBuyAmt  = fd.buyPeriods.length  ? fd.buyPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0) : 0;
+  var refSellAmt = fd.sellPeriods.length ? fd.sellPeriods.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0) : 0;
+
+  // 單行 label + value
+  function rRow(label, val){
+    if(!val && val!==0) return '';
+    return '<div style="display:flex;align-items:baseline;padding:5px 0;border-bottom:1px solid #f1f5f9;">'
+      +'<span style="min-width:90px;font-size:11px;color:#94a3b8;font-weight:600;flex-shrink:0;">'+label+'</span>'
+      +'<span style="font-size:13px;color:#1e293b;font-weight:500;flex:1;word-break:break-all;">'+val+'</span>'
+      +'</div>';
+  }
+
+  // 分期明細列表
+  function makePeriodRef(periods, amtColor){
+    if(!periods||!periods.length) return '';
+    var rows = periods.map(function(p,i){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:#f8fafc;border-radius:6px;margin-bottom:4px;">'
+        +'<span style="font-size:12px;font-weight:700;color:#475569;min-width:60px;">'+(p.name||'第'+(i+1)+'期')+'</span>'
+        +'<span style="font-size:12px;font-family:\'DM Mono\',monospace;color:'+(amtColor||'#1e293b')+';font-weight:600;">'+(p.cur||'TWD')+' '+Math.round(parseFloat(p.amt)||0).toLocaleString()+'</span>'
+        +(p.date?'<span style="font-size:11px;color:#94a3b8;margin-left:auto;">'+p.date+'</span>':'')
+        +'</div>'
+        +(p.note?'<div style="font-size:11px;color:#64748b;padding:0 8px 4px;">備註：'+p.note+'</div>':'');
+    }).join('');
+    return '<div style="margin-top:8px;">'
+      +'<div style="font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:.06em;margin-bottom:5px;">分期明細</div>'
+      +rows+'</div>';
+  }
+
+  // 區塊分隔 header
+  function secHead(icon, label, color){
+    return '<div style="display:flex;align-items:center;gap:6px;margin:12px 0 7px;">'
+      +'<span style="font-size:11px;">'+icon+'</span>'
+      +'<span style="font-size:11px;font-weight:700;color:'+(color||'#64748b')+';letter-spacing:.05em;">'+label+'</span>'
+      +'<div style="flex:1;height:1px;background:#e2e8f0;margin-left:4px;"></div>'
+      +'</div>';
+  }
+
+  // 採購 or 銷售主資訊
+  var counterAmt = fillPart==='銷售'
+    ? '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:'+refBg+';border:1.5px solid '+refBorder+';border-radius:8px;margin:6px 0;">'
+        +'<span style="font-size:11px;color:#94a3b8;font-weight:600;">採購總金額</span>'
+        +'<span style="font-size:16px;font-weight:700;color:'+refAmtC+';font-family:\'DM Mono\',monospace;">'+fd.buyCur+' '+Math.round(refBuyAmt).toLocaleString()+'</span>'
+      +'</div>'
+    : '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:'+refBg+';border:1.5px solid '+refBorder+';border-radius:8px;margin:6px 0;">'
+        +'<span style="font-size:11px;color:#94a3b8;font-weight:600;">銷售總金額</span>'
+        +'<span style="font-size:16px;font-weight:700;color:'+refAmtC+';font-family:\'DM Mono\',monospace;">'+fd.sellCur+' '+Math.round(refSellAmt).toLocaleString()+'</span>'
+      +'</div>';
+
+  var counterBlock = fillPart==='銷售'
+    ? rRow('供應商', fd.supplier)+counterAmt+rRow('付款條件', fd.buyPay)+(fd.buyNote?rRow('備註', fd.buyNote):'')+makePeriodRef(fd.buyPeriods, '#dc2626')
+    : rRow('客戶', fd.buyer)+counterAmt+rRow('收款條件', fd.sellPay)+(fd.sellNote?rRow('備註', fd.sellNote):'')+makePeriodRef(fd.sellPeriods, '#16a34a');
+
+  // 物流
+  var hasLogistics = fd.trade||fd.etd||fd.eta||fd.origin||fd.dest;
+  var logisticsRows = hasLogistics
+    ? secHead('🚢','交易細節')
+      +rRow('貿易條件', fd.trade)+rRow('ETD 出貨日', fd.etd)+rRow('ETA 到貨日', fd.eta)
+      +rRow('出貨地', fd.origin)+rRow('目的地', fd.dest)
+    : '';
+
+  // 費用
+  var fees = row.fees || {};
+  function feeDisplay(feeObj, oldVal){
+    var amt = (feeObj&&feeObj.amt) ? feeObj.amt : (oldVal||0);
+    var cur = (feeObj&&feeObj.cur) ? feeObj.cur : 'TWD';
+    return (parseFloat(amt)||0) ? cur+' '+Math.round(parseFloat(amt)).toLocaleString() : '';
+  }
+  var fFreight = feeDisplay(fees.freight,  row['運費']);
+  var fInsure  = feeDisplay(fees.insurance,row['保險費']);
+  var fTax     = feeDisplay(fees.tax,      row['規費']);
+  var fComm    = feeDisplay(fees.commission,row['佣金']);
+  var fExtra   = feeDisplay(fees.other,    row['其他費用']);
+  var hasAnyFee = fFreight||fInsure||fTax||fComm||fExtra;
+  var feesRows = hasAnyFee
+    ? secHead('💸','費用')
+      +(fFreight?rRow('運費', fFreight):'')+(fInsure?rRow('保險費', fInsure):'')
+      +(fTax?rRow('規費', fTax):'')+(fComm?rRow('佣金', fComm):'')+(fExtra?rRow('其他費用', fExtra):'')
+    : '';
+
+  var infoDiv = document.createElement('div');
+  infoDiv.style.cssText = 'background:#fff;border:1.5px solid '+refBorder+';border-radius:14px;overflow:hidden;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);';
+  infoDiv.innerHTML =
+    // 頭部色帶
+    '<div style="background:'+refTitleC+';padding:9px 16px;display:flex;align-items:center;gap:8px;">'
+      +'<span style="font-size:13px;color:#fff;font-weight:700;">前一位已填內容</span>'
+      +'<span style="font-size:11px;color:rgba(255,255,255,.7);margin-left:auto;">僅供參考，無法修改</span>'
+    +'</div>'
+    // 內容區
+    +'<div style="padding:12px 16px;">'
+      // 案件資訊
+      +secHead('📋','案件資訊')
+      +rRow('案件名稱', fd.caseName)
+      +rRow('業務名稱', fd.origStaff)
+      +(fd.asst ? rRow('承辦業助', fd.asst) : '')
+      // 採購/銷售
+      +secHead(fillPart==='銷售'?'🛒':'💰', fillPart==='銷售'?'採購資訊（對方已填）':'銷售資訊（對方已填）', refTitleC)
+      +counterBlock
+      // 物流 & 費用
+      +logisticsRows+feesRows
+    +'</div>';
+
+  showPage(2);
+  updateSections('採購+銷售(三角貿易)');
+
+  // 通用：將 fd.xxxPeriods 陣列渲染到指定 container
+  function renderPeriodsToDOM(type, periods){
+    var container = document.getElementById(type+'-periods');
+    if(!container) return;
+    // 清空現有 card
+    container.querySelectorAll('.period-card').forEach(function(c){ c.parentNode.removeChild(c); });
+    if(!periods || !periods.length){
+      addPeriod(type);
+      return;
+    }
+    periods.forEach(function(p, idx){
+      addPeriod(type);
+      var cards = container.querySelectorAll('.period-card');
+      var card  = cards[cards.length - 1];
+      if(!card) return;
+      var nameEl = card.querySelector('.period-name');
+      var amtEl  = card.querySelector('.period-amt');
+      var curEl  = card.querySelector('.period-cur');
+      var dateEl = card.querySelector('.period-date');
+      var noteEl = card.querySelector('.period-note');
+      if(nameEl && (p.name !== null && p.name !== undefined && p.name !== '')) nameEl.value = p.name;
+      if(amtEl  && (p.amt  !== null && p.amt  !== undefined && p.amt  !== '')) amtEl.value  = p.amt;
+      if(curEl  && (p.cur  !== null && p.cur  !== undefined && p.cur  !== '')) curEl.value  = p.cur;
+      if(dateEl && (p.date !== null && p.date !== undefined && p.date !== '')) dateEl.value = p.date.toString().substring(0,10).replace(/\//g,'-');
+      if(noteEl && (p.note !== null && p.note !== undefined && p.note !== '')) noteEl.value = p.note;
+    });
+    calcPeriodTotal(type);
+  }
+
+  if(fillPart==='銷售'){
+    var buySec=document.getElementById('buy-sec');
+    var buyT=document.getElementById('buy-sec-title');
+    if(buySec) buySec.style.display='none';
+    if(buyT)   buyT.style.display='none';
+    var sellSecEl=document.getElementById('sell-sec');
+    if(sellSecEl) sellSecEl.parentNode.insertBefore(infoDiv, sellSecEl);
+    fillFieldIfExists('buyer',    fd.buyer);
+    fillFieldIfExists('sell-pay', fd.sellPay);
+    fillFieldIfExists('sell-note',fd.sellNote);
+    // ★ 修正：回填銷售分期到 DOM
+    renderPeriodsToDOM('sell', fd.sellPeriods);
+  } else {
+    var sellSec2=document.getElementById('sell-sec');
+    var sellT=document.getElementById('sell-sec-title');
+    var sellCostSec=document.getElementById('sell-cost-sec');
+    if(sellSec2)    sellSec2.style.display='none';
+    if(sellT)       sellT.style.display='none';
+    if(sellCostSec) sellCostSec.style.display='none';
+    var buySec2=document.getElementById('buy-sec');
+    if(buySec2) buySec2.parentNode.insertBefore(infoDiv, buySec2);
+    fillFieldIfExists('supplier', fd.supplier);
+    fillFieldIfExists('buy-pay',  fd.buyPay);
+    fillFieldIfExists('buy-note', fd.buyNote);
+    // ★ 修正：回填採購分期到 DOM
+    renderPeriodsToDOM('buy', fd.buyPeriods);
+  }
+
+  var nextBtn2=document.getElementById('p2-next-btn');
+  if(nextBtn2){ nextBtn2.textContent='下一步：交易細節 →'; nextBtn2.style.background=fillColor; }
+  var nextBtn3=document.getElementById('p3-next-btn');
+  if(nextBtn3){ nextBtn3.textContent='送出補填內容（通知老闆審核）'; nextBtn3.style.background=fillColor; }
+
+  setTimeout(function(){
+    if(fd.buyCon) selRById('buyCon', fd.buyCon);
+    if(fd.sellCon) selRById('sellCon', fd.sellCon);
+    if(fd.trade){
+      var trSel=document.getElementById('trade-term');
+      if(trSel){
+        var found=false;
+        for(var oi=0;oi<trSel.options.length;oi++){
+          if(trSel.options[oi].value===fd.trade||trSel.options[oi].text===fd.trade){
+            trSel.value=trSel.options[oi].value; found=true; break;
+          }
+        }
+        if(!found){ trSel.value='其他'; fillFieldIfExists('trade-other',fd.trade); var to=document.getElementById('trade-other'); if(to)to.classList.add('show'); }
+      }
+    }
+    if(fd.etd){ var etdEl=document.getElementById('etd'); if(etdEl) etdEl.value=fd.etd.substring(0,10).replace(/\//g,'-'); }
+    if(fd.eta){ var etaEl=document.getElementById('eta'); if(etaEl) etaEl.value=fd.eta.substring(0,10).replace(/\//g,'-'); }
+    fillFieldIfExists('origin', fd.origin);
+    fillFieldIfExists('dest',   fd.dest);
+
+    // ★ 費用回填（支援新 {amt,cur} 結構和舊數字格式）
+    var feesData = row.fees || {};
+    function fillFeeField(amtId, curId, feeObj, oldFieldVal){
+      if(feeObj && typeof feeObj==='object' && feeObj.amt){
+        fillNumberIfExists(amtId, feeObj.amt);
+        var curEl=document.getElementById(curId); if(curEl&&feeObj.cur) curEl.value=feeObj.cur;
+      } else if(oldFieldVal){
+        fillNumberIfExists(amtId, oldFieldVal);
+      }
+    }
+    fillFeeField('cost-freight','fee-freight-cur', feesData.freight,  row['運費']);
+    fillFeeField('cost-insure', 'fee-insure-cur',  feesData.insurance,row['保險費']);
+    fillFeeField('cost-tax',    'fee-tax-cur',      feesData.tax,      row['規費']);
+    fillFeeField('cost-comm',   'fee-comm-cur',     feesData.commission,row['佣金']);
+    fillFeeField('cost-extra',  'fee-extra-cur',    feesData.other,    row['其他費用']);
+    calcCostTotal();
+  }, 100);
+}
+
 function fillGoNext2(){
-  console.log('=== fillGoNext2 被呼叫 === fillPart:', fd.fillPart);
-  var fp = fd.fillPart || '銷售';
+  var fp=fd.fillPart||'銷售';
   if(fp==='銷售'){
-    if(!v('buyer'))   { alert('請填入客戶名稱'); return; }
-    if(!getSellPay()) { alert('請填入收款條件'); return; }
+    if(!v('buyer')){alert('請填入客戶名稱');return;}
+    if(!getSellPay()){alert('請填入收款條件');return;}
     var sps=getPeriods('sell');
-    if(!sps.length)   { alert('請至少填入一筆收款期數'); return; }
+    if(!sps.length){alert('請至少填入一筆收款期數');return;}
     for(var j=0;j<sps.length;j++){
-      if(!sps[j].name){ alert('請填入第'+(j+1)+'期收款名稱'); return; }
-      if(!sps[j].amt||parseFloat(sps[j].amt)<=0){ alert('請填入第'+(j+1)+'期銷售金額'); return; }
-      if(!sps[j].date){ alert('請填入第'+(j+1)+'期預計收款日'); return; }
+      if(!sps[j].name){alert('請填入第'+(j+1)+'期收款名稱');return;}
+      if(!sps[j].amt||parseFloat(sps[j].amt)<=0){alert('請填入第'+(j+1)+'期銷售金額');return;}
+      if(!sps[j].date){alert('請填入第'+(j+1)+'期預計收款日');return;}
     }
   } else {
-    if(!v('supplier')) { alert('請填入供應商名稱'); return; }
-    if(!getBuyPay())   { alert('請填入付款條件'); return; }
+    if(!v('supplier')){alert('請填入供應商名稱');return;}
+    if(!getBuyPay()){alert('請填入付款條件');return;}
     var bps=getPeriods('buy');
-    if(!bps.length)    { alert('請至少填入一筆付款期數'); return; }
+    if(!bps.length){alert('請至少填入一筆付款期數');return;}
     for(var i=0;i<bps.length;i++){
-      if(!bps[i].name){ alert('請填入第'+(i+1)+'期付款名稱'); return; }
-      if(!bps[i].amt||parseFloat(bps[i].amt)<=0){ alert('請填入第'+(i+1)+'期採購金額'); return; }
-      if(!bps[i].date){ alert('請填入第'+(i+1)+'期預計付款日'); return; }
+      if(!bps[i].name){alert('請填入第'+(i+1)+'期付款名稱');return;}
+      if(!bps[i].amt||parseFloat(bps[i].amt)<=0){alert('請填入第'+(i+1)+'期採購金額');return;}
+      if(!bps[i].date){alert('請填入第'+(i+1)+'期預計付款日');return;}
     }
   }
   collect(2);
   showPage(3);
 }
 
-// 補填模式：page-3 收集交易細節後送出
 function fillGoSubmit(){
-  console.log('=== fillGoSubmit 被呼叫 ===');
-  console.log('fd before collect:', JSON.stringify({buyer:fd.buyer, supplier:fd.supplier, fillPart:fd.fillPart, formId:fd.formId}));
   collect(2);
   collect(3);
-  console.log('fd after collect:', JSON.stringify({buyer:fd.buyer, supplier:fd.supplier, sellPeriods:(fd.sellPeriods||[]).length, buyPeriods:(fd.buyPeriods||[]).length}));
   submitSellPart();
 }
 
-// 修改 submitForm 在補填模式下走不同 action
-var _origSubmit;
-function initFillModeSubmit(){
-  if(!FILL_MODE) return;
-  var btn = document.getElementById('submit-btn');
-  if(btn){
-    btn.onclick = function(){ submitSellPart(); };
-  }
-}
-
 function submitSellPart(){
-  console.log('=== submitSellPart 開始 ===');
-  console.log('FILL_MODE:', FILL_MODE, '| FILL_FORMID:', FILL_FORMID);
-  console.log('fd.fillPart:', fd.fillPart, '| fd.buyer:', fd.buyer, '| fd.supplier:', fd.supplier);
-  console.log('fd.sellPeriods:', JSON.stringify(fd.sellPeriods));
-  console.log('fd.buyPeriods:', JSON.stringify(fd.buyPeriods));
-
-  var fp = fd.fillPart || '銷售';  // 補填方向
-
-  // 依補填方向驗證
-  if(fp === '銷售'){
-    var sellPeriods = getPeriods('sell');
+  var fp = fd.fillPart || '銷售';
+  if(fp==='銷售'){
+    var sellPeriods = (fd.sellPeriods&&fd.sellPeriods.length) ? fd.sellPeriods : getPeriods('sell');
     if(!sellPeriods.length){ alert('請至少填入一筆收款期數'); return; }
     if(!fd.buyer){ alert('請填入客戶（買方）名稱'); return; }
   } else {
-    var buyPeriods2 = getPeriods('buy');
-    if(!buyPeriods2.length){ alert('請至少填入一筆付款期數'); return; }
+    var buyPeriods = (fd.buyPeriods&&fd.buyPeriods.length) ? fd.buyPeriods : getPeriods('buy');
+    if(!buyPeriods.length){ alert('請至少填入一筆付款期數'); return; }
     if(!fd.supplier){ alert('請填入供應商名稱'); return; }
   }
 
-  // 優先用 fd（collect 已存），DOM 為備援
-  var sellPeriods = (fd.sellPeriods && fd.sellPeriods.length) ? fd.sellPeriods : getPeriods('sell');
-  var buyPeriods  = (fd.buyPeriods  && fd.buyPeriods.length)  ? fd.buyPeriods  : getPeriods('buy');
+  var sellPeriodsFinal = (fd.sellPeriods&&fd.sellPeriods.length) ? fd.sellPeriods : getPeriods('sell');
+  var buyPeriodsFinal  = (fd.buyPeriods &&fd.buyPeriods.length)  ? fd.buyPeriods  : getPeriods('buy');
 
-  console.log('📦 補填送出 fillPart='+fp
-    +' sellPeriods='+sellPeriods.length
-    +' buyPeriods='+buyPeriods.length
-    +' fd.buyer='+fd.buyer+' fd.supplier='+fd.supplier);
-
-  // 計算銷售總金額
-  var sellCur = sellPeriods.length ? sellPeriods[0].cur : (fd.sellCur || 'TWD');
-  var sellAmt = sellPeriods.reduce(function(s,p){ return s+(parseFloat(p.amt)||0); }, 0);
-
-  // 計算採購總金額
-  var buyCurCalc = buyPeriods.length ? buyPeriods[0].cur : (fd.buyCur || 'TWD');
-  var buyAmtCalc = buyPeriods.length
-    ? buyPeriods.reduce(function(s,p){ return s+(parseFloat(p.amt)||0); }, 0)
-    : (fd.buyAmt || 0);
-
-  // staffName = 補填人（當前登入者）
-  var staffName = '';
-  try{
-    var cu = JSON.parse(localStorage.getItem('curUser')||'{}');
-    staffName = cu.staffName || cu.name || '';
-  }catch(e){}
-  // 未登入時：用 transferTo（指定業務員名稱）或 fd.fillStaff 備援
-  if(!staffName) staffName = fd.transferTo || fd.fillStaff || fd.staff || '補填人';
-
-  // origStaff = 原始填單人（從 Sheets 讀出）
   var origStaff = fd.origStaff || fd.staff || '';
+  var staffName = '';
+  try{ var cu=JSON.parse(localStorage.getItem('curUser')||'{}'); staffName=cu.staffName||cu.name||''; }catch(e){}
+  if(!staffName) staffName = fd.transferTo || fd.fillStaff || fd.staff || '補填人';
 
   var payload = {
     action:       'submitSellPart',
     formId:       FILL_FORMID,
     caseName:     fd.caseName,
-    staff:        origStaff,   // 原始填單人
-    sellStaff:    staffName,   // 補填人（當前登入者）
-    transferTo:   staffName,   // 同補填人名稱（供 Apps Script 組合業務名稱用）
-    fillPart:     fd.fillPart || '銷售',  // 明確傳補填方向（'銷售' 或 '採購'）
-    // 銷售欄位
+    staff:        origStaff,
+    sellStaff:    staffName,
+    transferTo:   staffName,
+    fillPart:     fp,
+    // ★ 補填完成後固定為採購+銷售(三角貿易)
+    type:         '採購+銷售(三角貿易)',
     buyer:        fd.buyer    ||'',
-    sellCur:      sellCur,
-    sellAmt:      sellAmt,
+    sellCur:      sellPeriodsFinal.length ? sellPeriodsFinal[0].cur : 'TWD',
+    sellAmt:      sellPeriodsFinal.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0),
     sellDate:     fd.sellDate ||'',
     sellPay:      fd.sellPay  ||'',
     sellNote:     fd.sellNote ||'',
-    sellPeriods:  sellPeriods,
-    // 採購欄位（補填採購時用 / 或從 fd 帶回）
-    supplier:     fd.supplier  ||'',
-    buyCur:       buyCurCalc,
-    buyAmt:       buyAmtCalc,
-    buyDate:      fd.buyDate   ||'',
-    buyPay:       fd.buyPay    ||'',
-    buyNote:      fd.buyNote   ||'',
-    buyPeriods:   buyPeriods,
-    buyConfirmAmt:  parseFloat((document.getElementById('buy-confirm-amt')||{}).value)||0,
-    sellConfirmAmt: parseFloat((document.getElementById('sell-confirm-amt')||{}).value)||0,
-    // 交易細節（page-3 填的）
+    sellPeriods:  sellPeriodsFinal,
+    supplier:     fd.supplier ||'',
+    buyCur:       buyPeriodsFinal.length ? buyPeriodsFinal[0].cur : 'TWD',
+    buyAmt:       buyPeriodsFinal.reduce(function(s,p){return s+(parseFloat(p.amt)||0);},0),
+    buyDate:      fd.buyDate  ||'',
+    buyPay:       fd.buyPay   ||'',
+    buyNote:      fd.buyNote  ||'',
+    buyPeriods:   buyPeriodsFinal,
     buyCon:       fd.buyCon   ||'',
     sellCon:      fd.sellCon  ||'',
     trade:        fd.trade    ||'',
@@ -1715,63 +1925,101 @@ function submitSellPart(){
     eta:          fd.eta      ||'',
     origin:       fd.origin   ||'',
     dest:         fd.dest     ||'',
-    extra:        fd.extra    ||0,
-    freight:      fd.freight  ||0,
-    tax:          fd.tax      ||0,
-    insure:       fd.insure   ||0,
-    comm:         fd.comm     ||0,
+    // ★ 費用 {amt,cur} 結構
+    extra:        fd.extra   ||{amt:0,cur:'TWD'},
+    freight:      fd.freight ||{amt:0,cur:'TWD'},
+    tax:          fd.tax     ||{amt:0,cur:'TWD'},
+    insure:       fd.insure  ||{amt:0,cur:'TWD'},
+    comm:         fd.comm    ||{amt:0,cur:'TWD'},
+    // ★ 補填完成，狀態改為空（可送老闆審核）
+    status: '',
   };
 
-  console.log('=== payload 內容 ===');
-  console.log('action:', payload.action, '| formId:', payload.formId);
-  console.log('fillPart:', payload.fillPart);
-  console.log('buyer:', payload.buyer, '| sellAmt:', payload.sellAmt);
-  console.log('supplier:', payload.supplier, '| buyAmt:', payload.buyAmt);
-  console.log('sellPeriods:', JSON.stringify(payload.sellPeriods));
-  console.log('buyPeriods:', JSON.stringify(payload.buyPeriods));
-  console.log('SCRIPT_URL:', SCRIPT_URL);
-
-  var btn = document.getElementById('fill-submit-btn') || document.getElementById('submit-btn');
+  var btn = document.getElementById('fill-submit-btn')||document.getElementById('submit-btn');
   if(btn){ btn.disabled=true; btn.textContent='送出中...'; }
 
-  fetch(SCRIPT_URL, {
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'text/plain'},
-    body: JSON.stringify(payload)
-  })
-  .finally(function(){
-    // 送出成功後記錄到 localStorage，防止重複送出
-    try{
-      var now = new Date().toLocaleString('zh-TW',{hour12:false});
-      localStorage.setItem('fill_submitted_'+FILL_FORMID, JSON.stringify({submitted:true, time:now}));
-    }catch(e){}
-    showPage('success');
-    var t=document.querySelector('.st2'); if(t) t.textContent='內容已送出！';
-    var s=document.querySelector('.ss2'); if(s) s.textContent='老闆將收到審核通知，感謝您的填寫。';
+  var firebaseFields = {
+    '銷售補填狀態': '已完成',
+    '案件屬性': '採購+銷售(三角貿易)',
+    // ★ 同步更新巢狀 meta.caseType（看板讀取用這個判斷顯示採購/銷售）
+    'meta.caseType': '採購+銷售(三角貿易)',
+    'transfer.fillStatus': '已完成',
+    fillPart: payload.fillPart,
+    sellStaff: payload.sellStaff,
+    _fillUpdatedAt: new Date().toLocaleString('zh-TW'),
+  };
+  if(fp==='銷售'){
+    Object.assign(firebaseFields,{
+      buyer:payload.buyer, sellCur:payload.sellCur, sellAmt:payload.sellAmt,
+      sellDate:payload.sellDate, sellPay:payload.sellPay, sellNote:payload.sellNote,
+      sellPeriods:payload.sellPeriods,
+    });
+  } else {
+    Object.assign(firebaseFields,{
+      supplier:payload.supplier, buyCur:payload.buyCur, buyAmt:payload.buyAmt,
+      buyDate:payload.buyDate, buyPay:payload.buyPay, buyNote:payload.buyNote,
+      buyPeriods:payload.buyPeriods,
+    });
+  }
+  Object.assign(firebaseFields,{
+    buyCon:payload.buyCon, sellCon:payload.sellCon,
+    trade:payload.trade, etd:payload.etd, eta:payload.eta,
+    origin:payload.origin, dest:payload.dest,
+    extra:payload.extra, freight:payload.freight,
+    tax:payload.tax, insure:payload.insure, comm:payload.comm,
   });
+
+  updateFirebase(FILL_FORMID, firebaseFields)
+    .then(function(){
+      // ★ 補填完成 → 通知老闆審核（status 非待補填）
+      notifyGASviaJSONP(Object.assign({}, payload, { action: 'newCase' }));
+      try{
+        var nowStr=new Date().toLocaleString('zh-TW',{hour12:false});
+        localStorage.setItem('fill_submitted_'+FILL_FORMID, JSON.stringify({submitted:true, time:nowStr}));
+      }catch(e){}
+      showPage('success');
+      var t=document.querySelector('.st2'); if(t) t.textContent='內容已送出！';
+      var s=document.querySelector('.ss2'); if(s) s.textContent='老闆將收到審核通知，感謝您的填寫。';
+    })
+    .catch(function(e){
+      console.error('Firebase 補填失敗：', e);
+      backupToGAS(Object.assign({}, payload, { action: 'newCase' }));
+      try{
+        var nowStr2=new Date().toLocaleString('zh-TW',{hour12:false});
+        localStorage.setItem('fill_submitted_'+FILL_FORMID, JSON.stringify({submitted:true, time:nowStr2}));
+      }catch(e2){}
+      showPage('success');
+      var t2=document.querySelector('.st2'); if(t2) t2.textContent='內容已送出！';
+      var s2=document.querySelector('.ss2'); if(s2) s2.textContent='老闆將收到審核通知，感謝您的填寫。';
+    });
 }
 
-
-// ── 啟動：頁面載入時同步業務員信箱 ──────────────────
+// ══════════════════════════════════════════════════════
+// 啟動：同步信箱 + 補填模式偵測
+// ══════════════════════════════════════════════════════
 (function(){
-  jsonpGet(SCRIPT_URL+'?action=getAccounts', function(accData, accErr){
-    if(accData && accData.status==='ok' && accData.accounts){
-      accData.accounts.forEach(function(u){
-        if(u.email && u.staffName && STAFF_EMAILS.hasOwnProperty(u.staffName)){
-          STAFF_EMAILS[u.staffName] = u.email;
-        }
-      });
-      // 若轉交選單已有選擇，重新觸發更新信箱顯示
-      var sel = document.getElementById('transfer-to');
-      if(sel && sel.value) onTransferChange();
+  // 從 GAS 取最新匯率
+  jsonpGet(SCRIPT_URL+'?action=getRates', function(d){
+    if(d&&d.status==='ok'&&d.rates){
+      if(d.rates.USD>0) RATE.USD=d.rates.USD;
+      if(d.rates.JPY>0) RATE.JPY=d.rates.JPY;
+      if(d.rates.EUR>0) RATE.EUR=d.rates.EUR;
     }
   });
+  // 從 Supabase Accounts 同步業務員信箱
+  try {
+    getSb().from('accounts').select('data').then(function(res){
+      if(res.data) res.data.forEach(function(row){
+        var u = row.data || {};
+        if(u.email && u.staffName) STAFF_EMAILS[u.staffName] = u.email;
+      });
+      var sel = document.getElementById('transfer-to');
+      if(sel && sel.value) onTransferChange();
+    });
+  } catch(e){}
 })();
 
-// ── 啟動：偵測是否為補填模式 ────────────────────────
 checkFillMode();
-
 </script>
 </body>
 </html>
