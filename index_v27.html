@@ -5805,6 +5805,11 @@ function approveTransfer(formId, periodIdx, periodType) {
   var updated = JSON.parse(JSON.stringify(periods));
   var target  = updated[periodIdx];
   if (!target) { toast('❌ 找不到該期別', '#dc2626'); return; }
+  // ★ 檢查是否已經審核過，避免重複點擊
+  if (target.status === 'approved') {
+    toast('⚠️ 此期別已審核確認', '#0369a1');
+    return;
+  }
   // ★ 只修改 status + approvedAt，不動金額/日期/備註等其他欄位
   target.status     = 'approved';
   target.approvedAt = new Date().toISOString();
