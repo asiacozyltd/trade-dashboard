@@ -1465,14 +1465,32 @@ function pf(v){return parseFloat((v||'').toString().replace(/[^0-9.-]/g,''))||0;
 function parseDateStr(s){
   if(!s) return '';
   s = s.toString().trim();
-  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-  if(/^\d{4}\/\d{2}\/\d{2}/.test(s)) return s.replace(/\//g,'-').slice(0,10);
-  if(/^\d{4}\/\d{1,2}\/\d{1,2}/.test(s)){
-    var pts=s.split('/'); return pts[0]+'-'+('0'+pts[1]).slice(-2)+'-'+('0'+pts[2]).slice(-2);
+  function validYMD(y,m,d){
+    y=parseInt(y,10); m=parseInt(m,10); d=parseInt(d,10);
+    if(!y||!m||!d) return '';
+    var dt = new Date(y, m-1, d);
+    if(dt.getFullYear()!==y || dt.getMonth()!==m-1 || dt.getDate()!==d) return '';
+    return y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2);
   }
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:\D|$)/);
+  if(m) return validYMD(m[1],m[2],m[3]);
+  m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:\D|$)/);
+  if(m) return validYMD(m[1],m[2],m[3]);
   var d = new Date(s);
-  if(!isNaN(d.getTime())) return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+  if(!isNaN(d.getTime())){
+    var iso = validYMD(d.getFullYear(), d.getMonth()+1, d.getDate());
+    return iso;
+  }
   return '';
+}
+function dateFromFormId(fid){
+  fid = (fid||'').toString().trim();
+  var m = fid.match(/^T(\d{4})(\d{2})(\d{2})\d{3}$/);
+  if(!m) return '';
+  return parseDateStr(m[1]+'-'+m[2]+'-'+m[3]);
+}
+function getCaseDate(r){
+  return parseDateStr(g(r,'time')) || dateFromFormId(g(r,'formId')) || '';
 }
 function cv(v){var s=(v===undefined||v===null)?'':v.toString().trim();return s&&s!=='—'&&s!=='0'&&s!=='-'&&s!=='undefined';}
 function isPend(r){
@@ -2098,7 +2116,7 @@ function makeCard(r,showApprove){
     +'<div class="cc-id">'+g(r,'formId')+splitBadge+'</div>'
     +'<div class="cc-name">'+g(r,'name')+'</div>'
     +'</div><span class="bdg '+bc+'">'+sl+'</span></div>'
-    +'<div class="cc-meta">'+g(r,'staff')+'　·　'+fmtDateSlash(g(r,'time'))+'</div>'
+    +'<div class="cc-meta">'+g(r,'staff')+'　·　'+fmtDateSlash(getCaseDate(r))+'</div>'
     +(function(){
       // 應收：顯示原幣金額（取第1期幣別+金額，若多期同幣則加總，不同幣則顯示折合NTD）
       var sellPeriods = getPeriods01(r,'sell');
@@ -2315,8 +2333,8 @@ function doSearch(){
     if(st==='a'&&!isAppr(r))return false;
     if(st==='r'){var s=g(r,'status');if(!s.includes('退')&&s!=='退回')return false;}
     if(sf&&g(r,'staff')!==sf)return false;
-    if(ff){var d=new Date(g(r,'time'));if(isNaN(d)||d<new Date(ff))return false;}
-    if(ft){var d2=new Date(g(r,'time'));if(isNaN(d2)||d2>new Date(ft+'T23:59:59'))return false;}
+    if(ff){var d=new Date(getCaseDate(r));if(isNaN(d)||d<new Date(ff))return false;}
+    if(ft){var d2=new Date(getCaseDate(r));if(isNaN(d2)||d2>new Date(ft+'T23:59:59'))return false;}
     // ★ 多關鍵字：每個關鍵字都必須在 formId / 案件名稱 / 業務名稱 其中一欄中出現
     if(keywords.length > 0){
       var formId=(g(r,'formId')||'').toLowerCase();
@@ -3026,7 +3044,7 @@ function showD(rowNum){
   if(!r)return;
   document.getElementById('dm-id').textContent='案件號碼 '+g(r,'formId');
   document.getElementById('dm-nm').textContent=g(r,'name');
-  document.getElementById('dm-tm').textContent=fmtDateSlash(g(r,'time'))+'　'+g(r,'staff')+(g(r,'asst')?'/'+g(r,'asst'):'');
+  document.getElementById('dm-tm').textContent=fmtDateSlash(getCaseDate(r))+'　'+g(r,'staff')+(g(r,'asst')?'/'+g(r,'asst'):'');
 
   var m=calcMargin(r);
   var h='';
