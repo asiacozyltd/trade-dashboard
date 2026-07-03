@@ -250,6 +250,20 @@ textarea{height:72px;resize:none;line-height:1.6;}
         </div>
       </div>
     </div>
+    <!-- 採購單純案件：預估收益 -->
+    <div id="buy-rev-sec" style="display:none;">
+      <div class="sec-div" style="color:#0369a1;">預估收益（採購案件毛利計算用）</div>
+      <div class="field">
+        <div class="lbl">預估收益 <span class="req">*</span></div>
+        <div class="aw">
+          <select class="cs" id="buy-rev-cur" onchange="calcProfit()">
+            <option>TWD</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option>
+          </select>
+          <input type="number" class="ai" id="buy-rev-amt" min="0" step="any"
+            inputmode="numeric" placeholder="填入預估收益金額" oninput="calcProfit()">
+        </div>
+      </div>
+    </div>
     <!-- 毛利試算 -->
     <div class="cb">
       <div class="cb-t">預估毛利試算（含費用將在下一頁更新）</div>
@@ -558,6 +572,8 @@ function buildFirestoreDoc(payload){
       paymentTerms: payload.buyPay   || '',
       note:         payload.buyNote  || '',
       contract:     payload.buyCon   || '',
+      revenueAmount:   parseFloat(payload.buyRevAmt) || 0,
+      revenueCurrency: payload.buyRevCur || 'TWD',
       periods:      buyPeriods,
     },
     sales: {
@@ -863,6 +879,8 @@ function updateSections(tp){
   if(sellEl){ sellEl.style.display=needSell?'':'none'; sellT.style.display=needSell?'':'none'; }
   var costSec = document.getElementById('sell-cost-sec');
   if(costSec) costSec.style.display = isSellOnly ? '' : 'none';
+  var revSec = document.getElementById('buy-rev-sec');
+  if(revSec) revSec.style.display = (tp==='採購') ? '' : 'none';
   setTimeout(calcProfit, 50);
 }
 
@@ -903,12 +921,20 @@ function calcProfit(){
     if(sbA>0){ bC=sbC; bA=sbA; }
   }
 
+  // ★ 純採購：用「預估收益」當出貨收入計算毛利（對稱於純銷售的採購成本）
+  if(isPurchaseOnly && !sA){
+    var brC = v('buy-rev-cur')||'TWD';
+    var brEl = document.getElementById('buy-rev-amt');
+    var brA  = brEl ? parseFloat(brEl.value)||0 : 0;
+    if(brA>0){ sC=brC; sA=brA; }
+  }
+
   var fees = calcCostTotal();
   var bN = toNTD(bA, bC);
   var sN = toNTD(sA, sC);
   var p  = sN - bN - fees;
 
-  if(isPurchaseOnly){
+  if(isPurchaseOnly && !(sA>0)){
     var el=document.getElementById('c-profit');
     if(document.getElementById('c-cost2')) document.getElementById('c-cost2').textContent='NTD '+fmt(bN);
     if(document.getElementById('c-rev2'))  document.getElementById('c-rev2').textContent='—';
@@ -964,6 +990,10 @@ function collect(n){
       fd.sellCostAmt = numV('sell-buy-amt');
       fd.sellCostCur = v('sell-buy-cur')||'TWD';
     }
+    if((fd.type||'')==='採購'){
+      fd.buyRevAmt = numV('buy-rev-amt');
+      fd.buyRevCur = v('buy-rev-cur')||'TWD';
+    }
     if(fd.buyPeriods && fd.buyPeriods.length){
       fd.buyCur  = fd.buyPeriods[0].cur  || 'TWD';
       fd.buyAmt  = fd.buyPeriods.reduce(function(s,p){ return s+(p.cur===fd.buyCur?parseFloat(p.amt)||0:0); },0);
@@ -976,6 +1006,10 @@ function collect(n){
     }
     fd.buyNTD  = toNTD(fd.buyAmt||0, fd.buyCur||'TWD');
     fd.sellNTD = toNTD(fd.sellAmt||0, fd.sellCur||'TWD');
+    // ★ 純採購：預估收益折算 NTD 當出貨收入（供 profit/margin 計算）
+    if((fd.type||'')==='採購' && (fd.buyRevAmt||0) > 0){
+      fd.sellNTD = toNTD(fd.buyRevAmt, fd.buyRevCur||'TWD');
+    }
   }
   if(n===3){
     fd.buyCon   = fd.buyCon||'未選';
@@ -1038,6 +1072,10 @@ function buildPreview(){
     ['費用合計（≈NTD）', fmt(fd.totalFeeNTD||0)],
     ['預估毛利潤', '<b style="color:#0284c7">NTD '+fmt(fd.profit||0)+' ('+fd.margin+'%)</b>'],
   ];
+  // ★ 純採購：在客戶欄前插入預估收益列
+  if((fd.type||'')==='採購'){
+    rows.splice(8, 0, ['預估收益', (fd.buyRevAmt||0)>0 ? ((fd.buyRevCur||'TWD')+' '+fmt(fd.buyRevAmt)) : '—']);
+  }
   document.getElementById('preview-card').innerHTML=rows.map(function(r){
     return '<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;">'
       +'<span style="color:#64748b;flex-shrink:0;margin-right:8px;">'+r[0]+'</span>'
@@ -1116,6 +1154,8 @@ async function submitForm(){
     formId:        fd.formId,
     sellCostAmt:   fd.sellCostAmt    ||0,
     sellCostCur:   fd.sellCostCur    ||'TWD',
+    buyRevAmt:     fd.buyRevAmt      ||0,
+    buyRevCur:     fd.buyRevCur      ||'TWD',
     transferTo:    transferTo,
     transferType:  fd.type           ||'',
     transferEmail: transferEmail,
@@ -1769,6 +1809,9 @@ function processFillRow(row, fillId, banner){
     calcPeriodTotal(type);
   }
 
+  // ★ 補填模式一律隱藏預估收益區（補填後成為三角貿易，改用實際銷售期計算）
+  var fillRevSec=document.getElementById('buy-rev-sec');
+  if(fillRevSec) fillRevSec.style.display='none';
   if(fillPart==='銷售'){
     var buySec=document.getElementById('buy-sec');
     var buyT=document.getElementById('buy-sec-title');
