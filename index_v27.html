@@ -1718,10 +1718,10 @@ function normalizeRow(r){
   mapped['建立時間']  = meta.createdAt  || '';
 
   // ★ 案件屬性：若 sales 有資料但 meta.caseType 還是舊值，自動修正
-  var _salesHasData = (sales.customer || '').trim() !== ''
-    || (sales.periods && sales.periods.length > 0 && sales.periods[0].amount > 0);
-  var _purchaseHasData = (purchase.supplier || '').trim() !== ''
-    || (purchase.periods && purchase.periods.length > 0 && purchase.periods[0].amount > 0);
+  //   ★ 修正：須有「真實金額」才算有資料，避免只填了客戶/供應商名稱
+  //     （尚未填金額）就被誤判成三角貿易並鎖定
+  var _salesHasData = !!(sales.periods && sales.periods.some(function(p){ return (parseFloat(p.amount)||0) > 0; }));
+  var _purchaseHasData = !!(purchase.periods && purchase.periods.some(function(p){ return (parseFloat(p.amount)||0) > 0; }));
   var _resolvedType = meta.caseType || '';
   if (_salesHasData && _purchaseHasData && _resolvedType !== '採購+銷售(三角貿易)') {
     _resolvedType = '採購+銷售(三角貿易)';
@@ -3195,11 +3195,21 @@ function showD(rowNum){
       +(function(){
         var ct = (g(r,'type')||'').trim();
         var isTriangle = ct==='採購+銷售' || ct.indexOf('三角貿易')>=0;
-        if(isTriangle){
-          // 已是三角貿易 → 鎖定顯示，不可改
+        var isAdminUser = curUser && curUser.role==='admin';
+        if(isTriangle && !isAdminUser){
+          // 已是三角貿易 → 業務員鎖定顯示，不可改（管理員可改，見下方）
           return '<div><label class="ef-lbl">案件屬性</label>'
-            +'<div class="ef-i" style="background:#f1f5f9;color:#64748b;padding:10px 12px;border-radius:9px;font-size:14px;border:1.5px solid #e2e8f0;">'+ct+'（不可改）</div>'
+            +'<div class="ef-i" style="background:#f1f5f9;color:#64748b;padding:10px 12px;border-radius:9px;font-size:14px;border:1.5px solid #e2e8f0;">'+ct+'（不可改，僅管理員可修改）</div>'
             +'<input type="hidden" id="e-type-'+rowNum+'" value="'+ct+'"></div>';
+        }
+        if(isTriangle && isAdminUser){
+          // ★ 管理員可修改三角貿易案件屬性（修正誤判 / 拆回單邊案件用）
+          var triOpts = ['採購','銷售','採購+銷售(三角貿易)'];
+          var triOps = triOpts.map(function(o){
+            return '<option value="'+o+'"'+(o===ct?' selected':'')+'>'+o+'</option>';
+          }).join('');
+          return '<div><label class="ef-lbl">案件屬性 <span style="color:#d97706;font-weight:700;">（管理員可改）</span></label>'
+            +'<select id="e-type-'+rowNum+'" class="ef-i">'+triOps+'</select></div>';
         }
         // 採購 → [採購, 採購+銷售]；銷售 → [銷售, 採購+銷售]；其他 → 鎖定
         var opts = ct==='採購' ? ['採購','採購+銷售']
