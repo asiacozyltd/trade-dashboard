@@ -170,7 +170,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <input type="text" id="buy-pay" placeholder="例：50% 訂金 + 50% 出貨前、全額 L/C at sight…">
     </div>
     <div class="field">
-      <div class="lbl">付款期數 <span class="req">*</span><span class="opt" style="margin-left:6px;">最多3期</span></div>
+      <div class="lbl">付款期數 <span class="req">*</span><span class="opt" style="margin-left:6px;">最多6期</span></div>
       <div id="buy-periods"></div>
       <button type="button" id="add-buy-btn" onclick="addPeriod('buy')" class="add-period-btn">＋ 新增付款期數</button>
       <div class="cost-total" style="margin-top:10px;">
@@ -208,7 +208,7 @@ textarea{height:72px;resize:none;line-height:1.6;}
       <input type="text" id="sell-pay" placeholder="例：全額 L/C at sight、交貨後14天內…">
     </div>
     <div class="field">
-      <div class="lbl">收款期數 <span class="req">*</span><span class="opt" style="margin-left:6px;">最多3期</span></div>
+      <div class="lbl">收款期數 <span class="req">*</span><span class="opt" style="margin-left:6px;">最多6期</span></div>
       <div id="sell-periods"></div>
       <button type="button" id="add-sell-btn" onclick="addPeriod('sell')" class="add-period-btn">＋ 新增收款期數</button>
       <div class="cost-total" style="margin-top:10px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac;">
@@ -647,7 +647,6 @@ async function updateFirebase(formId, fields){
   existing.transfer = existing.transfer || {};
   existing.transfer.fillStatus = '已完成';
   existing.meta = existing.meta || {};
-  existing.meta.caseType = '採購+銷售(三角貿易)';
   existing._fillUpdatedAt = new Date().toLocaleString('zh-TW', {hour12:false});
 
   existing.logistics = existing.logistics || {};
@@ -687,6 +686,17 @@ async function updateFirebase(formId, fields){
       });
     }
   }
+
+  // ★ v31 修正：案件屬性依「補填後實際有金額的側別」判斷，
+  //   不再一律硬寫成三角貿易（拆分出的純採購/純銷售子單補填後會被誤標）
+  var _hasBuyAmt  = !!(existing.purchase && existing.purchase.periods &&
+    existing.purchase.periods.some(function(p){ return (parseFloat(p.amount)||0) > 0; }));
+  var _hasSellAmt = !!(existing.sales && existing.sales.periods &&
+    existing.sales.periods.some(function(p){ return (parseFloat(p.amount)||0) > 0; }));
+  existing.meta.caseType = (_hasBuyAmt && _hasSellAmt) ? '採購+銷售(三角貿易)'
+    : _hasBuyAmt  ? '採購'
+    : _hasSellAmt ? '銷售'
+    : (existing.meta.caseType || '');
 
   var upd = await sb.from('cases').update({ data: existing }).eq('id', formId);
   if(upd.error) throw new Error(upd.error.message);
@@ -1276,7 +1286,7 @@ function initTransfer(){
 // ══════════════════════════════════════════════════════
 // 分期付款
 // ══════════════════════════════════════════════════════
-var MAX_PERIODS = 3;
+var MAX_PERIODS = 6; // ★ v31：3→6，配合交易條件異動常見的重新分期
 function addPeriod(type){
   var container = document.getElementById(type+'-periods');
   var existing  = container.querySelectorAll('.period-card').length;
@@ -1618,7 +1628,7 @@ function processFillRow(row, fillId, banner){
       return {name:p.name||'', cur:p.currency||'TWD', amt:p.amount||0, date:p.expectedDate||'', note:p.note||''};
     });
   } else {
-    for(var bpi=1;bpi<=3;bpi++){
+    for(var bpi=1;bpi<=MAX_PERIODS;bpi++){
       var bamt=parseFloat(row['採購期'+bpi+'金額'])||0;
       var bname=row['採購期'+bpi+'名稱']||'';
       if(bamt||bname) fd.buyPeriods.push({
@@ -1641,7 +1651,7 @@ function processFillRow(row, fillId, banner){
       return {name:p.name||'', cur:p.currency||'TWD', amt:p.amount||0, date:p.expectedDate||'', note:p.note||''};
     });
   } else {
-    for(var spi=1;spi<=3;spi++){
+    for(var spi=1;spi<=MAX_PERIODS;spi++){
       var samt=parseFloat(row['銷售期'+spi+'金額'])||0;
       var sname=row['銷售期'+spi+'名稱']||'';
       if(samt||sname) fd.sellPeriods.push({
