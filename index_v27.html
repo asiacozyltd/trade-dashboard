@@ -3049,7 +3049,7 @@ function showD(rowNum){
   var h='';
   var isVoided=!!(r.voided);
   var caseType3   = (r[F.type]||'').toString().trim();
-  var isPurchOnly3 = caseType3==='採購';
+  var isPurchOnly3 = !!m.isPurchOnly;
   var isSellOnly3  = caseType3==='銷售';
 
   // ── 分期明細 HTML 產生函式 ───────────────────────────
@@ -3156,6 +3156,7 @@ function showD(rowNum){
     +'</div></div>';
 
   // ── 毛利潤 ────────────────────────────────────────────
+  if(!isPurchOnly3){
   var pColor3 = m.profitNTD>=0?'var(--jade)':'var(--coral)';
   var pBg3    = m.profitNTD>=0?'#f0fdf4':'#fef2f2';
   var costAmt3= parseFloat(r[F.sellCostAmt])||0;
@@ -3167,17 +3168,13 @@ function showD(rowNum){
       +'<span style="color:var(--coral);font-weight:700;">'+costCur3+' '+fmtN(costAmt3)+'</span>'
       +'</div>';
   }
-  if(isPurchOnly3){
-    h+='<span style="font-size:12px;color:var(--muted);font-weight:700;">預估毛利潤（純採購案件）</span>'
-      +'<div style="text-align:right;"><span style="font-size:18px;font-weight:700;color:var(--muted);">不計算</span></div>';
-  } else {
     h+='<span style="font-size:12px;color:'+pColor3+';font-weight:700;">預估毛利潤（TWD）</span>'
       +'<div style="text-align:right;">'
       +'<span style="font-size:20px;font-weight:700;color:'+pColor3+';font-family:monospace;">TWD '+fmtN(m.profitNTD)+'</span>'
       +'<span style="font-size:12px;color:var(--muted);margin-left:8px;background:#fff;padding:2px 6px;border-radius:4px;">'+m.margin+'%</span>'
       +'</div>';
-  }
   h+='</div>';
+  }
 
   // ── 老闆批示欄（已有批示時顯示）────────────────────────
   var bNote = (r[F.bossNote]||'').toString().trim();
