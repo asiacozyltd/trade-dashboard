@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>貿易大漁｜管理系統 v27</title>
+<title>貿易大漁｜管理系統 V28</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700&family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{--ink:#0b1d35;--sea:#0369a1;--wave:#0ea5e9;--gold:#d97706;--gold2:#fbbf24;--jade:#16a34a;--coral:#dc2626;--pay:#ea580c;--pay-bg:#fff7ed;--pay-border:#fed7aa;--paper:#f0f6fc;--card:#fff;--muted:#64748b;--border:#e2e8f0;}
@@ -1017,6 +1018,26 @@ function deleteAccountFirebase(id, cb){
     .catch(function(e){ if(cb) cb(false); });
 }
 
+// 從 Firebase accounts 載入（優先），失敗才退回 Sheets/本地
+function fetchAccountsFirebase(callback){
+  readAccountsFirebase(function(fbAccs, err){
+    if(fbAccs && fbAccs.length > 0){
+      CLOUD_ACCOUNTS = fbAccs;
+      // ★ 安全修復：不儲存密碼到 localStorage，只儲存無敏感資訊的版本
+      var safeCopy = CLOUD_ACCOUNTS.map(function(acc){
+        var safe = Object.assign({}, acc);
+        delete safe.pwd; // 移除密碼
+        return safe;
+      });
+      try{ localStorage.setItem('cloudAccounts', JSON.stringify(safeCopy)); }catch(e){}
+      if(callback) callback();
+    } else {
+      // Firebase 無資料，退回 Sheets JSONP
+      fetchAccounts(callback);
+    }
+  });
+}
+
 // ── GAS 非同步通知（JSONP GET，完全繞過 CORS）─────────
 // ★ 修復：原本 fetch POST no-cors 模式下 GAS 有時收不到 body 導致不發信
 // 改用 JSONP GET，GAS 從 URL 參數讀取，100% 可靠
@@ -1198,49 +1219,90 @@ function doLogin(u){
   setInterval(function(){
     var cacheTime = parseInt(localStorage.getItem('cases_cache_time')||'0');
     var age = Date.now() - cacheTime;
-    if(age > 1800000){ // 超過 30 分鐘才重讀
-      load();
-    }
+    if(age > 1800000){ // 超過 30 分鐘才重讀      load();
+    } else {    }
   }, 600000); // 每 10 分鐘檢查一次
   setInterval(fetchRates, 3600000); // 每 60 分鐘重新拉取匯率
   // 直接讀取（Supabase 不需要 Auth）
   load();
 }
 
+// 載入雲端帳號（Apps Script Sheets — JSONP 模式）
+function fetchAccounts(callback){
+  jsonpGet(SCRIPT+'?action=getAccounts', function(d, err){
+    if(d && d.status==='ok' && d.accounts && d.accounts.length>0){
+      CLOUD_ACCOUNTS = d.accounts;
+      // ★ 安全修復：不儲存密碼到 localStorage
+      var safeCopy = CLOUD_ACCOUNTS.map(function(acc){
+        var safe = Object.assign({}, acc);
+        delete safe.pwd;
+        return safe;
+      });
+      try{localStorage.setItem('cloudAccounts', JSON.stringify(safeCopy));}catch(e){}
+    } else {
+      // 失敗：從本地快取讀
+      try{
+        var c=localStorage.getItem('cloudAccounts');
+        if(c) CLOUD_ACCOUNTS=JSON.parse(c);
+      }catch(e){}
+    }
+    if(callback) callback();
+  });
+}
+function loadU(){
+  var allLocal = BASE_USERS.concat(DEFAULT_STAFF);
+
+  // ── 雲端帳號完全優先（Sheets 為準）──────────────────
+  // 雲端帳號直接用，不限制 id 是否在本地清單
+  // 新增人員只要在 Sheets Accounts 分頁加一列即可生效
+  function mergeWithLocal(cloudAccounts){
+    return cloudAccounts.map(function(u){
+      if(u.pwd) return u; // 有密碼直接用
+      // 若雲端沒有密碼（老舊資料），補上本地對應密碼
+      var local = allLocal.find(function(l){ return l.id===u.id; });
+      return Object.assign({}, u, { pwd: local ? local.pwd : '' });
+    });
+    // 注意：不再 concat(getCU())，避免自訂帳號與雲端衝突
+  }
+
+  // 1. 優先使用雲端帳號（當次載入）
+  if(CLOUD_ACCOUNTS && CLOUD_ACCOUNTS.length > 0){
+    return mergeWithLocal(CLOUD_ACCOUNTS);
+  }
+  // 2. 備用：上次登入的本地快取（離線時使用）
+  try{
+    var c=localStorage.getItem('cloudAccounts');
+    if(c){
+      var ca=JSON.parse(c);
+      if(ca&&ca.length>0) return mergeWithLocal(ca);
+    }
+  }catch(e){}
+  // 3. 最後備用：前端硬編碼（完全無網路時）
+  return allLocal.slice();
+}
+function saveU(arr){
+  try{
+    var allBaseIds=BASE_USERS.concat(DEFAULT_STAFF).map(function(u){return u.id;});
+    localStorage.setItem('tu',JSON.stringify(arr.filter(function(u){return allBaseIds.indexOf(u.id)>=0;})));
+  }catch(e){}
+}
+function getCU(){try{var s=localStorage.getItem('tcu');return s?JSON.parse(s):[];}catch(e){return[];}}
+function saveCU(a){try{localStorage.setItem('tcu',JSON.stringify(a));}catch(e){}}
+
 // ── FormResponses01 分期計算輔助函式 ─────────────────
-// ★ 期數上限（v31：3 → 6，配合交易條件異動常見的重新分期）
-var MAX_PERIODS = 6;
-
-// ★ 單邊終止（v31）：側別狀態助手
-//   sideStatus = '' 進行中 | 'terminated' 已終止（買家毀約 / 取消採購等）
-//   終止側的「未入帳確認」期別自動退出應收應付、日曆與毛利計算；
-//   已確認（status='approved'）的期別保留在帳上（錢已實際進出）。
-function sideTerm(r, type){
-  var side = type==='buy' ? (r && r.purchase) : (r && r.sales);
-  return !!(side && side.sideStatus === 'terminated');
-}
-function sideTermInfo(r, type){
-  var side = type==='buy' ? (r && r.purchase) : (r && r.sales);
-  return (side && side.sideStatusInfo) || {};
-}
-
-function getPeriods01(r, type, includeAll) {
-  // type = 'buy' or 'sell'；includeAll=true 時不過濾終止側（供詳情/編輯顯示全貌）
+function getPeriods01(r, type) {
+  // type = 'buy' or 'sell'
   var prefix = type==='buy' ? '採購期' : '銷售期';
-  var terminated = !includeAll && sideTerm(r, type);
   var periods = [];
-  for(var i=1; i<=MAX_PERIODS; i++){
+  for(var i=1; i<=3; i++){
     var amt = parseFloat(r[prefix+i+'金額'])||0;
     if(!amt && !r[prefix+i+'名稱']) continue;
-    var st = (r[prefix+i+'審核狀態']||'').toString();
-    if(terminated && st!=='approved') continue; // 終止側只留已入帳期別
     periods.push({
       name: r[prefix+i+'名稱']||'',
       cur:  r[prefix+i+'幣別']||'TWD',
       amt:  amt,
       date: r[prefix+i+'預計日']||'',
       note: r[prefix+i+'備註']||'',
-      status: st,
     });
   }
   return periods;
@@ -1280,8 +1342,6 @@ function createSession(userObj) {
     createdAt: Date.now(),
     expiresAt: expiry
   };
-  // ★ 同步存 sessionStorage：頁面重整可恢復會話，分頁關閉即清除
-  try { sessionStorage.setItem('app_session_user', JSON.stringify(userObj)); } catch(e){}
 
   console.log('✓ 會話建立，有效期 1 小時');
   return token;
@@ -1298,21 +1358,7 @@ function getSession() {
   }
 
   var session = SESSION_STORAGE[token];
-  if (!session) {
-    // ★ 頁面重整後記憶體已清空 → 從 sessionStorage 還原（token/expiry 仍以 localStorage 為準）
-    try {
-      var su = sessionStorage.getItem('app_session_user');
-      if (su) {
-        var restoredUser = JSON.parse(su);
-        session = SESSION_STORAGE[token] = {
-          user: restoredUser,
-          createdAt: Date.now(),
-          expiresAt: expiry
-        };
-      }
-    } catch(e){}
-    if (!session) return null;
-  }
+  if (!session) return null;
 
   // 檢查記憶體中的會話是否過期
   if (Date.now() > session.expiresAt) {
@@ -1343,7 +1389,6 @@ function clearSession() {
   }
   localStorage.removeItem(SESSION_TOKEN_KEY);
   localStorage.removeItem(SESSION_EXPIRY_KEY);
-  try { sessionStorage.removeItem('app_session_user'); } catch(e){}
   console.log('✓ 會話已清除');
 }
 
@@ -1359,7 +1404,8 @@ function restoreSessionIfValid() {
   return false;
 }
 
-var curUser=null,rows=[],filtered=[],logs=[],fillPend=false;
+var CU=loadU(),curUser=null,rows=[],filtered=[],logs=[],fillPend=false;
+var dailyChart=null;
 
 var F={
   // 步驟1
@@ -1384,8 +1430,6 @@ var F={
   sellRem:     '備註（銷售）',
   sellCostAmt: '銷售成本金額',
   sellCostCur: '銷售成本幣別',
-  buyRevAmt:   '預估收益金額',
-  buyRevCur:   '預估收益幣別',
   // 步驟3
   buyCon:      '賣方合約（採購）',
   sellCon:     '買方合約（銷售）',
@@ -1452,6 +1496,9 @@ function cv(v){var s=(v===undefined||v===null)?'':v.toString().trim();return s&&
 function isPend(r){
   // 待補填中的案件不算待審核（補填完成後才讓老闆簽核）
   var fillStat = (r[F.fillStatus]||r['銷售補填狀態']||'').toString().trim();
+  if(g(r,'formId')==='T20260414729'){
+    
+  }
   if(fillStat==='待補填') return false;
   var s=g(r,'status');
   return s===''||s==='否'||s==='待審核'||s==='尚未';
@@ -1473,6 +1520,10 @@ function feeToNTD(feeVal){
 function calcMargin(r){
   var caseType = (r[F.type]||'').toString().trim();
   var buyNTD  = calcTotalNTD01(r, 'buy');
+  // 純採購只統計採購金額，不進行毛利及毛利率運算。
+  if(caseType==='採購'){
+    return {buyNTD:buyNTD, sellNTD:0, profitNTD:0, margin:'—', isPurchOnly:true};
+  }
   var sellNTD = calcTotalNTD01(r, 'sell');
   // ★ 費用：支援新 {amt,cur} 和舊數字，統一換算為 NTD
   var fees = feeToNTD(r[F.extra])
@@ -1480,19 +1531,6 @@ function calcMargin(r){
            + feeToNTD(r[F.tax])
            + feeToNTD(r[F.insure])
            + feeToNTD(r[F.comm]);
-
-  // 1. 純採購：有填「預估收益」則以其為收入計算毛利，否則不顯示
-  if(caseType==='採購'){
-    var revAmt = parseFloat(r[F.buyRevAmt])||0;
-    var revCur = (r[F.buyRevCur]||'TWD').toString();
-    var revNTD = calcNTD(revAmt, revCur);
-    if(revNTD > 0){
-      var profitB = revNTD - buyNTD - fees;
-      var marginB = (profitB/revNTD*100).toFixed(1);
-      return {buyNTD:buyNTD, sellNTD:revNTD, profitNTD:profitB, margin:marginB, isPurchOnly:true, hasRevenue:true};
-    }
-    return {buyNTD:buyNTD, sellNTD:0, profitNTD:0, margin:'—', isPurchOnly:true};
-  }
 
   // 2. 純銷售：用銷售金額 - 銷售成本金額
   if(caseType==='銷售'){
@@ -1595,6 +1633,21 @@ function buildNav(){
 
 // ★ 全域資料快取（只讀一次 Firebase，所有 render 用 allData）
 var allData = [];
+
+// ★ 統計計算（本地，不 fetch）
+function calcStats(data){
+  return {
+    total:   data.length,
+    approved:data.filter(isAppr).length,
+    pending: data.filter(isPend).length,
+  };
+}
+
+// ★ 分頁工具（純前端，不 fetch）
+function getPageData(data, page){
+  var start = (page-1)*10;
+  return data.slice(start, start+10);
+}
 
 // ★ 手動刷新（重新讀取 Firebase 一次）
 function doRefresh(forceRefresh){
@@ -1704,14 +1757,14 @@ function normalizeRow(r){
 
   // 若是舊格式（已有中文欄位），補齊分期欄位後返回
   if(r['業務名稱'] || r['案件名稱']){
-    for(var bi=1; bi<=MAX_PERIODS; bi++){
+    for(var bi=1; bi<=3; bi++){
       if(mapped['採購期'+bi+'金額'] === undefined) mapped['採購期'+bi+'金額'] = 0;
       if(mapped['採購期'+bi+'幣別'] === undefined) mapped['採購期'+bi+'幣別'] = 'TWD';
       if(mapped['採購期'+bi+'名稱'] === undefined) mapped['採購期'+bi+'名稱'] = '';
       if(mapped['採購期'+bi+'預計日'] === undefined) mapped['採購期'+bi+'預計日'] = '';
       if(mapped['採購期'+bi+'備註'] === undefined) mapped['採購期'+bi+'備註'] = '';
     }
-    for(var si=1; si<=MAX_PERIODS; si++){
+    for(var si=1; si<=3; si++){
       if(mapped['銷售期'+si+'金額'] === undefined) mapped['銷售期'+si+'金額'] = 0;
       if(mapped['銷售期'+si+'幣別'] === undefined) mapped['銷售期'+si+'幣別'] = 'TWD';
       if(mapped['銷售期'+si+'名稱'] === undefined) mapped['銷售期'+si+'名稱'] = '';
@@ -1738,10 +1791,10 @@ function normalizeRow(r){
   mapped['建立時間']  = meta.createdAt  || '';
 
   // ★ 案件屬性：若 sales 有資料但 meta.caseType 還是舊值，自動修正
-  //   ★ 修正：須有「真實金額」才算有資料，避免只填了客戶/供應商名稱
-  //     （尚未填金額）就被誤判成三角貿易並鎖定
-  var _salesHasData = !!(sales.periods && sales.periods.some(function(p){ return (parseFloat(p.amount)||0) > 0; }));
-  var _purchaseHasData = !!(purchase.periods && purchase.periods.some(function(p){ return (parseFloat(p.amount)||0) > 0; }));
+  var _salesHasData = (sales.customer || '').trim() !== ''
+    || (sales.periods && sales.periods.length > 0 && sales.periods[0].amount > 0);
+  var _purchaseHasData = (purchase.supplier || '').trim() !== ''
+    || (purchase.periods && purchase.periods.length > 0 && purchase.periods[0].amount > 0);
   var _resolvedType = meta.caseType || '';
   if (_salesHasData && _purchaseHasData && _resolvedType !== '採購+銷售(三角貿易)') {
     _resolvedType = '採購+銷售(三角貿易)';
@@ -1757,8 +1810,6 @@ function normalizeRow(r){
   mapped['付款條件（採購）'] = purchase.paymentTerms || '';
   mapped['備註（採購）']     = purchase.note         || '';
   mapped['賣方合約（採購）'] = purchase.contract     || '';
-  mapped['預估收益金額']     = purchase.revenueAmount   || 0;
-  mapped['預估收益幣別']     = purchase.revenueCurrency || 'TWD';
 
   // ★ purchase periods → 採購期1~3
   // 優先用巢狀 purchase.periods（修改後會更新這裡）
@@ -1766,7 +1817,7 @@ function normalizeRow(r){
   var buyPeriods = (purchase.periods && purchase.periods.length > 0)
     ? purchase.periods
     : null;
-  for(var bi=0; bi<MAX_PERIODS; bi++){
+  for(var bi=0; bi<3; bi++){
     var bp = buyPeriods ? (buyPeriods[bi] || {}) : {};
     var n = bi+1;
     var hasBuyPeriod = buyPeriods && buyPeriods[bi];
@@ -1792,7 +1843,7 @@ function normalizeRow(r){
   var sellPeriods = (sales.periods && sales.periods.length > 0)
     ? sales.periods
     : null;
-  for(var si=0; si<MAX_PERIODS; si++){
+  for(var si=0; si<3; si++){
     var sp = sellPeriods ? (sellPeriods[si] || {}) : {};
     var sn = si+1;
     var hasSellPeriod = sellPeriods && sellPeriods[si];
@@ -2002,7 +2053,7 @@ function renderDash(){
     var m=calcMargin(r);
     tB+=m.buyNTD; tS+=m.sellNTD; tP+=m.profitNTD;
   });
-  var mg=tS>0?(tP/tS*100).toFixed(1):0;
+  var mg=tS>0?(tP/tS*100).toFixed(1)+'%':'不計算';
   var pend=rows.filter(isPend).length;
   var total=rows.length;
   var apprCnt=rows.filter(isAppr).length;
@@ -2011,7 +2062,7 @@ function renderDash(){
   var statsHtml='<div class="sg">'
     +'<div class="st s1"><div class="stlbl">總採購金額（已審核）</div><div class="stval v1">'+fmtM(tB)+'</div><div class="stsub">NTD 換算</div></div>'
     +'<div class="st s2"><div class="stlbl">總銷售金額（已審核）</div><div class="stval v2">'+fmtM(tS)+'</div><div class="stsub">NTD 換算</div></div>'
-    +'<div class="st s3"><div class="stlbl">預估總毛利（已審核）</div><div class="stval v3">'+fmtM(tP)+'</div><div class="stsub">毛利率 '+mg+'%</div></div>'
+    +'<div class="st s3"><div class="stlbl">預估總毛利（已審核）</div><div class="stval v3">'+fmtM(tP)+'</div><div class="stsub">毛利率 '+mg+'</div></div>'
     +'<div class="st s4"><div class="stlbl">待審核</div><div class="stval v4">'+pend+'</div><div class="stsub">筆合約</div></div>'
     +'</div>';
 
@@ -2048,7 +2099,7 @@ function makeCard(r,showApprove){
   var bc=isVoided?'bv':fillWait?'bp':pend?'bp':appr?'ba':'br';
   var sl=isVoided?'已作廢':fillWait?'待補填':pend?'待審核':appr?'已同意':'退回';
   var m=calcMargin(r);
-  var mgStr=(m.isPurchOnly&&!m.hasRevenue)?'—':(m.margin!=='—'?m.margin+'%':'—');
+  var mgStr=m.isPurchOnly?'不計算':(m.margin!=='—'?m.margin+'%':'—');
   var rowNum=r._row;
   var rq="'"+rowNum+"'"; // 字串版（Firebase 用 formId 當 key）
   var splitInfo = r.splitInfo || {};
@@ -2059,12 +2110,9 @@ function makeCard(r,showApprove){
     : hasSplitInto
     ? '<span class="bdg bs" style="font-size:10px;padding:2px 7px;margin-left:5px;">🔗 已拆</span>'
     : '';
-  // ★ v31：單邊終止標籤
-  var termBadge = (sideTerm(r,'buy') ?'<span class="bdg br" style="font-size:10px;padding:2px 7px;margin-left:5px;">⛔ 採購終止</span>':'')
-                + (sideTerm(r,'sell')?'<span class="bdg br" style="font-size:10px;padding:2px 7px;margin-left:5px;">⛔ 銷售終止</span>':'');
   return '<div class="cc '+sc2+'" onclick="showD('+rq+')">'
     +'<div class="cc-top"><div>'
-    +'<div class="cc-id">'+g(r,'formId')+splitBadge+termBadge+'</div>'
+    +'<div class="cc-id">'+g(r,'formId')+splitBadge+'</div>'
     +'<div class="cc-name">'+g(r,'name')+'</div>'
     +'</div><span class="bdg '+bc+'">'+sl+'</span></div>'
     +'<div class="cc-meta">'+g(r,'staff')+'　·　'+fmtDateSlash(getCaseDate(r))+'</div>'
@@ -2110,7 +2158,7 @@ function makeCard(r,showApprove){
       if(!hasAmt || !hasMissing) return '';
       return '<div style="background:#fef3c7;border-top:1px solid #fcd34d;padding:7px 12px;font-size:11px;font-weight:700;color:#d97706;display:flex;align-items:center;gap:5px;">📅 有應收期尚未設定收款日</div>';
     })()
-    +(isFillPending(r) && curUser && curUser.staffName && g(r,'transferTo')===curUser.staffName
+    +(fillPend && curUser && curUser.staffName && g(r,'transferTo')===curUser.staffName
       ? '<button class="cc-btn" style="background:#4f46e5;color:#fff;border-color:#4338ca;" onclick="event.stopPropagation();openFillSell('+rq+')">✍️ 補填銷售內容</button>'
       : '<button class="cc-btn" onclick="event.stopPropagation();showD('+rq+')">查看詳細 / 操作</button>')
     +'</div>';
@@ -2213,6 +2261,9 @@ function isMyCase(r){
   var match = staff === myName
     || staff.indexOf(myName) >= 0
     || cleanStaff.indexOf(myName) >= 0;
+  if(g(r,'formId')==='T20260410190'){
+    
+  }
   return match;
 }
 
@@ -2225,7 +2276,7 @@ function renderMyCase(){
   myRows.forEach(function(r){
     var m=calcMargin(r); tB+=m.buyNTD; tS+=m.sellNTD; tP+=m.profitNTD;
   });
-  var mg = tS>0?(tP/tS*100).toFixed(1):0;
+  var mg = tS>0?(tP/tS*100).toFixed(1)+'%':'不計算';
   var pend = myRows.filter(isPend).length;
 
   var statsEl = document.getElementById('mycase-stats');
@@ -2233,7 +2284,7 @@ function renderMyCase(){
     statsEl.innerHTML=
       '<div class="st s1"><div class="stlbl">總採購金額</div><div class="stval v1">'+fmtM(tB)+'</div><div class="stsub">NTD 換算</div></div>'
      +'<div class="st s2"><div class="stlbl">總銷售金額</div><div class="stval v2">'+fmtM(tS)+'</div><div class="stsub">NTD 換算</div></div>'
-     +'<div class="st s3"><div class="stlbl">預估總毛利</div><div class="stval v3">'+fmtM(tP)+'</div><div class="stsub">毛利率 '+mg+'%</div></div>'
+     +'<div class="st s3"><div class="stlbl">預估總毛利</div><div class="stval v3">'+fmtM(tP)+'</div><div class="stsub">毛利率 '+mg+'</div></div>'
      +'<div class="st s3"><div class="stlbl">待審核</div><div class="stval v4">'+pend+'</div><div class="stsub">筆合約</div></div>';
   }
 
@@ -2552,8 +2603,7 @@ function renderDaily(){
     var bps = rawBps||getPeriods01(r,'buy').map(function(p){
       return {name:p.name,currency:p.cur,amount:p.amt,expectedDate:p.date,status:p.status||'',paid:false};
     });
-    // ★ v31：採購側已終止 → 未入帳期別不進日曆
-    if(hasBuy && !sideTerm(r,'buy')) bps.forEach(function(bp,bi){
+    if(hasBuy) bps.forEach(function(bp,bi){
       if((bp.status||'')==='approved') return;
       var amt  = parseFloat(bp.amount||bp.amt)||0;
       var date = parseDateStr(bp.expectedDate||bp.date||'');
@@ -2570,8 +2620,7 @@ function renderDaily(){
     var sps = rawSps||getPeriods01(r,'sell').map(function(p){
       return {name:p.name,currency:p.cur,amount:p.amt,expectedDate:p.date,status:p.status||'',paid:false};
     });
-    // ★ v31：銷售側已終止 → 未入帳期別不進日曆
-    if(hasSell && !sideTerm(r,'sell')) sps.forEach(function(sp,si){
+    if(hasSell) sps.forEach(function(sp,si){
       if((sp.status||'')==='approved') return;
       var amt  = parseFloat(sp.amount||sp.amt)||0;
       var date = parseDateStr(sp.expectedDate||sp.date||'');
@@ -2727,7 +2776,31 @@ function renderDaily(){
   document.addEventListener('click', window._calClickHandler, true);
 }
 
+// ── 日曆篩選狀態 ─────────────────────────────────────
+var calendarFilter = { ship:true, trade:true, forecast:true };
+function toggleCalendarFilter(type){
+  if(type==='all'){
+    var allOn = calendarFilter.ship&&calendarFilter.trade&&calendarFilter.forecast;
+    calendarFilter.ship = calendarFilter.trade = calendarFilter.forecast = !allOn;
+  } else {
+    calendarFilter[type] = !calendarFilter[type];
+  }
+  var allOn2 = calendarFilter.ship&&calendarFilter.trade&&calendarFilter.forecast;
+  var allBtn = document.getElementById('cal-f-all');
+  if(allBtn) allBtn.className = 'cal-filter-btn'+(allOn2?' on':'');
+  var shipBtn = document.getElementById('cal-f-ship');
+  if(shipBtn) shipBtn.className = 'cal-filter-btn'+(calendarFilter.ship?' on-jade':'');
+  var tradeBtn = document.getElementById('cal-f-trade');
+  if(tradeBtn) tradeBtn.className = 'cal-filter-btn'+(calendarFilter.trade?' on-jade':'');
+  var fBtn = document.getElementById('cal-f-forecast');
+  if(fBtn) fBtn.className = 'cal-filter-btn'+(calendarFilter.forecast?' on-purple':'');
+  renderDaily();
+}
+
 // ── 日期詳細彈窗 ─────────────────────────────────────
+var _dayDetailDate = '';
+var _dayDetailTab  = 'all';
+
 function openDayDetail(dateStr){
   _dayDetailDate = dateStr;
   _dayDetailTab  = 'all';
@@ -2777,7 +2850,7 @@ function _renderDayDetail(){
     var bps = rawBps||getPeriods01(r,'buy').map(function(p){
       return {name:p.name,currency:p.cur,amount:p.amt,expectedDate:p.date,status:p.status||'',paid:false};
     });
-    if(hasBuy && !sideTerm(r,'buy')) bps.forEach(function(bp,bi){
+    if(hasBuy) bps.forEach(function(bp,bi){
       if((bp.status||'')==='approved') return;
       var amt  = parseFloat(bp.amount||bp.amt)||0;
       var date = parseDateStr(bp.expectedDate||bp.date||'');
@@ -2795,7 +2868,7 @@ function _renderDayDetail(){
     var sps = rawSps||getPeriods01(r,'sell').map(function(p){
       return {name:p.name,currency:p.cur,amount:p.amt,expectedDate:p.date,status:p.status||'',paid:false};
     });
-    if(hasSell && !sideTerm(r,'sell')) sps.forEach(function(sp,si){
+    if(hasSell) sps.forEach(function(sp,si){
       if((sp.status||'')==='approved') return;
       var amt  = parseFloat(sp.amount||sp.amt)||0;
       var date = parseDateStr(sp.expectedDate||sp.date||'');
@@ -2952,6 +3025,17 @@ function _renderDayDetail(){
     totalEl.innerHTML = thtml;
   }
 }
+// 關閉日曆視窗並開啟案件詳細
+function closeDayAndShowD(rowNum){
+  document.getElementById('DayM').classList.remove('open');
+  showD(parseInt(rowNum));
+}
+
+// 格式化金額：千位數逗號分隔（會計格式）
+function fmtK(n){
+  return Math.round(n||0).toLocaleString('zh-TW');
+}
+
 // 詳細 Modal
 function showD(rowNum){
   var rq="'" + rowNum + "'";
@@ -3010,31 +3094,16 @@ function showD(rowNum){
     return html;
   }
 
-  // ── 單邊終止橫幅（v31）─────────────────────────────────
-  function termBanner(type){
-    if(!sideTerm(r,type)) return '';
-    var info = sideTermInfo(r,type);
-    var lbl  = type==='buy' ? '採購側已終止' : '銷售側已終止';
-    return '<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:10px 14px;margin:6px 0 10px;font-size:12px;color:#991b1b;line-height:1.7;">'
-      +'<b>⛔ '+lbl+(info.reason?'：'+escHtml(info.reason):'')+'</b><br>'
-      +'<span style="font-size:11px;color:#b91c1c;">未入帳期別已自應收應付／日曆／毛利移除；已入帳期別保留在帳上。</span>'
-      +((info.by||info.at)?'<div style="font-size:10px;color:#f87171;margin-top:4px;">'+(info.by||'')+(info.at?' · '+info.at:'')+'</div>':'')
-      +'</div>';
-  }
-
   // ── 採購區塊 ─────────────────────────────────────────
   if(!isSellOnly3){
-    var buyPeriods3 = getPeriods01(r,'buy',true);
-    h+='<div class="dsec"><div class="dsec-t tb">　採購（賣方）</div>'
-      +termBanner('buy')
-      +'<div class="dgrid">'
+    var buyPeriods3 = getPeriods01(r,'buy');
+    h+='<div class="dsec"><div class="dsec-t tb">　採購（賣方）</div><div class="dgrid">'
       +dr('供應商',      r[F.supp]||'—')
       +dr('採購幣別',    buyPeriods3.length?(buyPeriods3[0].cur||'TWD'):'TWD')
       +dr('應付總金額',  (function(){var bp=buyPeriods3;if(bp.length){var cur=bp[0].cur||'TWD';var allSame=bp.every(function(p){return (p.cur||'TWD')===cur;});if(allSame){var tot=bp.reduce(function(s,p){return s+p.amt;},0);return cur+' '+fmtN(tot)+(cur==='TWD'?'':' <span style="color:#64748b;font-size:11px;">(≈TWD '+fmtN(m.buyNTD)+')</span>');}}return 'TWD '+fmtN(m.buyNTD);}()))
       +dr('折合TWD',    'TWD '+fmtN(m.buyNTD))
       +dr('付款條件',    r[F.buyPay]||'—')
       +dr('賣方合約',    r[F.buyCon]||'未選')
-      +(isPurchOnly3 && pf(r[F.buyRevAmt])>0 ? dr('預估收益', (r[F.buyRevCur]||'TWD')+' '+fmtN(r[F.buyRevAmt])) : '')
       +(r[F.buyRem]?'<div class="drow drow-f"><div class="drow-l">採購備註</div><div class="drow-v" style="color:var(--ink);font-weight:500;">'+r[F.buyRem]+'</div></div>':'')
       +'</div>'
       + makePeriodTable(buyPeriods3, true)
@@ -3043,10 +3112,8 @@ function showD(rowNum){
 
   // ── 銷售區塊 ─────────────────────────────────────────
   if(!isPurchOnly3){
-    var sellPeriods3 = getPeriods01(r,'sell',true);
-    h+='<div class="dsec"><div class="dsec-t ts">　銷售（買方）</div>'
-      +termBanner('sell')
-      +'<div class="dgrid">'
+    var sellPeriods3 = getPeriods01(r,'sell');
+    h+='<div class="dsec"><div class="dsec-t ts">　銷售（買方）</div><div class="dgrid">'
       +dr('客戶名稱',    r[F.buyer]||'—')
       +dr('銷售幣別',    sellPeriods3.length?(sellPeriods3[0].cur||'TWD'):'TWD')
       +dr('應收總金額',  (function(){var sp=sellPeriods3;if(sp.length){var cur=sp[0].cur||'TWD';var allSame=sp.every(function(p){return (p.cur||'TWD')===cur;});if(allSame){var tot=sp.reduce(function(s,p){return s+p.amt;},0);return cur+' '+fmtN(tot)+(cur==='TWD'?'':' <span style="color:#64748b;font-size:11px;">(≈TWD '+fmtN(m.sellNTD)+')</span>');}}return 'TWD '+fmtN(m.sellNTD);}()))
@@ -3093,8 +3160,6 @@ function showD(rowNum){
   var pBg3    = m.profitNTD>=0?'#f0fdf4':'#fef2f2';
   var costAmt3= parseFloat(r[F.sellCostAmt])||0;
   var costCur3= r[F.sellCostCur]||'TWD';
-  var revAmt3 = parseFloat(r[F.buyRevAmt])||0;
-  var revCur3 = r[F.buyRevCur]||'TWD';
   h+='<div class="pbar" style="background:'+pBg3+';">';
   if(isSellOnly3 && costAmt3>0){
     h+='<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;padding-bottom:6px;border-bottom:0.5px solid #e2e8f0;">'
@@ -3102,15 +3167,9 @@ function showD(rowNum){
       +'<span style="color:var(--coral);font-weight:700;">'+costCur3+' '+fmtN(costAmt3)+'</span>'
       +'</div>';
   }
-  if(isPurchOnly3 && revAmt3>0){
-    h+='<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;padding-bottom:6px;border-bottom:0.5px solid #e2e8f0;">'
-      +'<span style="color:var(--muted);">預估收益（'+revCur3+'）</span>'
-      +'<span style="color:var(--jade);font-weight:700;">'+revCur3+' '+fmtN(revAmt3)+'</span>'
-      +'</div>';
-  }
-  if(isPurchOnly3 && revAmt3<=0){
+  if(isPurchOnly3){
     h+='<span style="font-size:12px;color:var(--muted);font-weight:700;">預估毛利潤（純採購案件）</span>'
-      +'<div style="text-align:right;"><span style="font-size:18px;font-weight:700;color:var(--muted);font-family:monospace;">TWD 0</span></div>';
+      +'<div style="text-align:right;"><span style="font-size:18px;font-weight:700;color:var(--muted);">不計算</span></div>';
   } else {
     h+='<span style="font-size:12px;color:'+pColor3+';font-weight:700;">預估毛利潤（TWD）</span>'
       +'<div style="text-align:right;">'
@@ -3141,35 +3200,6 @@ function showD(rowNum){
       +(bSignTime?'<span style="font-size:10px;color:#94a3b8;margin-left:auto;font-family:monospace;">'+fmtDateTimeSlash(bSignTime)+'</span>':'')
       +'</div>'
       +(bNote?'<div style="font-size:13px;color:'+bColor+';font-weight:500;line-height:1.8;background:#fff;border-radius:7px;padding:10px 14px;border-left:3px solid '+bAccent+';">'+bNote+'</div>':'')
-      +'</div>';
-  }
-
-  // ── 異動歷史時間軸（v31）────────────────────────────────
-  var amHist3 = Array.isArray(r.amendments) ? r.amendments : [];
-  if(amHist3.length){
-    var amKindTag = function(k){
-      if(k==='金額') return '<span style="background:#fef9c3;color:#92400e;border:0.5px solid #fde68a;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;">💰 金額異動</span>';
-      if(k==='終止') return '<span style="background:#fee2e2;color:#991b1b;border:0.5px solid #fca5a5;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;">⛔ 終止</span>';
-      if(k==='恢復') return '<span style="background:#dcfce7;color:#14532d;border:0.5px solid #86efac;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;">↩ 恢復</span>';
-      return '<span style="background:#e0f2fe;color:#0369a1;border:0.5px solid #7dd3fc;border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;">✏️ 修改</span>';
-    };
-    h+='<div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin:12px 0 4px;">'
-      +'<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:10px;">📜 異動歷史（'+amHist3.length+' 筆）</div>'
-      + amHist3.slice().reverse().map(function(a){
-          var chgList = (a.changes||[]).map(function(c){
-            return '<div style="font-size:11px;color:#475569;line-height:1.7;">・'+escHtml(String(c))+'</div>';
-          }).join('');
-          return '<div style="border-left:2px solid #cbd5e1;padding:2px 0 10px 12px;margin-left:4px;">'
-            +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">'
-            +amKindTag(a.kind||'')
-            +'<span style="font-size:11px;font-weight:700;color:var(--ink);">'+escHtml(a.by||'')+'</span>'
-            +'<span style="font-size:10px;color:#94a3b8;font-family:monospace;">'+escHtml(a.at||'')+'</span>'
-            +(a.needReapprove?'<span style="font-size:10px;color:#d97706;font-weight:700;">→ 需老闆重審</span>':'')
-            +'</div>'
-            +(a.reason?'<div style="font-size:12px;color:#0f172a;font-weight:600;margin-bottom:2px;">原因：'+escHtml(a.reason)+'</div>':'')
-            +chgList
-            +'</div>';
-        }).join('')
       +'</div>';
   }
 
@@ -3217,12 +3247,9 @@ function showD(rowNum){
       var ops=opts.map(function(o){return '<option value="'+o+'"'+(o===val?' selected':'')+'>'+o+'</option>';}).join('');
       return '<div><label class="ef-lbl">'+lbl+'</label><select id="'+id+'" class="ef-i">'+ops+'</select></div>';
     };
-    // 取得採購/銷售期1的值（供編輯用；includeAll=true 終止側期別也要能編輯）
-    var eBuyPeriods  = getPeriods01(r,'buy',true);
-    var eSellPeriods = getPeriods01(r,'sell',true);
-    // ★ 編輯列數：既有期數+1（最少3、最多 MAX_PERIODS），避免固定6列撐爆表單
-    var eBuyRowN  = Math.min(MAX_PERIODS, Math.max(3, eBuyPeriods.length+1));
-    var eSellRowN = Math.min(MAX_PERIODS, Math.max(3, eSellPeriods.length+1));
+    // 取得採購/銷售期1的值（供編輯用）
+    var eBuyPeriods  = getPeriods01(r,'buy');
+    var eSellPeriods = getPeriods01(r,'sell');
     var eBuyCur   = eBuyPeriods.length  ? (eBuyPeriods[0].cur||'TWD')  : (g(r,'buyCur')||'TWD');
     var eBuyAmt   = eBuyPeriods.length  ? eBuyPeriods[0].amt            : pf(g(r,'buyAmt'));
     var eBuyDate  = eBuyPeriods.length  ? eBuyPeriods[0].date           : g(r,'buyDate');
@@ -3268,21 +3295,11 @@ function showD(rowNum){
       +(function(){
         var ct = (g(r,'type')||'').trim();
         var isTriangle = ct==='採購+銷售' || ct.indexOf('三角貿易')>=0;
-        var isAdminUser = curUser && curUser.role==='admin';
-        if(isTriangle && !isAdminUser){
-          // 已是三角貿易 → 業務員鎖定顯示，不可改（管理員可改，見下方）
+        if(isTriangle){
+          // 已是三角貿易 → 鎖定顯示，不可改
           return '<div><label class="ef-lbl">案件屬性</label>'
-            +'<div class="ef-i" style="background:#f1f5f9;color:#64748b;padding:10px 12px;border-radius:9px;font-size:14px;border:1.5px solid #e2e8f0;">'+ct+'（不可改，僅管理員可修改）</div>'
+            +'<div class="ef-i" style="background:#f1f5f9;color:#64748b;padding:10px 12px;border-radius:9px;font-size:14px;border:1.5px solid #e2e8f0;">'+ct+'（不可改）</div>'
             +'<input type="hidden" id="e-type-'+rowNum+'" value="'+ct+'"></div>';
-        }
-        if(isTriangle && isAdminUser){
-          // ★ 管理員可修改三角貿易案件屬性（修正誤判 / 拆回單邊案件用）
-          var triOpts = ['採購','銷售','採購+銷售(三角貿易)'];
-          var triOps = triOpts.map(function(o){
-            return '<option value="'+o+'"'+(o===ct?' selected':'')+'>'+o+'</option>';
-          }).join('');
-          return '<div><label class="ef-lbl">案件屬性 <span style="color:#d97706;font-weight:700;">（管理員可改）</span></label>'
-            +'<select id="e-type-'+rowNum+'" class="ef-i">'+triOps+'</select></div>';
         }
         // 採購 → [採購, 採購+銷售]；銷售 → [銷售, 採購+銷售]；其他 → 鎖定
         var opts = ct==='採購' ? ['採購','採購+銷售']
@@ -3304,10 +3321,10 @@ function showD(rowNum){
           +'<div style="font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">銷售（應收）</div>'
           +ef2('e-buyer-'+rowNum,'客戶名稱',g(r,'buyer'))
           +ef2('e-sellpay-'+rowNum,'收款條件',g(r,'sellPay'))
-          // 分期（動態列數，上限 MAX_PERIODS）
+          // 分期 1~3
           +(function(){
             var rows3='';
-            for(var si=1;si<=eSellRowN;si++){
+            for(var si=1;si<=3;si++){
               var sc = eSellPeriods.length>=si?(eSellPeriods[si-1].cur||'TWD'):'TWD';
               var sa = eSellPeriods.length>=si?eSellPeriods[si-1].amt:'';
               var sd = eSellPeriods.length>=si?eSellPeriods[si-1].date:'';
@@ -3325,25 +3342,16 @@ function showD(rowNum){
             }
             return rows3;
           })()
-          // ★ 純銷售：銷售成本（毛利計算用）
-          +(isSellOnly3
-            ? '<div style="border-top:0.5px dashed #bbf7d0;padding-top:7px;margin-top:7px;">'
-              +'<div style="font-size:10px;font-weight:700;color:#7c3aed;margin-bottom:5px;">銷售成本（毛利計算用）</div>'
-              +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">'
-              +efSel('e-sellcostcur-'+rowNum,'幣別',(r[F.sellCostCur]||'TWD'),['TWD','USD','JPY','EUR','CNY'])
-              +'<div><label class="ef-lbl">金額</label><input type="number" id="e-sellcostamt-'+rowNum+'" class="ef-i" value="'+(pf(r[F.sellCostAmt])||'')+'"></div>'
-              +'</div></div>'
-            : '')
         +'</div>'
         // 採購在右
         +'<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px;">'
           +'<div style="font-size:11px;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">採購（應付）</div>'
           +ef2('e-supp-'+rowNum,'供應商',g(r,'supp'))
           +ef2('e-buypay-'+rowNum,'付款條件',g(r,'buyPay'))
-          // 分期（動態列數，上限 MAX_PERIODS）
+          // 分期 1~3
           +(function(){
             var rowsb='';
-            for(var bi=1;bi<=eBuyRowN;bi++){
+            for(var bi=1;bi<=3;bi++){
               var bc = eBuyPeriods.length>=bi?(eBuyPeriods[bi-1].cur||'TWD'):'TWD';
               var ba = eBuyPeriods.length>=bi?eBuyPeriods[bi-1].amt:'';
               var bd = eBuyPeriods.length>=bi?eBuyPeriods[bi-1].date:'';
@@ -3361,15 +3369,6 @@ function showD(rowNum){
             }
             return rowsb;
           })()
-          // ★ 純採購：預估收益（毛利計算用）
-          +(isPurchOnly3
-            ? '<div style="border-top:0.5px dashed #fed7aa;padding-top:7px;margin-top:7px;">'
-              +'<div style="font-size:10px;font-weight:700;color:#0369a1;margin-bottom:5px;">預估收益（毛利計算用）</div>'
-              +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">'
-              +efSel('e-buyrevcur-'+rowNum,'幣別',(r[F.buyRevCur]||'TWD'),['TWD','USD','JPY','EUR','CNY'])
-              +'<div><label class="ef-lbl">金額</label><input type="number" id="e-buyrevamt-'+rowNum+'" class="ef-i" value="'+(pf(r[F.buyRevAmt])||'')+'"></div>'
-              +'</div></div>'
-            : '')
         +'</div>'
       +'</div>'
 
@@ -3414,13 +3413,21 @@ function showD(rowNum){
       })()
       +'</div>'
 
-      // ★ v31：拆分記錄編輯區已移除（拆分功能由「單邊終止」取代；
-      //   舊資料的拆分記錄仍會在上方唯讀顯示）
-
-      // ── 異動原因（v31：寫入異動歷史；金額變動必填）──────
-      +'<div style="margin-top:12px;">'
-      +'<label class="ef-lbl">異動原因（金額 / 期數 / 日期有變動時<b style="color:#dc2626;">必填</b>，將寫入異動歷史）</label>'
-      +'<input type="text" id="e-editreason-'+rowNum+'" class="ef-i" placeholder="例：客戶要求延後付款、重新議價調整金額、改分3期...">'
+      // ── 拆分記錄編輯區 ────────────────────────────────
+      +'<div style="margin-top:14px;border-top:1px solid #bae6fd;padding-top:12px;">'
+      +'<div style="font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">🔗 拆分記錄</div>'
+      +'<div style="margin-bottom:8px;">'
+      +'<label class="ef-lbl">源自案件 ID（若本案件是從其他案件拆出）</label>'
+      +'<input type="text" id="e-split-from-'+rowNum+'" class="ef-i" value="'+(splitFrom||'')+'" placeholder="例：T20260401001">'
+      +'</div>'
+      +'<div style="margin-bottom:8px;">'
+      +'<label class="ef-lbl">已拆分出的案件 ID（多筆用逗號分隔）</label>'
+      +'<input type="text" id="e-split-into-'+rowNum+'" class="ef-i" value="'+splitInto.join(',')+'" placeholder="例：T20260401002,T20260401003">'
+      +'</div>'
+      +'<div>'
+      +'<label class="ef-lbl">拆分說明</label>'
+      +'<textarea id="e-split-note-'+rowNum+'" class="ef-ta" placeholder="說明拆分原因...">'+( splitNote||'')+'</textarea>'
+      +'</div>'
       +'</div>'
 
       +'<button class="btn-edit-save" id="ebtn-'+rowNum+'" onclick="doEdit('+rq+')" style="margin-top:10px;">💾 儲存修改</button>'
@@ -3441,16 +3448,9 @@ function showD(rowNum){
           +'<button onclick="doUnvoid('+rq+')" style="width:100%;padding:11px;border-radius:9px;background:#f0fdf4;color:#16a34a;border:0.5px solid #86efac;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">↩ 強制恢復此案件</button>'
         : '<button onclick="confirmVoid('+rq+')" style="width:100%;padding:11px;border-radius:9px;background:#fef9c3;color:#92400e;border:0.5px solid #fde68a;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">🚫 作廢此案件</button>'
       )
-      // ★ v31 單邊終止：三角貿易案件可只終止一側，另一側交易照常
       +((!isVoided && caseType3.indexOf('採購')>=0 && caseType3.indexOf('銷售')>=0)
-        ? (sideTerm(r,'buy')
-            ? '<button onclick="doRestoreSide('+rq+',\'buy\')" style="width:100%;padding:11px;border-radius:9px;background:#f0fdf4;color:#16a34a;border:0.5px solid #86efac;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">↩ 恢復採購側（取消終止）</button>'
-            : '<button onclick="confirmTerminateSide('+rq+',\'buy\')" style="width:100%;padding:11px;border-radius:9px;background:#fff7ed;color:#c2410c;border:0.5px solid #fed7aa;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">⛔ 終止採購側（取消採購，銷售照常進行）</button>')
-          +(sideTerm(r,'sell')
-            ? '<button onclick="doRestoreSide('+rq+',\'sell\')" style="width:100%;padding:11px;border-radius:9px;background:#f0fdf4;color:#16a34a;border:0.5px solid #86efac;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">↩ 恢復銷售側（取消終止）</button>'
-            : '<button onclick="confirmTerminateSide('+rq+',\'sell\')" style="width:100%;padding:11px;border-radius:9px;background:#fef2f2;color:#dc2626;border:0.5px solid #fca5a5;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">⛔ 終止銷售側（買家毀約，採購照常進行）</button>')
+        ? '<button onclick="confirmSplitCase('+rq+')" style="width:100%;padding:11px;border-radius:9px;background:#eff6ff;color:#1d4ed8;border:0.5px solid #bfdbfe;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px;">✂️ 拆分案件（採購／銷售分開）</button>'
         : '')
-      // ★ v31：拆分案件入口已移除（0/57 從未使用，由「單邊終止」取代）
       +'<button onclick="confirmDel('+rq+')" style="width:100%;padding:11px;border-radius:9px;background:#fef2f2;color:var(--coral);border:0.5px solid #fca5a5;font-size:13px;font-weight:700;cursor:pointer;">🗑️ 刪除此案件</button>'
       +'</div>';
   }
@@ -3544,7 +3544,8 @@ function doApp(rowNum,status){
         signTime: tsNow,
         bossNote: note,
       });
-      toast('✅ 已簽核！各期款項將由財務在「訂單轉入管理」逐期入帳確認','#16a34a');
+      toast('✅ 已簽核！等待會計確認轉入款項','#16a34a');
+      if(r) r['_pendingPayment']=true;
     } else {
       // 發退回通知（寄給業務）
       backupActionToGAS({
@@ -3562,12 +3563,6 @@ function doApp(rowNum,status){
   // Firestore 更新（有 formId 才更新）
   if(formId){
     updateFirebase(formId, firestoreFields, function(ok){
-      if(!ok){
-        toast('❌ 簽核寫入失敗，狀態未變更，請檢查網路後重試','#dc2626');
-        if(b1)b1.disabled=false;
-        if(b2)b2.disabled=false;
-        return;
-      }
       onDone();
     });
   } else {
@@ -3606,16 +3601,12 @@ function doDeletePeriodDate(rowNum, periodIdx){
         currency:     p.currency     || p.cur  || 'TWD',
         amount:       parseFloat(p.amount || p.amt) || 0,
         expectedDate: p.expectedDate || p.date || '',
-        note:         p.note         || '',
-        // 保留帳務欄位，避免刪日期時洗掉財務的確認狀態/備註
-        status:       p.status       || '',
-        acctNote:     p.acctNote     || '',
-        approvedAt:   p.approvedAt   || ''
+        note:         p.note         || ''
       };
     });
   } else {
     // Fallback：從平鋪欄位重構（向下相容舊資料）
-    for(var i=0; i<MAX_PERIODS; i++){
+    for(var i=0; i<3; i++){
       var amt = parseFloat(r['銷售期'+(i+1)+'金額'])||0;
       if(!amt && !r['銷售期'+(i+1)+'名稱']) continue;
       salesPeriods.push({
@@ -3684,10 +3675,10 @@ function doResendNotify(rowNum, action){
   var staff    = g(r,'staff')||'';
   var buyPeriods = (r.purchase&&r.purchase.periods&&r.purchase.periods.length)
     ? r.purchase.periods.map(function(p){return{name:p.name||'',cur:p.currency||p.cur||'TWD',amt:parseFloat(p.amount||p.amt)||0,date:p.expectedDate||p.date||'',note:p.note||''}; })
-    : (function(){ var a=[]; for(var i=1;i<=MAX_PERIODS;i++){var v=parseFloat(r['採購期'+i+'金額'])||0;if(v||r['採購期'+i+'預計日'])a.push({name:r['採購期'+i+'名稱']||('第'+i+'期'),cur:r['採購期'+i+'幣別']||'TWD',amt:v,date:r['採購期'+i+'預計日']||'',note:r['採購期'+i+'備註']||''});} return a; })();
+    : (function(){ var a=[]; for(var i=1;i<=3;i++){var v=parseFloat(r['採購期'+i+'金額'])||0;if(v||r['採購期'+i+'預計日'])a.push({name:r['採購期'+i+'名稱']||('第'+i+'期'),cur:r['採購期'+i+'幣別']||'TWD',amt:v,date:r['採購期'+i+'預計日']||'',note:r['採購期'+i+'備註']||''});} return a; })();
   var sellPeriods = (r.sales&&r.sales.periods&&r.sales.periods.length)
     ? r.sales.periods.map(function(p){return{name:p.name||'',cur:p.currency||p.cur||'TWD',amt:parseFloat(p.amount||p.amt)||0,date:p.expectedDate||p.date||'',note:p.note||''}; })
-    : (function(){ var a=[]; for(var i=1;i<=MAX_PERIODS;i++){var v=parseFloat(r['銷售期'+i+'金額'])||0;if(v||r['銷售期'+i+'預計日'])a.push({name:r['銷售期'+i+'名稱']||('第'+i+'期'),cur:r['銷售期'+i+'幣別']||'TWD',amt:v,date:r['銷售期'+i+'預計日']||'',note:r['銷售期'+i+'備註']||''});} return a; })();
+    : (function(){ var a=[]; for(var i=1;i<=3;i++){var v=parseFloat(r['銷售期'+i+'金額'])||0;if(v||r['銷售期'+i+'預計日'])a.push({name:r['銷售期'+i+'名稱']||('第'+i+'期'),cur:r['銷售期'+i+'幣別']||'TWD',amt:v,date:r['銷售期'+i+'預計日']||'',note:r['銷售期'+i+'備註']||''});} return a; })();
   var transferEmail = (r.transfer && r.transfer.transferEmail) || r['轉交信箱'] || '';
   var transferTo    = (r.transfer && r.transfer.transferTo)    || r['轉交銷售業務'] || '';
   backupActionToGAS({
@@ -3736,9 +3727,42 @@ function openFillSell(rowNum){
   window.open(url, '_blank');
 }
 
-// ★ 2026-07 健檢移除：案件級「會計確認」流程從未被使用（57 案 0 次），
-//   實務上已由「訂單轉入管理」的期別入帳確認（approveTransfer）取代。
-//   舊資料的 approval.accountingConfirmed 欄位保留可讀，僅移除操作入口。
+function doAccountingConfirm(rowNum){
+  var r=rows.find(function(x){return x._row===rowNum;});
+  if(!r){ toast('找不到案件','#dc2626'); return; }
+  var formId   = (r[F.formId]||'')||g(r,'表單編號')||'';
+  var caseName = (r[F.name]||'')||'';
+  var staff    = (r[F.staff]||'')||'';
+  toast('轉入款項中...','#0369a1');
+
+  var tsNow = now();
+  var firestoreFields = {
+    'approval.accountingConfirmed': '是',
+    'approval.accountingAt':        tsNow,
+  };
+
+  function onDone(){
+    addLog('會計確認轉入',curUser.name,caseName,'',formId);
+    toast('✅ 款項已轉入','#16a34a');
+    // 通知業務會計已確認
+    backupActionToGAS({
+      action:        'accounting',
+      caseName:      caseName,
+      formId:        formId,
+      staff:         staff,
+      staffEmail:    '',
+      buyConfirmAmt: r['採購確認金額']||0,
+      sellConfirmAmt:r['銷售確認金額']||0,
+    });
+    onLoad();
+  }
+
+  if(formId){
+    updateFirebase(formId, firestoreFields, function(){ onDone(); });
+  } else {
+    onDone();
+  }
+}
 
 // 從 FormResponses01 分期欄位建立 periods（財務轉入 Payments 用）
 function buildPeriodsFromRow(r){
@@ -3749,7 +3773,7 @@ function buildPeriodsFromRow(r){
 
   // 採購分期 1~3
   if(hasBuy){
-    for(var bi=1; bi<=MAX_PERIODS; bi++){
+    for(var bi=1; bi<=3; bi++){
       var bAmt  = parseFloat(r['採購期'+bi+'金額'])||0;
       var bDate = (r['採購期'+bi+'預計日']||'').toString().trim();
       var bCur  = (r['採購期'+bi+'幣別']||'TWD').toUpperCase();
@@ -3762,7 +3786,7 @@ function buildPeriodsFromRow(r){
   }
   // 銷售分期 1~3
   if(hasSell){
-    for(var si=1; si<=MAX_PERIODS; si++){
+    for(var si=1; si<=3; si++){
       var sAmt  = parseFloat(r['銷售期'+si+'金額'])||0;
       var sDate = (r['銷售期'+si+'預計日']||'').toString().trim();
       var sCur  = (r['銷售期'+si+'幣別']||'TWD').toUpperCase();
@@ -3792,7 +3816,7 @@ function notifyBossEdit(r, editorName, changes, originalData, editedData){
               amt:parseFloat(p.amount||p.amt)||0, date:p.expectedDate||p.date||'', note:p.note||''};
     });
   } else {
-    for(var bi=1;bi<=MAX_PERIODS;bi++){
+    for(var bi=1;bi<=3;bi++){
       var bAmt=parseFloat(r['採購期'+bi+'金額'])||0;
       var bDate=(r['採購期'+bi+'預計日']||'').toString().trim();
       if(bAmt>0||bDate) buyPeriods.push({
@@ -3809,7 +3833,7 @@ function notifyBossEdit(r, editorName, changes, originalData, editedData){
               amt:parseFloat(p.amount||p.amt)||0, date:p.expectedDate||p.date||'', note:p.note||''};
     });
   } else {
-    for(var si=1;si<=MAX_PERIODS;si++){
+    for(var si=1;si<=3;si++){
       var sAmt=parseFloat(r['銷售期'+si+'金額'])||0;
       var sDate=(r['銷售期'+si+'預計日']||'').toString().trim();
       if(sAmt>0||sDate) sellPeriods.push({
@@ -3870,8 +3894,6 @@ function doEdit(rowNum){
   var r=rows.find(function(x){return x._row===rowNum;});
   var formId = r ? (r[F.formId]||r['表單編號']||r._firebaseKey||'') : '';
   var caseName = r ? g(r,'name') : 'Row'+rowNum;
-  // ★ v31：進入前快照本地資料 — 驗證失敗時要還原，否則第二次儲存 diff 會消失
-  var _rPristine = r ? JSON.parse(JSON.stringify(r)) : null;
 
   // 收集編輯欄位的新值
   var editMap=[
@@ -3962,60 +3984,9 @@ function doEdit(rowNum){
     }
   });
 
-  // ★ 預估收益（純採購案件才有此欄位）
-  var revAmtEl = document.getElementById('e-buyrevamt-'+rowNum);
-  if(revAmtEl){
-    var revCurEl  = document.getElementById('e-buyrevcur-'+rowNum);
-    var newRevAmt = parseFloat(revAmtEl.value)||0;
-    var newRevCur = revCurEl ? (revCurEl.value||'TWD') : 'TWD';
-    firestoreFields['purchase.revenueAmount']   = newRevAmt;
-    firestoreFields['purchase.revenueCurrency'] = newRevCur;
-    firestoreFields['預估收益金額'] = newRevAmt;
-    firestoreFields['預估收益幣別'] = newRevCur;
-    if(r){
-      var oldRevAmt = parseFloat(r['預估收益金額'])||0;
-      var oldRevCur = (r['預估收益幣別']||'TWD').toString();
-      if(oldRevAmt !== newRevAmt || oldRevCur !== newRevCur){
-        changes.push('預估收益 「'+oldRevCur+' '+oldRevAmt+'」→「'+newRevCur+' '+newRevAmt+'」');
-        hasAmtChange = true;
-      }
-      r['預估收益金額'] = newRevAmt;
-      r['預估收益幣別'] = newRevCur;
-      if(!r.purchase) r.purchase = {};
-      r.purchase.revenueAmount   = newRevAmt;
-      r.purchase.revenueCurrency = newRevCur;
-    }
-  }
-
-  // ★ 銷售成本（純銷售案件才有此欄位）
-  var costAmtEl = document.getElementById('e-sellcostamt-'+rowNum);
-  if(costAmtEl){
-    var costCurEl  = document.getElementById('e-sellcostcur-'+rowNum);
-    var newCostAmt = parseFloat(costAmtEl.value)||0;
-    var newCostCur = costCurEl ? (costCurEl.value||'TWD') : 'TWD';
-    firestoreFields['sales.costAmount']   = newCostAmt;
-    firestoreFields['sales.costCurrency'] = newCostCur;
-    firestoreFields['銷售成本金額'] = newCostAmt;
-    firestoreFields['銷售成本幣別'] = newCostCur;
-    if(r){
-      var oldCostAmt = parseFloat(r['銷售成本金額'])||0;
-      var oldCostCur = (r['銷售成本幣別']||'TWD').toString();
-      if(oldCostAmt !== newCostAmt || oldCostCur !== newCostCur){
-        changes.push('銷售成本 「'+oldCostCur+' '+oldCostAmt+'」→「'+newCostCur+' '+newCostAmt+'」');
-        hasAmtChange = true;
-      }
-      r['銷售成本金額'] = newCostAmt;
-      r['銷售成本幣別'] = newCostCur;
-      if(!r.sales) r.sales = {};
-      r.sales.costAmount   = newCostAmt;
-      r.sales.costCurrency = newCostCur;
-    }
-  }
-
   // 採購分期 1~3
-  var oldNestedBuy = (r && r.purchase && r.purchase.periods) ? r.purchase.periods : [];
   var newBuyPeriods = [];
-  for(var bpi=1;bpi<=MAX_PERIODS;bpi++){
+  for(var bpi=1;bpi<=3;bpi++){
     var bpCurEl  = document.getElementById('e-buyp'+bpi+'cur-'+rowNum);
     var bpAmtEl  = document.getElementById('e-buyp'+bpi+'amt-'+rowNum);
     var bpDateEl = document.getElementById('e-buyp'+bpi+'date-'+rowNum);
@@ -4036,13 +4007,9 @@ function doEdit(rowNum){
     firestoreFields['採購期'+bpi+'備註']  = nbpNote;
 
     if(nbpAmt > 0 || nbpName){
-      var oldBp = oldNestedBuy[bpi-1] || {};
       newBuyPeriods.push({
         name: nbpName, currency: nbpCur, amount: nbpAmt,
-        expectedDate: nbpDate, note: nbpNote,
-        // 保留帳務欄位，避免編輯案件時洗掉財務的確認狀態/備註
-        status: oldBp.status || '', acctNote: oldBp.acctNote || '',
-        approvedAt: oldBp.approvedAt || ''
+        expectedDate: nbpDate, note: nbpNote
       });
     }
     if(r){
@@ -4058,16 +4025,14 @@ function doEdit(rowNum){
       r['採購期'+bpi+'備註']  = nbpNote;
     }
   }
-  // ★ 巢狀 periods 一律寫入（含空陣列）：
-  //   讀取端優先用巢狀，若清空/歸零時不寫入，資料庫殘留的舊金額
-  //   會在下次重新載入時蓋回平鋪欄位（金額還原 bug）
-  firestoreFields['purchase.periods'] = newBuyPeriods;
-  if(r){ if(!r.purchase) r.purchase = {}; r.purchase.periods = newBuyPeriods; }
+  // ★ purchase.periods 同步更新（巢狀格式）
+  if(newBuyPeriods.length > 0){
+    firestoreFields['purchase.periods'] = newBuyPeriods;
+  }
 
   // 銷售分期 1~3
-  var oldNestedSell = (r && r.sales && r.sales.periods) ? r.sales.periods : [];
   var newSellPeriods = [];
-  for(var spi=1;spi<=MAX_PERIODS;spi++){
+  for(var spi=1;spi<=3;spi++){
     var spCurEl  = document.getElementById('e-sellp'+spi+'cur-'+rowNum);
     var spAmtEl  = document.getElementById('e-sellp'+spi+'amt-'+rowNum);
     var spDateEl = document.getElementById('e-sellp'+spi+'date-'+rowNum);
@@ -4088,13 +4053,9 @@ function doEdit(rowNum){
     firestoreFields['銷售期'+spi+'備註']  = nspNote;
 
     if(nspAmt > 0 || nspName){
-      var oldSp = oldNestedSell[spi-1] || {};
       newSellPeriods.push({
         name: nspName, currency: nspCur, amount: nspAmt,
-        expectedDate: nspDate, note: nspNote,
-        // 保留帳務欄位，避免編輯案件時洗掉財務的確認狀態/備註
-        status: oldSp.status || '', acctNote: oldSp.acctNote || '',
-        approvedAt: oldSp.approvedAt || ''
+        expectedDate: nspDate, note: nspNote
       });
     }
     if(r){
@@ -4110,9 +4071,10 @@ function doEdit(rowNum){
       r['銷售期'+spi+'備註']  = nspNote;
     }
   }
-  // ★ 巢狀 periods 一律寫入（含空陣列），理由同採購側
-  firestoreFields['sales.periods'] = newSellPeriods;
-  if(r){ if(!r.sales) r.sales = {}; r.sales.periods = newSellPeriods; }
+  // ★ sales.periods 同步更新（巢狀格式）
+  if(newSellPeriods.length > 0){
+    firestoreFields['sales.periods'] = newSellPeriods;
+  }
   // ★ feeCurFields 已整合至 FEE_MAP，無需重複處理
 
   // ★ 只有金額變動才重置審核狀態，否則不動 approval
@@ -4235,12 +4197,12 @@ function doEdit(rowNum){
           buyPeriods:  (function(){
             if(r && r.purchase && r.purchase.periods && r.purchase.periods.length)
               return r.purchase.periods.map(function(p){return {name:p.name||'',cur:p.currency||p.cur||'TWD',amt:parseFloat(p.amount||p.amt)||0,date:p.expectedDate||p.date||'',note:p.note||''};});
-            var _bp=[]; for(var _i=1;_i<=MAX_PERIODS;_i++){var _a=parseFloat(r&&r['採購期'+_i+'金額'])||0;var _d=(r&&r['採購期'+_i+'預計日']||'').toString().trim();if(_a||_d)_bp.push({name:(r&&r['採購期'+_i+'名稱'])||('第'+_i+'期'),cur:(r&&r['採購期'+_i+'幣別'])||'TWD',amt:_a,date:_d,note:(r&&r['採購期'+_i+'備註'])||''});} return _bp;
+            var _bp=[]; for(var _i=1;_i<=3;_i++){var _a=parseFloat(r&&r['採購期'+_i+'金額'])||0;var _d=(r&&r['採購期'+_i+'預計日']||'').toString().trim();if(_a||_d)_bp.push({name:(r&&r['採購期'+_i+'名稱'])||('第'+_i+'期'),cur:(r&&r['採購期'+_i+'幣別'])||'TWD',amt:_a,date:_d,note:(r&&r['採購期'+_i+'備註'])||''});} return _bp;
           })(),
           sellPeriods: (function(){
             if(r && r.sales && r.sales.periods && r.sales.periods.length)
               return r.sales.periods.map(function(p){return {name:p.name||'',cur:p.currency||p.cur||'TWD',amt:parseFloat(p.amount||p.amt)||0,date:p.expectedDate||p.date||'',note:p.note||''};});
-            var _sp=[]; for(var _i=1;_i<=MAX_PERIODS;_i++){var _a=parseFloat(r&&r['銷售期'+_i+'金額'])||0;var _d=(r&&r['銷售期'+_i+'預計日']||'').toString().trim();if(_a||_d)_sp.push({name:(r&&r['銷售期'+_i+'名稱'])||('第'+_i+'期'),cur:(r&&r['銷售期'+_i+'幣別'])||'TWD',amt:_a,date:_d,note:(r&&r['銷售期'+_i+'備註'])||''});} return _sp;
+            var _sp=[]; for(var _i=1;_i<=3;_i++){var _a=parseFloat(r&&r['銷售期'+_i+'金額'])||0;var _d=(r&&r['銷售期'+_i+'預計日']||'').toString().trim();if(_a||_d)_sp.push({name:(r&&r['銷售期'+_i+'名稱'])||('第'+_i+'期'),cur:(r&&r['銷售期'+_i+'幣別'])||'TWD',amt:_a,date:_d,note:(r&&r['銷售期'+_i+'備註'])||''});} return _sp;
           })(),
           originalData: _origDataSnapshot || null,
           editedData:   _editedDataSnapshot || null,
@@ -4252,54 +4214,17 @@ function doEdit(rowNum){
     if(btn){btn.disabled=false;btn.textContent='💾 儲存修改';}
   }
 
-  // ★ v31 異動歷史：有任何變動即寫入案件的 amendments[]（金額變動必填原因）
-  //   讓「說好的期數/付款時間/金額後來改了」永遠可以在案件內一眼看到演變史
-  var reasonEl   = document.getElementById('e-editreason-'+rowNum);
-  var editReason = reasonEl ? reasonEl.value.trim() : '';
-  if(changes.length > 0){
-    if(hasAmtChange && !editReason){
-      // 還原本地資料（上方 diff 過程已就地改寫 r，不還原會導致重填後 diff 消失）
-      if(r && _rPristine){ for(var _pk in _rPristine){ r[_pk] = _rPristine[_pk]; } }
-      toast('❌ 金額/期數有變動，請先填寫「異動原因」再儲存','#dc2626');
-      if(btn){btn.disabled=false;btn.textContent='💾 儲存修改';}
-      return;
-    }
-    var amHist = (r && Array.isArray(r.amendments)) ? r.amendments.slice() : [];
-    amHist.push({
-      at:   now(),
-      by:   (curUser&&curUser.name)||'',
-      kind: hasAmtChange ? '金額' : '一般',
-      reason: editReason,
-      changes: changes.slice(),
-      needReapprove: hasAmtChange
-    });
-    if(amHist.length > 100) amHist = amHist.slice(-100); // 防止無限成長
-    firestoreFields['amendments'] = amHist;
-    if(r) r.amendments = amHist;
-  }
-
-  // ★ 待補填案件：依案件屬性判斷補填完成條件
-  //   含銷售側 → 銷售期有資料即完成；純採購（拆分子單）→ 採購期有資料即完成
+  // ★ 待補填案件：只要銷售期有資料就自動標記完成
   var isFillWaiting = r && (r[F.fillStatus]||r['銷售補填狀態']||'').toString().trim() === '待補填';
   if(isFillWaiting){
-    var fillCaseType = (r[F.type]||'').toString().trim();
-    var needSellFill = fillCaseType === '' || fillCaseType.indexOf('銷售') >= 0;
     var hasSellData = newSellPeriods.length > 0 ||
       (function(){
-        for(var _i=1;_i<=MAX_PERIODS;_i++){
+        for(var _i=1;_i<=3;_i++){
           if(parseFloat(r['銷售期'+_i+'金額'])||0) return true;
         }
         return false;
       })();
-    var hasBuyData = newBuyPeriods.length > 0 ||
-      (function(){
-        for(var _i=1;_i<=MAX_PERIODS;_i++){
-          if(parseFloat(r['採購期'+_i+'金額'])||0) return true;
-        }
-        return false;
-      })();
-    var fillDone = needSellFill ? hasSellData : hasBuyData;
-    if(fillDone){
+    if(hasSellData){
       firestoreFields['銷售補填狀態']    = '已完成';
       firestoreFields['transfer.fillStatus'] = '已完成';
       if(r){ r[F.fillStatus]='已完成'; r['銷售補填狀態']='已完成'; }
@@ -4308,19 +4233,147 @@ function doEdit(rowNum){
 
   if(formId){
     updateFirebase(formId, firestoreFields, function(ok){
-      if(!ok){
-        toast('❌ 儲存失敗，資料未寫入資料庫，請檢查網路後重試','#dc2626');
-        if(btn){btn.disabled=false;btn.textContent='💾 儲存修改';}
-        return;
-      }
       onEditDone();
     });
   } else {
     onEditDone();
   }
 }
-// ★ v31：拆分案件功能已移除（0/57 從未使用，設計過重 — 原案作廢+兩單重填重審），
-//   單邊終止（doTerminateSide）取代其使用情境。舊拆分資料的取消/顯示邏輯保留於下方。
+// ── 拆分案件（採購 / 銷售 分開成兩張單）────────────────
+function confirmSplitCase(rowNum){
+  var r = rows.find(function(x){ return x._row===rowNum; });
+  if(!r) return;
+  var name   = g(r,'name');
+  var formId = r[F.formId]||r['表單編號']||r._firebaseKey||'';
+  var idP = formId+'-P';
+  var idS = formId+'-S';
+  if(!confirm(
+    '確定要拆分案件「'+name+'」嗎？\n\n'
+    +'拆分後將產生兩張新案件：\n'
+    +'  採購單：'+idP+'（退回業務補填 → 重新審核）\n'
+    +'  銷售單：'+idS+'（退回業務補填 → 重新審核）\n\n'
+    +'原案件暫時作廢（拆分完成補填前可取消）。\n'
+    +'業務員將收到補填通知郵件。'
+  )) return;
+  doSplitCase(rowNum);
+}
+
+function doSplitCase(rowNum){
+  var r = rows.find(function(x){ return x._row===rowNum; });
+  if(!r){ toast('❌ 找不到案件','#dc2626'); return; }
+  var sb = getSupabase();
+  if(!sb){ toast('❌ Supabase 未連線','#dc2626'); return; }
+
+  var formId   = r[F.formId]||r['表單編號']||r._firebaseKey||'';
+  var caseName = g(r,'name');
+  var staff    = g(r,'staff')||'';
+  var now      = new Date().toISOString();
+  var nowStr   = new Date().toLocaleString('zh-TW',{hour12:false});
+  var byWho    = (curUser&&curUser.name)||'';
+
+  var idP = formId+'-P';
+  var idS = formId+'-S';
+
+  var baseMeta      = Object.assign({}, (r.meta||{}), { createdAt:now, timestamp:nowStr });
+  var baseLogistics = Object.assign({}, r.logistics||{});
+  var baseFees      = Object.assign({}, r.fees||{});
+  var baseSplitInfo = { from:formId, into:[], at:nowStr, by:byWho, note:'由 '+formId+' 拆分' };
+  // 新案件皆設為「退回」，請業務補填後重新送審
+  var splitNote    = '案件由 '+formId+' 拆分，請確認資料後重新送審';
+  var clearApproval = { bossApproved:'退回', bossNote:splitNote, approvedAt:'' };
+  var fillTransfer  = { fillStatus:'待補填', transferTo:staff };
+
+  // ── 採購單：保留 purchase，銷售清空 ──────────────────
+  var docP = {
+    meta:      Object.assign({}, baseMeta, { formId:idP, caseType:'採購' }),
+    purchase:  JSON.parse(JSON.stringify(r.purchase||{})),
+    sales:     { customer:'', paymentTerms:'', note:'', periods:[] },
+    logistics: JSON.parse(JSON.stringify(baseLogistics)),
+    fees:      JSON.parse(JSON.stringify(baseFees)),
+    approval:  clearApproval,
+    transfer:  fillTransfer,
+    splitInfo: Object.assign({}, baseSplitInfo),
+    voided:    false
+  };
+
+  // ── 銷售單：保留 sales，採購清空 ──────────────────────
+  var docS = {
+    meta:      Object.assign({}, baseMeta, { formId:idS, caseType:'銷售' }),
+    purchase:  { supplier:'', paymentTerms:'', note:'', periods:[] },
+    sales:     JSON.parse(JSON.stringify(r.sales||{})),
+    logistics: JSON.parse(JSON.stringify(baseLogistics)),
+    fees:      JSON.parse(JSON.stringify(baseFees)),
+    approval:  clearApproval,
+    transfer:  fillTransfer,
+    splitInfo: Object.assign({}, baseSplitInfo),
+    voided:    false
+  };
+
+  // 原案件作廢資料（整個 splitInfo 物件一次寫入，避免 dot notation 失敗）
+  var voidUpdate = {
+    voided:    true,
+    voidedAt:  now,
+    voidedBy:  byWho,
+    splitInfo: { from:'', into:[idP,idS], at:nowStr, by:byWho, note:'已拆分為 '+idP+'（採購）、'+idS+'（銷售）' }
+  };
+
+  toast('拆分中...','#1d4ed8');
+
+  // ── Step1：寫入採購單 ──────────────────────────────────
+  sb.from('cases').upsert({ id: idP, data: docP })
+  .then(function(res){
+    if(res.error) throw new Error(res.error.message);
+    // ── Step2：寫入銷售單 ──────────────────────────────
+    return sb.from('cases').upsert({ id: idS, data: docS });
+  })
+  .then(function(res){
+    if(res.error) throw new Error(res.error.message);
+    // ── Step3：作廢原案件（讀取後合併再寫回）────────────
+    return sb.from('cases').select('data').eq('id', formId).single()
+      .then(function(r2){
+        var merged = Object.assign({}, r2.data ? r2.data.data : {}, voidUpdate);
+        return sb.from('cases').upsert({ id: formId, data: merged });
+      });
+  })
+  .then(function(){
+    // ── Step4：郵件通知業務補填（採購單）—— 使用 rejected 觸發退回補填信 ────
+    backupActionToGAS({
+      action:'rejected', formId:idP, caseName:caseName+'（採購）',
+      staff:staff, bossNote:splitNote, editor:byWho
+    });
+    // ── Step5：郵件通知業務補填（銷售單）—— 使用 rejected 觸發退回補填信 ────
+    backupActionToGAS({
+      action:'rejected', formId:idS, caseName:caseName+'（銷售）',
+      staff:staff, bossNote:splitNote, editor:byWho
+    });
+
+    // ── Step6：更新本地記憶體 ─────────────────────────
+    Object.assign(r, voidUpdate); // 原案件在 memory 也作廢
+
+    function makeLocalRow(doc, id, type){
+      var row = Object.assign({}, doc, { _firebaseKey:id, _row:id });
+      row['表單編號'] = id;
+      row['業務名稱'] = staff;
+      row['案件名稱'] = caseName;
+      row['案件屬性'] = type;
+      row['銷售補填狀態'] = '待補填';
+      return row;
+    }
+    allData.push(makeLocalRow(docP, idP, '採購'));
+    allData.push(makeLocalRow(docS, idS, '銷售'));
+    rows = allData;
+
+    invalidateCache('cases'); // 清除快取，下次強制讀 Firebase
+    addLog('拆分案件', byWho, caseName, '→ '+idP+'、'+idS, formId);
+    closeD();
+    onLoad();
+    showPopup('✂️','拆分完成！','已通知業務員補填 '+idP+' 及 '+idS);
+  })
+  .catch(function(e){
+    console.error('拆分失敗：',e);
+    toast('❌ 拆分失敗：'+(e.message||e),'#dc2626');
+  });
+}
 
 // ── 取消拆分（限拆分出的案件都還在補填中）────────────────
 function canCancelSplit(r){
@@ -4462,97 +4515,6 @@ function doUnvoid(rowNum){
   });
 }
 
-// ════════════════════════════════════════════════════════════════
-// ★ v31 單邊終止：買家毀約 / 取消採購時只終止一側，另一側交易照常
-//   終止側「未入帳」期別退出應收應付/日曆/毛利（getPeriods01 統一過濾），
-//   「已入帳」期別保留；可隨時恢復；異動寫入 amendments + log + 通知。
-// ════════════════════════════════════════════════════════════════
-function confirmTerminateSide(rowNum, type){
-  var r=rows.find(function(x){return x._row===rowNum;});
-  if(!r) return;
-  var lbl  = type==='buy' ? '採購側' : '銷售側';
-  var hint = type==='buy' ? '（例：商品品質不符，取消採購）' : '（例：買家毀約）';
-  var reason = prompt(
-    '確定要終止「'+g(r,'name')+'」的'+lbl+'嗎？\n\n'
-    +'終止後：\n'
-    +'・該側「未入帳」期別將自應收應付、日曆與毛利中移除\n'
-    +'・「已入帳」期別保留在帳上（錢已實際進出）\n'
-    +'・另一側交易完全不受影響\n'
-    +'・之後可隨時恢復\n\n'
-    +'請輸入終止原因'+hint+'：');
-  if(reason===null) return;
-  reason = reason.trim();
-  if(!reason){ toast('❌ 必須填寫終止原因才能終止','#dc2626'); return; }
-  doTerminateSide(rowNum, type, reason);
-}
-
-function doTerminateSide(rowNum, type, reason){
-  var r=rows.find(function(x){return x._row===rowNum;});
-  if(!r){ toast('❌ 找不到案件','#dc2626'); return; }
-  var formId   = r[F.formId]||r['表單編號']||r._firebaseKey||'';
-  if(!formId){ toast('❌ 找不到案件 ID','#dc2626'); return; }
-  var caseName = g(r,'name');
-  var who      = (curUser&&curUser.name)||'';
-  var ts       = now();
-  var lbl      = type==='buy' ? '採購側' : '銷售側';
-  var sideKey  = type==='buy' ? 'purchase' : 'sales';
-  var info     = { at:ts, by:who, reason:reason };
-
-  var fields = {};
-  fields[sideKey+'.sideStatus']     = 'terminated';
-  fields[sideKey+'.sideStatusInfo'] = info;
-  // ★ 寫入異動歷史
-  var amHist = Array.isArray(r.amendments) ? r.amendments.slice() : [];
-  amHist.push({ at:ts, by:who, kind:'終止', reason:reason, changes:['⛔ 終止'+lbl] });
-  fields['amendments'] = amHist;
-
-  updateFirebase(formId, fields, function(ok){
-    if(!ok){ toast('❌ 終止寫入失敗，狀態未變更，請重試','#dc2626'); return; }
-    if(!r[sideKey]) r[sideKey]={};
-    r[sideKey].sideStatus     = 'terminated';
-    r[sideKey].sideStatusInfo = info;
-    r.amendments = amHist;
-    addLog('終止'+lbl, who, caseName, reason, formId);
-    // 沿用既有 notifyEditInfo 郵件通知老闆/相關人員（GAS 端無需改動）
-    backupActionToGAS({
-      action:'notifyEditInfo', caseName:caseName, formId:formId, caseId:formId,
-      editor:who, changes:'⛔ 終止'+lbl+'：'+reason, staff:(r[F.staff]||'')
-    });
-    closeD(); onLoad();
-    toast('⛔ 已終止'+lbl+'，另一側交易不受影響','#92400e');
-  });
-}
-
-function doRestoreSide(rowNum, type){
-  var r=rows.find(function(x){return x._row===rowNum;});
-  if(!r){ toast('❌ 找不到案件','#dc2626'); return; }
-  var lbl = type==='buy' ? '採購側' : '銷售側';
-  if(!confirm('確定要恢復「'+g(r,'name')+'」的'+lbl+'嗎？\n恢復後該側期別將重新出現在應收應付與日曆中。')) return;
-  var formId   = r[F.formId]||r['表單編號']||r._firebaseKey||'';
-  var caseName = g(r,'name');
-  var who      = (curUser&&curUser.name)||'';
-  var ts       = now();
-  var sideKey  = type==='buy' ? 'purchase' : 'sales';
-
-  var fields = {};
-  fields[sideKey+'.sideStatus']     = '';
-  fields[sideKey+'.sideStatusInfo'] = { at:'', by:'', reason:'' };
-  var amHist = Array.isArray(r.amendments) ? r.amendments.slice() : [];
-  amHist.push({ at:ts, by:who, kind:'恢復', reason:'', changes:['↩ 恢復'+lbl] });
-  fields['amendments'] = amHist;
-
-  updateFirebase(formId, fields, function(ok){
-    if(!ok){ toast('❌ 恢復寫入失敗，請重試','#dc2626'); return; }
-    if(!r[sideKey]) r[sideKey]={};
-    r[sideKey].sideStatus     = '';
-    r[sideKey].sideStatusInfo = {};
-    r.amendments = amHist;
-    addLog('恢復'+lbl, who, caseName, '', formId);
-    closeD(); onLoad();
-    toast('✅ 已恢復'+lbl,'#16a34a');
-  });
-}
-
 // 刪除
 function confirmDel(rowNum){
   var r=rows.find(function(x){return x._row===rowNum;});
@@ -4602,7 +4564,7 @@ function doDelete(rowNum,name){
         sellPay:     r ? (r['收款條件（銷售）']||'') : '',
         buyPeriods:  r ? (function(){
           var ps=[];
-          for(var i=1;i<=MAX_PERIODS;i++){
+          for(var i=1;i<=3;i++){
             var a=parseFloat(r['採購期'+i+'金額'])||0;
             var n=r['採購期'+i+'名稱']||'';
             if(a||n) ps.push({name:n,cur:r['採購期'+i+'幣別']||'TWD',amt:a,date:r['採購期'+i+'預計日']||''});
@@ -4611,7 +4573,7 @@ function doDelete(rowNum,name){
         })() : [],
         sellPeriods: r ? (function(){
           var ps=[];
-          for(var i=1;i<=MAX_PERIODS;i++){
+          for(var i=1;i<=3;i++){
             var a=parseFloat(r['銷售期'+i+'金額'])||0;
             var n=r['銷售期'+i+'名稱']||'';
             if(a||n) ps.push({name:n,cur:r['銷售期'+i+'幣別']||'TWD',amt:a,date:r['銷售期'+i+'預計日']||''});
@@ -4690,6 +4652,11 @@ function syncPermConfigFromDB(cb){
     })
     .catch(function(){ if(cb) cb(); });
 }
+function hasPerm(role, key){
+  var cfg = loadPermConfig();
+  return !!(cfg[role] && cfg[role][key]);
+}
+
 // 後台管理
 function renderAdmin(){
   var ug = document.getElementById('ug');
@@ -4897,6 +4864,51 @@ function escHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+function saveAccountToFirebase(id){
+  var nameEl  = document.getElementById('un-'+id);
+  var pwdEl   = document.getElementById('up-'+id);
+  var emailEl = document.getElementById('ue-'+id);
+  var stnEl   = document.getElementById('usn-'+id);
+  var roleEl  = document.getElementById('ur-'+id);
+  if(!nameEl||!pwdEl) return;
+
+  var name      = nameEl.value.trim();
+  var pwd       = pwdEl.value.trim();
+  var email     = emailEl ? emailEl.value.trim() : '';
+  var staffName = stnEl ? stnEl.value.trim() : '';
+  var newRole   = roleEl ? roleEl.value : '';
+
+  if(!name||!pwd){ toast('名稱和密碼不能空白','#dc2626'); return; }
+
+  var existing = (CLOUD_ACCOUNTS||[]).find(function(u){ return u.id===id; }) || {};
+  var acc = Object.assign({}, existing, { id:id, name:name, pwd:pwd });
+  if(email) acc.email = email;
+  if(staffName) acc.staffName = staffName;
+  if(newRole) acc.role = newRole;  // 保存新角色
+
+  saveAccountFirebase(acc, function(ok){
+    if(ok){
+      // 同步更新本地快取
+      if(CLOUD_ACCOUNTS){
+        var idx = CLOUD_ACCOUNTS.findIndex(function(u){ return u.id===id; });
+        if(idx>=0) CLOUD_ACCOUNTS[idx]=acc; else CLOUD_ACCOUNTS.push(acc);
+      }
+      var sv=document.getElementById('sv-'+id);
+      if(sv){sv.style.display='inline';setTimeout(function(){sv.style.display='none';},2000);}
+
+      var msg = newRole && newRole !== existing.role
+        ? '✅ 已儲存（權限已更新為：' + (newRole==='boss'?'董事長':newRole==='admin'?'管理員':newRole==='finance'?'財務':'業務員') + '）'
+        : '✅ 已儲存至 Supabase';
+      toast(msg,'#16a34a');
+
+      // 同步備份到 GAS
+      backupActionToGAS({action:'updateAccount',id:id,name:name,pwd:pwd,email:email,staffName:staffName,role:newRole||existing.role});
+    } else {
+      toast('❌ 儲存失敗','#dc2626');
+    }
+  });
+}
+
 function showAddAccountModal(){
   var html = '<div style="padding:20px;">'
     +'<div style="font-size:15px;font-weight:700;margin-bottom:16px;">➕ 新增帳號</div>'
@@ -4963,6 +4975,36 @@ function doAddAccount(){
   });
 }
 
+function renderCU(){
+  var cus=getCU();
+  if(!cus.length){document.getElementById('cu').innerHTML='<div style="font-size:12px;color:#94a3b8;padding:8px 0;">尚無自訂帳號</div>';return;}
+  var h='<div class="ugrid">';
+  cus.forEach(function(u){
+    h+='<div class="uc"><div class="uc-f"><label class="uc-l">顯示名稱</label><input class="uc-i" id="cn-'+u.id+'" value="'+u.name+'"></div>'
+      +'<div class="uc-f"><label class="uc-l">角色</label><select class="uc-i" id="cr-'+u.id+'">'
+      +'<option value="boss"'+(u.role==='boss'?' selected':'')+'>董事長</option>'
+      +'<option value="staff"'+(u.role==='staff'?' selected':'')+'>業務員</option>'
+      +'<option value="finance"'+(u.role==='finance'?' selected':'')+'>財務</option>'
+      +'</select></div>'
+      +'<div class="uc-f"><label class="uc-l">密碼</label><input class="uc-i" id="cp-'+u.id+'" value="'+u.pwd+'"></div>'
+      +'<div style="display:flex;gap:6px;margin-top:4px;">'
+      +'<button class="btn-su" style="flex:2" onclick="saveCU2(\''+u.id+'\')">儲存</button>'
+      +'<button style="flex:1;padding:8px;border-radius:7px;background:#fef2f2;color:#dc2626;border:0.5px solid #fca5a5;font-size:12px;font-weight:700;cursor:pointer;" onclick="delCU(\''+u.id+'\')">刪除</button>'
+      +'</div></div>';
+  });
+  h+='</div>';
+  document.getElementById('cu').innerHTML=h;
+}
+function saveCU2(id){
+  var cus=getCU();var u=cus.find(function(x){return x.id===id;});
+  if(!u)return;
+  u.name=document.getElementById('cn-'+id).value.trim()||u.name;
+  u.role=document.getElementById('cr-'+id).value;
+  u.pwd=document.getElementById('cp-'+id).value.trim()||u.pwd;
+  saveCU(cus);CU=loadU();toast('✅ 已儲存','#16a34a');
+}
+function delCU(id){saveCU(getCU().filter(function(x){return x.id!==id;}));CU=loadU();renderCU();}
+
 // Log
 function addLog(a, u, tgt, n, caseId) {
   var c = a.indexOf('同意')>=0||a.indexOf('簽核')>=0 ? 'lok'
@@ -4983,20 +5025,13 @@ function addLog(a, u, tgt, n, caseId) {
     a: a||'', g: tgt||'', n: n||'', caseId: caseId||''
   };
   (function() {
-    function logWriteFail(e){
-      console.warn('Log 寫入失敗：', e);
-      // ★ 日誌迴圈斷掉必須看得見：只在本頁第一次失敗時跳警示，避免洗版
-      if(!window._logFailWarned){
-        window._logFailWarned = true;
-        toast('⚠️ 日誌無法寫入資料庫（僅存本機），請通知管理員檢查 Supabase logs 權限','#dc2626');
-      }
-    }
     try {
-      sb.from('logs').insert({ data: sbEntry }).then(function(res){
-        if(res && res.error) logWriteFail(res.error.message||res.error);
-      }).catch(logWriteFail);
+      var res = sb.from('logs').insert({ data: sbEntry });
+      if (res && typeof res.then === 'function') {
+        res.catch(function(e) { console.warn('Log 寫入失敗：', e); });
+      }
     } catch(e) {
-      logWriteFail(e);
+      console.warn('Log 寫入失敗：', e);
     }
   })();
 }
@@ -5022,14 +5057,11 @@ function renderLog(){
   lb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">讀取中…</td></tr>';
   loadLogsFromFirebase(function(fbLogs) {
     var display = fbLogs.length > 0 ? fbLogs : logs.slice().reverse();
-    // ★ 資料庫日誌為空時明確標示目前只看得到本機記錄（每台裝置不同）
-    var srcBanner = fbLogs.length > 0 ? '' :
-      '<tr><td colspan="6" style="text-align:center;color:#dc2626;background:#fef2f2;padding:10px;font-size:12px;font-weight:700;">⚠️ 資料庫日誌為空 — 以下僅為本機裝置記錄（換裝置看不到），請檢查 Supabase logs 表寫入權限</td></tr>';
     if (!display.length) {
-      lb.innerHTML = srcBanner + '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">尚無記錄</td></tr>';
+      lb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">尚無記錄</td></tr>';
       return;
     }
-    lb.innerHTML = srcBanner + display.map(function(l) {
+    lb.innerHTML = display.map(function(l) {
       var c = l.c || (l.a&&(l.a.indexOf('同意')>=0||l.a.indexOf('簽核')>=0)?'lok':l.a&&(l.a.indexOf('退回')>=0||l.a.indexOf('刪除')>=0)?'lng':'lin');
       var roleLabel = {boss:'👑',admin:'🔧',finance:'💰',staff:'👤'}[l.role||''] || '';
       return '<tr>'
@@ -5083,31 +5115,18 @@ function changePwd(){
   if(inputOld !== storedPwd){errEl.textContent='目前密碼錯誤';return;}
   if(newP.length<6){errEl.textContent='新密碼至少需要6個字元';return;}
   if(newP!==cfP){errEl.textContent='兩次輸入的新密碼不一致';return;}
-  // ★ 先寫入 Supabase accounts（登入優先讀這裡，不寫的話新密碼會無效）
-  var updatedAcc = Object.assign({}, curUser, { pwd: newP });
-  saveAccountFirebase(updatedAcc, function(ok){
-    if(!ok){
-      errEl.textContent='密碼更新失敗（資料庫寫入失敗），請稍後重試';
-      return;
-    }
-    // 同步更新本地帳號快取（不重抓 Sheets，避免舊密碼蓋回來）
-    if(CLOUD_ACCOUNTS){
-      var ci = CLOUD_ACCOUNTS.findIndex(function(u){ return u.id===curUser.id; });
-      if(ci>=0) CLOUD_ACCOUNTS[ci] = Object.assign({}, CLOUD_ACCOUNTS[ci], { pwd:newP });
-      else CLOUD_ACCOUNTS.push(updatedAcc);
-    }
-    // 備份到 Google Sheets（跨裝置）
-    backupActionToGAS({action:'updateAccount',id:curUser.id,pwd:newP});
-    curUser.pwd=newP;
-    var pdisplay=document.getElementById('pwd-display');
-    if(pdisplay){ pdisplay.value=newP; pdisplay.type='password'; }
-    var eyeBtn=document.getElementById('pwd-eye-btn');
-    if(eyeBtn) eyeBtn.textContent='👁 顯示';
-    addLog('修改密碼',curUser.name,'','');
-    showPopup('🔑','密碼更新成功','所有裝置同步生效');
-    ['pwd-old','pwd-new','pwd-confirm'].forEach(function(id){
-      var el2=document.getElementById(id);if(el2)el2.value='';
-    });
+  // 同步更新到 Google Sheets（跨裝置）
+  backupActionToGAS({action:'updateAccount',id:curUser.id,pwd:newP});
+  curUser.pwd=newP;
+  var pdisplay=document.getElementById('pwd-display');
+  if(pdisplay){ pdisplay.value=newP; pdisplay.type='password'; }
+  var eyeBtn=document.getElementById('pwd-eye-btn');
+  if(eyeBtn) eyeBtn.textContent='👁 顯示';
+  fetchAccounts(function(){CU=loadU();CLOUD_ACCOUNTS=CU;});
+  addLog('修改密碼',curUser.name,'','');
+  showPopup('🔑','密碼更新成功','所有裝置同步生效');
+  ['pwd-old','pwd-new','pwd-confirm'].forEach(function(id){
+    var el2=document.getElementById(id);if(el2)el2.value='';
   });
 }
 
@@ -5202,8 +5221,6 @@ function _buildTransferItems() {
           var dateStr  = p.expectedDate || p.date || '';
           var dueDate  = dateStr ? new Date(dateStr.replace(/\//g,'-')) : null;
           var periodStatus = (p.status || '').toString();
-          // ★ v31：採購側已終止 → 未入帳期別不進轉入管理（已入帳保留可查）
-          if(sideTerm(r,'buy') && periodStatus !== 'approved') return;
           _transferItems.push({
             _row:        formId + '_buy_' + idx,
             _firebaseRow: r._row,
@@ -5222,8 +5239,7 @@ function _buildTransferItems() {
             confirmed:   periodStatus === 'approved',
             // ★ 優先用 Firebase 原始物件的 acctNote，再 fallback 展平欄位
             acctNote:    p.acctNote || r['採購期'+(idx+1)+'帳務備註'] || '',
-            periodStatus: periodStatus || r['採購期'+(idx+1)+'審核狀態'] || '',
-            approvedAt:  p.approvedAt || ''
+            periodStatus: periodStatus || r['採購期'+(idx+1)+'審核狀態'] || ''
           });
         });
       } else {
@@ -5269,8 +5285,6 @@ function _buildTransferItems() {
           var dateStr  = p.expectedDate || p.date || '';
           var dueDate  = dateStr ? new Date(dateStr.replace(/\//g,'-')) : null;
           var periodStatus = (p.status || '').toString();
-          // ★ v31：銷售側已終止 → 未入帳期別不進轉入管理（已入帳保留可查）
-          if(sideTerm(r,'sell') && periodStatus !== 'approved') return;
           _transferItems.push({
             _row:        formId + '_sell_' + idx,
             _firebaseRow: r._row,
@@ -5289,8 +5303,7 @@ function _buildTransferItems() {
             confirmed:   periodStatus === 'approved',
             // ★ 優先用 Firebase 原始物件的 acctNote，再 fallback 展平欄位
             acctNote:    p.acctNote || r['銷售期'+(idx+1)+'帳務備註'] || '',
-            periodStatus: periodStatus || r['銷售期'+(idx+1)+'審核狀態'] || '',
-            approvedAt:  p.approvedAt || ''
+            periodStatus: periodStatus || r['銷售期'+(idx+1)+'審核狀態'] || ''
           });
         });
       } else {
@@ -5334,14 +5347,6 @@ function _buildTransferItems() {
 function _renderTransfer() {
   var el = document.getElementById('transfer-pending');
   if (!el) return;
-
-  // ★ 記住搜尋框是否持有焦點（re-render 重建 DOM 會失焦，渲染後需還原）
-  var _searchHadFocus = document.activeElement && document.activeElement.id === 'transfer-search-input';
-  function _restoreSearchFocus() {
-    if (!_searchHadFocus) return;
-    var si = document.getElementById('transfer-search-input');
-    if (si) { si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
-  }
 
   // ── 1. 待確認 / 已確認 篩選 ──
   var displayItems = _transferItems.filter(function(p) {
@@ -5406,7 +5411,7 @@ function _renderTransfer() {
     '</div>' +
     // 搜尋列
     '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">' +
-    '<input type="text" id="transfer-search-input" value="' + escHtml(_transferSearch || '') + '"' +
+    '<input type="text" id="transfer-search-input" value="' + (kw ? kw : '') + '"' +
       ' placeholder="🔍 搜尋案號 / 業務 / 案件名稱 / 幣別..."' +
       ' oninput="_transferSearch=this.value;_transferPage=1;_renderTransfer();"' +
       ' style="flex:1;background:#f8fafc;border:1.5px solid var(--border);border-radius:9px;padding:9px 14px;font-size:13px;outline:none;font-family:inherit;">' +
@@ -5423,7 +5428,6 @@ function _renderTransfer() {
       (kw ? '查無符合「' + kw + '」的資料' : (_transferFilter==='approved' ? '尚無已確認的資料' : '所有已簽核案件均已確認')) +
       '</div></div>';
     document.getElementById('transfer-pagination').innerHTML = '';
-    _restoreSearchFocus();
     return;
   }
 
@@ -5501,7 +5505,6 @@ function _renderTransfer() {
 
   html += '</tbody></table></div>';
   el.innerHTML = html;
-  _restoreSearchFocus();
 
   renderPagination('transfer-pagination', _transferPage, pages, function(pg) {
     _transferPage = pg;
@@ -5581,6 +5584,34 @@ function _syncLocalPeriods(formId, periodType, periodsArray) {
     localStorage.removeItem('cases_cache');
     localStorage.removeItem('cases_cache_time');
   } catch(e) {}
+}
+
+// ── 預計付款日更新 → 整包 periods 寫回 ───────────────
+function updatePayDate(rowId, newDate) {
+  if (!newDate) return;
+  var p = _transferItems.find(function(x) { return String(x._row) === String(rowId); });
+  if (!p) return;
+  var periods = _getFirebasePeriodsRef(p.formId, p.periodType);
+  if (!periods) {
+    toast('❌ 找不到 periods 資料', '#dc2626');
+    return;
+  }
+  // 深複製後修改，避免直接改快取
+  var updated = JSON.parse(JSON.stringify(periods));
+  var target  = updated[p.periodIdx];
+  if (!target) { toast('❌ 找不到該期別', '#dc2626'); return; }
+  target.expectedDate = newDate;
+  target.date         = newDate; // 相容舊欄位
+  _writePeriodsToFirebase(p.formId, p.periodType, updated, function(ok) {
+    if (ok) {
+      var who = (curUser && curUser.name) || '?';
+      addLog('付款日修改', who, p.caseName + '【' + p.periodName + '】', p.dueDate + ' → ' + newDate, p.formId);
+      p.dueDate = newDate;
+      toast('📅 日期已更新', '#0369a1');
+    } else {
+      toast('❌ 更新失敗，請重試', '#dc2626');
+    }
+  });
 }
 
 // ── 訂單轉入：編輯 Modal ─────────────────────────────
@@ -5681,6 +5712,79 @@ function saveTransferEdit(rowId, andApprove) {
     } else {
       toast('💾 已儲存', '#0369a1');
       _renderTransfer();
+    }
+  });
+}
+
+// ── inline-edit：點擊文字 → 顯示輸入框 ───────────────
+function editNote(safeId) {
+  var textEl  = document.getElementById('note-text-'  + safeId);
+  var inputEl = document.getElementById('note-input-' + safeId);
+  if (!textEl || !inputEl) return;
+  var cur = textEl.innerText;
+  inputEl.value = (cur === '（點擊輸入備註）') ? '' : cur;
+  textEl.style.display  = 'none';
+  inputEl.style.display = 'block';
+  inputEl.focus();
+}
+
+// ── inline-edit：失焦或 Enter → 整包 periods 寫回 ────
+function saveNote(safeId, formId, periodIdx, periodType) {
+  var textEl  = document.getElementById('note-text-'  + safeId);
+  var inputEl = document.getElementById('note-input-' + safeId);
+  if (!textEl || !inputEl) return;
+  // ★ 防止 Enter 觸發 blur 造成雙重寫入（_saving 旗標存在 inputEl 物件上）
+  if (inputEl._saving) return;
+  inputEl._saving = true;  // 鎖住，防止 blur 重複觸發
+
+  var val = inputEl.value.trim();
+  // UI 立即切回顯示
+  inputEl.style.display = 'none';
+  textEl.style.display  = 'block';
+  textEl.innerText = val || '（點擊輸入備註）';
+  textEl.style.color = val ? 'var(--ink)' : '#94a3b8';
+
+  // 找對應 item，得到 periodType（★ 須同時比對 periodType，避免同案件採購/銷售期 idx 衝突）
+  var p = _transferItems.find(function(x) {
+    return x.formId === formId && (x.periodIdx || 0) === periodIdx && x.periodType === periodType;
+  }) || _transferItems.find(function(x) {
+    return x.formId === formId && (x.periodIdx || 0) === periodIdx;
+  });
+
+  // ★ finally 確保無論成功或失敗都解鎖
+  function unlock() { inputEl._saving = false; }
+
+  if (!p) { unlock(); return; }
+  p.acctNote = val;
+
+  var periods = _getFirebasePeriodsRef(formId, p.periodType);
+  if (!periods) { toast('❌ 找不到 periods', '#dc2626'); unlock(); return; }
+
+  var updated, target;
+  try {
+    updated = JSON.parse(JSON.stringify(periods));
+    target  = updated[periodIdx];
+    if (!target) { toast('❌ 找不到該期別', '#dc2626'); unlock(); return; }
+    target.acctNote = val;
+  } catch(parseErr) {
+    toast('❌ 資料解析失敗', '#ef4444');
+    unlock();
+    return;
+  }
+
+  _writePeriodsToFirebase(formId, p.periodType, updated, function(ok) {
+    try {
+      if (ok) {
+        toast('📝 備註已儲存', '#0369a1');
+        var who = (curUser && curUser.name) || '?';
+        addLog('帳務備註', who, p.caseName + '【' + p.periodName + '】', '備註：' + val, formId);
+      } else {
+        toast('儲存失敗，請檢查網路', '#ef4444');
+      }
+    } catch(e) {
+      toast('儲存失敗，請檢查網路', '#ef4444');
+    } finally {
+      unlock();  // ★ 非同步完成後，無論成功失敗都解鎖
     }
   });
 }
@@ -5978,6 +6082,7 @@ function fmtDateTimeSlash(s) {
     return Y+'/'+M+'/'+D+' '+h+':'+m;
   } catch(e) { return s; }
 }
+var CUR_SYMBOL = {'TWD':'TWD','USD':'USD','JPY':'JPY','EUR':'EUR','CNY':'CNY','NTD':'TWD'};
 function fmtAmt(amt, cur, direction) {
   var n   = Math.round(parseFloat(amt)||0);
   var c   = (cur||'TWD').toUpperCase();
@@ -6104,6 +6209,7 @@ function loadKeyin() {
 // ── 主渲染 ────────────────────────────────────────────
 function renderKeyin() {
   var today  = new Date(); today.setHours(0,0,0,0);
+  var todayStr = today.toISOString().slice(0,10);
   var kw = (document.getElementById('keyin-search') ? document.getElementById('keyin-search').value : '').trim().toLowerCase();
   var f  = _keyinFilter;
 
@@ -6337,6 +6443,7 @@ function openKeyinForm(id) {
     notice.id = 'kf-transfer-notice';
     notice.style.cssText = 'background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:4px;';
     notice.innerHTML = '📥 此帳款由訂單轉入自動建立，可自由修改所有欄位';
+    document.getElementById('kf-form-body') || document.getElementById('keyin-form-body');
     document.getElementById('keyin-form-body').insertBefore(notice, document.getElementById('keyin-form-body').firstChild);
   }
   document.getElementById('KeyinFormM').classList.add('open');
