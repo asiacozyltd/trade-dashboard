@@ -3211,6 +3211,9 @@ function showD(rowNum){
       }
       if(isFilllWait){
         h+='<button onclick="doResendNotify('+rq+',\'resendFillRequest\')" style="flex:1;padding:9px 0;border-radius:9px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-size:12px;font-weight:700;cursor:pointer;">↩ 重發補填通知</button>';
+        if(g(r,'type')==='採購' && !isVoided){
+          h+='<button onclick="cancelPurchaseFill('+rq+')" style="flex:1;padding:9px 8px;border-radius:9px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;font-size:12px;font-weight:700;cursor:pointer;">取消誤設補填，改為純採購送審</button>';
+        }
       }
       h+='</div>';
     }
@@ -3716,6 +3719,57 @@ function doResendNotify(rowNum, action){
 }
 
 // 補填銷售內容 - 開啟表單帶入 formId
+// 誤設補填的純採購：只解除補填及重新送審，保留所有採購、物流與費用資料。
+var purchaseFillSaving = {};
+function purchaseFillCorrection(data, editor, timestamp){
+  var meta=data.meta||{}, transfer=data.transfer||{}, approval=data.approval||{};
+  var type=String(meta.caseType!==undefined?meta.caseType:(data['案件屬性']||'')).trim();
+  var fill=String(transfer.fillStatus!==undefined?transfer.fillStatus:(data['銷售補填狀態']||'')).trim();
+  if(data.voided || type!=='採購' || fill!=='待補填') throw new Error('案件狀態已變更，請重新整理後確認。');
+  if(approval.bossApproved==='是' || String(approval.bossApproved||data['老闆已同意']||'').includes('同意')) throw new Error('案件已簽核，不能重新送審。');
+  var sales=data.sales||{};
+  var hasSales=(sales.periods||[]).some(function(p){return (parseFloat(p.amount||p.amt)||0)!==0;});
+  for(var i=1;i<=3;i++) hasSales=hasSales || (parseFloat(data['銷售期'+i+'金額'])||0)!==0;
+  if(hasSales || (parseFloat(sales.amount||data.sellAmt)||0)!==0) throw new Error('案件已有銷售金額，請先確認案件屬性，不能直接改為純採購。');
+  var updated=JSON.parse(JSON.stringify(data));
+  updated.transfer=Object.assign({},transfer,{fillStatus:'',transferTo:'',transferEmail:'',transferNote:'',cancelledAt:timestamp,cancelledBy:editor});
+  updated.approval=Object.assign({},approval,{bossApproved:'待審核',approvedAt:'',requestedAt:timestamp});
+  updated['銷售補填狀態']='';
+  updated['轉交信箱']='';
+  updated['轉交銷售業務']='';
+  updated['老闆已同意']='待審核';
+  updated['簽核時間']='';
+  return updated;
+}
+async function cancelPurchaseFill(rowNum){
+  if(!curUser || ['admin','boss'].indexOf(curUser.role)<0) return toast('僅限管理員或董事長操作','#dc2626');
+  var r=rows.find(function(x){return x._row===rowNum;});
+  if(!r) return;
+  var formId=r[F.formId]||r._firebaseKey;
+  if(!formId || purchaseFillSaving[formId]) return;
+  if(!confirm('確認 '+formId+' 為純採購，不需要補填銷售資料？\n取消補填後將恢復待審核，保留原採購資料。')) return;
+  purchaseFillSaving[formId]=true;
+  try{
+    var sb=getSupabase();
+    if(!sb) throw new Error('資料庫尚未連線');
+    var current=await sb.from('cases').select('data').eq('id',formId).single();
+    if(current.error || !current.data) throw new Error('無法取得最新案件，請重新整理');
+    var original=current.data.data;
+    var updated=purchaseFillCorrection(original,curUser.name,new Date().toISOString());
+    // 比對原資料，避免覆蓋其他人剛完成的補填或簽核；不以 upsert 重建已刪除案件。
+    var saved=await sb.from('cases').update({data:updated}).eq('id',formId).eq('data',JSON.stringify(original)).select('id');
+    if(saved.error) throw new Error(saved.error.message);
+    if(!saved.data || saved.data.length!==1) throw new Error('案件已被其他人更新，請重新整理後重試');
+    r[F.fillStatus]=''; r[F.status]='待審核'; r[F.signTime]='';
+    r.transfer=updated.transfer; r.approval=updated.approval;
+    invalidateCache('cases');
+    addLog('取消誤設補填',curUser.name,g(r,'name'),'恢復純採購待審核',formId);
+    closeD();
+    doRefresh(true);
+    toast('已取消補填，恢復純採購待審核','#16a34a');
+  }catch(e){toast('取消補填失敗：'+e.message,'#dc2626');}
+  finally{delete purchaseFillSaving[formId];}
+}
 function openFillSell(rowNum){
   var r = rows.find(function(x){ return x._row===rowNum; });
   if(!r) return;
