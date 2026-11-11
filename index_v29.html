@@ -7025,15 +7025,21 @@ function exportKeyinExcel() {
  function drawManager(){
   var host=document.getElementById('partner-manager');host.replaceChildren();
   node('h3','客戶／供應商資料',host);
-  var search=node('input',undefined,host);search.placeholder='搜尋名稱、聯絡人或電話';
+  var search=node('input',undefined,host);search.placeholder='搜尋編號、名稱、聯絡人或電話';
   var add=node('button','新增資料',host);add.onclick=function(){editPartner({kind:'supplier',active:true});};
   var refresh=node('button','重新載入',host);refresh.onclick=window.openPartnerManager;
   var editor=node('div',undefined,host);editor.id='partner-editor';
   var list=node('div',undefined,host);
-  function draw(){list.replaceChildren();records.filter(function(r){return [r.name,r.contact,r.phone].join(' ').toLowerCase().includes(search.value.toLowerCase());}).forEach(function(r){
+  function draw(){list.replaceChildren();records.filter(function(r){return [r.partner_code,r.name,r.contact,r.phone].join(' ').toLowerCase().includes(search.value.toLowerCase());}).forEach(function(r){
    var line=node('div',undefined,list);line.style.cssText='padding:10px;border-bottom:1px solid #ddd;display:flex;gap:12px;align-items:center';
-   node('span',(r.kind==='supplier'?'供應商':'客戶')+'｜'+r.name+'｜'+(r.contact||'')+' '+(r.phone||'')+(r.active?'':'（已停用）'),line);
+   node('span',(r.partner_code||'尚未建立編號')+'｜'+(r.kind==='supplier'?'供應商':'客戶')+'｜'+r.name+'｜'+(r.contact||'')+' '+(r.phone||'')+(r.active?'':'（已停用）'),line);
    var button=node('button','編輯',line);button.onclick=function(){editPartner(r);};
+   var remove=node('button','刪除',line);remove.style.color='#b91c1c';remove.onclick=async function(){
+    if(!confirm('確定刪除 '+(r.partner_code||'')+' '+r.name+'？\n將從名單移除，歷史案件的原有名稱仍保留。若只是不再使用，也可在編輯中停用。'))return;
+    remove.disabled=true;
+    try{await adminCall('delete',{id:r.id,updated_at:r.updated_at});await window.openPartnerManager();}
+    catch(e){alert('刪除失敗：'+e.message);remove.disabled=false;}
+   };
   });if(!list.children.length)node('p','目前沒有符合的資料。',list);}
   search.oninput=draw;draw();
  }
@@ -7041,7 +7047,9 @@ function exportKeyinExcel() {
   editing=Object.assign({},record);var host=document.getElementById('partner-editor');host.replaceChildren();
   var form=node('form',undefined,host);form.style.cssText='padding:16px;background:#f8fafc;display:grid;gap:10px;margin:12px 0';
   var fields={};var kind=node('select',undefined,form);fields.kind=kind;
+  node('p','編號：'+(record.partner_code||'儲存後自動產生（客戶 C、供應商 S）'),form);
   [['supplier','供應商'],['customer','客戶']].forEach(function(p){var o=node('option',p[1],kind);o.value=p[0];});kind.value=record.kind;
+  kind.disabled=!!record.id;
   [['name','公司名稱'],['contact','聯絡人'],['phone','電話'],['email','Email'],['address','地址'],['tax_id','統一編號'],['note','備註']].forEach(function(p){
    var label=node('label',p[1]+' ',form),input=node('input',undefined,label);input.value=record[p[0]]||'';input.maxLength=p[0]==='name'?200:2000;input.required=p[0]==='name';if(p[0]==='email')input.type='email';fields[p[0]]=input;
   });
@@ -7056,8 +7064,19 @@ function exportKeyinExcel() {
  if(typeof renderAdmin==='function'){
   var original=renderAdmin;
   window.renderAdmin=function(){original();if(!curUser||curUser.role!=='admin')return;
-   var host=document.getElementById('ug'),button=node('button','客戶／供應商管理',host);button.style.marginTop='20px';button.onclick=window.openPartnerManager;
-   node('div',undefined,host).id='partner-manager';
+   var host=document.getElementById('ug'),bar=document.getElementById('atab-acct').parentNode;
+   var button=node('button','客戶／供應商管理',bar);button.id='atab-partners';
+   button.style.cssText='padding:10px 20px;border:none;background:none;color:var(--muted);font-weight:700;cursor:pointer;border-bottom:2px solid transparent;font-size:13px;';
+   button.onclick=function(){window.switchAdminTab('partners');};
+   var panel=node('div',undefined,host);panel.id='partner-manager';panel.style.display='none';
+  };
+  var originalSwitch=switchAdminTab;
+  window.switchAdminTab=function(tab){
+   originalSwitch(tab);
+   var panel=document.getElementById('partner-manager'),button=document.getElementById('atab-partners');
+   if(panel)panel.style.display=tab==='partners'?'block':'none';
+   if(button){button.style.color=tab==='partners'?'var(--sea)':'var(--muted)';button.style.borderBottom=tab==='partners'?'2px solid var(--sea)':'2px solid transparent';}
+   if(tab==='partners')window.openPartnerManager();
   };
  }
 })();
