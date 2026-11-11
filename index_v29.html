@@ -7022,45 +7022,141 @@ function exportKeyinExcel() {
   host.replaceChildren();node('p','載入客戶／供應商資料…',host);
   try{records=await adminCall('list');drawManager();}catch(e){host.replaceChildren();node('p','載入失敗：'+e.message,host);}
  };
+ // 客戶／供應商管理的列表與詳細畫面（嵌入 partners_ui.js 同一作用域）。
+ var partnerView={query:'',kind:'',size:10,page:1,sort:'partner_code',direction:1};
+ function partnerStyle(){
+  if(document.getElementById('partner-view-style'))return;
+  var style=node('style',undefined,document.head);style.id='partner-view-style';
+  style.textContent=`
+  #partner-manager{color:#243e59;font-size:13px;padding:20px 0;font-family:inherit}
+  #partner-manager *{box-sizing:border-box}
+  #partner-manager .pm-card{background:#fff;border:1px solid #e4e9f0;border-radius:12px;overflow:hidden;box-shadow:0 2px 5px #172b4d05}
+  #partner-manager .pm-head{padding:18px 24px;background:#f5f7fa;display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:600}
+  #partner-manager .pm-body{padding:24px}
+  #partner-manager .pm-tools,#partner-manager .pm-footer{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 0}
+  #partner-manager .pm-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  #partner-manager input,#partner-manager select,#partner-manager textarea{border:1px solid #d6deea;border-radius:4px;padding:8px 10px;background:white;color:#243e59;font:inherit;min-height:35px}
+  #partner-manager input:focus,#partner-manager select:focus,#partner-manager textarea:focus{outline:2px solid #b8dfed;outline-offset:1px;border-color:#0789bd}
+  #partner-manager button{font:inherit;cursor:pointer;border:1px solid transparent;border-radius:4px;padding:8px 12px;white-space:nowrap;background:#edf2f7;color:#31465b}
+  #partner-manager button:disabled{opacity:.5;cursor:default}
+  #partner-manager .pm-blue{background:#008bc2;color:white}
+  #partner-manager .pm-orange{background:#dc8000;color:white}
+  #partner-manager .pm-dark{background:#48515a;color:white}
+  #partner-manager .pm-delete{background:white;border-color:#efc5c5;color:#bc3b3b}
+  #partner-manager .pm-scroll{overflow-x:auto}
+  #partner-manager table{border-collapse:collapse;width:100%;font-size:13px;min-width:860px;table-layout:fixed}
+  #partner-manager th,#partner-manager td{border:1px solid #dfe5ee;padding:12px 14px;text-align:left;vertical-align:middle;overflow-wrap:anywhere;height:51px}
+  #partner-manager th{background:#fff;font-weight:500;height:42px}
+  #partner-manager th button{padding:0;background:none;width:100%;text-align:left;display:flex;justify-content:space-between}
+  #partner-manager tbody tr:nth-child(odd){background:#f3f4f5}
+  #partner-manager tbody tr:hover{background:#d9edf0}
+  #partner-manager .pm-actions{display:flex;gap:6px;flex-wrap:wrap}
+  #partner-manager .pm-actions button{font-size:12px;padding:6px 9px}
+  #partner-manager .pm-badge{font-size:11px;padding:3px 7px;border-radius:4px;background:#e4f3ed;color:#297458}
+  #partner-manager .pm-off{background:#eceff3;color:#7b8794}
+  #partner-manager .pm-pages{display:flex;gap:3px;align-items:center}
+  #partner-manager .pm-pages button{background:#f5f7fa}
+  #partner-manager .pm-pages .pm-current{background:#008bc2;color:#fff}
+  #partner-manager .pm-tabs{display:flex;background:#f5f7fa;margin-bottom:24px;gap:0}
+  #partner-manager .pm-tabs button{border-radius:0;background:transparent;padding:14px 18px}
+  #partner-manager .pm-tabs .pm-selected{background:white;color:#007daf;box-shadow:inset 0 -2px #008bc2}
+  #partner-manager .pm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px 26px;padding:4px 8px 28px}
+  #partner-manager .pm-field{display:flex;flex-direction:column;gap:9px;min-width:0}
+  #partner-manager .pm-field input,#partner-manager .pm-field select,#partner-manager .pm-field textarea{width:100%}
+  #partner-manager input:disabled,#partner-manager select:disabled,#partner-manager textarea:disabled{background:#e9edf2;color:#526378;opacity:1}
+  #partner-manager .pm-status{color:#b33232;white-space:pre-wrap}
+  #partner-manager .pm-empty{text-align:center;padding:48px;color:#8190a0}
+  @media(max-width:800px){#partner-manager .pm-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#partner-manager .pm-body{padding:16px}}
+  @media(max-width:520px){#partner-manager .pm-grid{grid-template-columns:1fr}#partner-manager .pm-head{padding:16px}#partner-manager .pm-tabs button{padding:12px}}
+  `;
+ }
+ function pmNode(tag,text,parent,cls){var el=node(tag,text,parent);if(cls)el.className=cls;return el;}
+ function pmButton(text,parent,cls,click){var b=pmNode('button',text,parent,cls);b.type='button';b.onclick=click;return b;}
  function drawManager(){
-  var host=document.getElementById('partner-manager');host.replaceChildren();
-  node('h3','客戶／供應商資料',host);
-  var search=node('input',undefined,host);search.placeholder='搜尋編號、名稱、聯絡人或電話';
-  var add=node('button','新增資料',host);add.onclick=function(){editPartner({kind:'supplier',active:true});};
-  var refresh=node('button','重新載入',host);refresh.onclick=window.openPartnerManager;
-  var editor=node('div',undefined,host);editor.id='partner-editor';
-  var list=node('div',undefined,host);
-  function draw(){list.replaceChildren();records.filter(function(r){return [r.partner_code,r.name,r.contact,r.phone].join(' ').toLowerCase().includes(search.value.toLowerCase());}).forEach(function(r){
-   var line=node('div',undefined,list);line.style.cssText='padding:10px;border-bottom:1px solid #ddd;display:flex;gap:12px;align-items:center';
-   node('span',(r.partner_code||'尚未建立編號')+'｜'+(r.kind==='supplier'?'供應商':'客戶')+'｜'+r.name+'｜'+(r.contact||'')+' '+(r.phone||'')+(r.active?'':'（已停用）'),line);
-   var button=node('button','編輯',line);button.onclick=function(){editPartner(r);};
-   var remove=node('button','刪除',line);remove.style.color='#b91c1c';remove.onclick=async function(){
-    if(!confirm('確定刪除 '+(r.partner_code||'')+' '+r.name+'？\n將從名單移除，歷史案件的原有名稱仍保留。若只是不再使用，也可在編輯中停用。'))return;
-    remove.disabled=true;
-    try{await adminCall('delete',{id:r.id,updated_at:r.updated_at});await window.openPartnerManager();}
-    catch(e){alert('刪除失敗：'+e.message);remove.disabled=false;}
-   };
-  });if(!list.children.length)node('p','目前沒有符合的資料。',list);}
-  search.oninput=draw;draw();
- }
- function editPartner(record){
-  editing=Object.assign({},record);var host=document.getElementById('partner-editor');host.replaceChildren();
-  var form=node('form',undefined,host);form.style.cssText='padding:16px;background:#f8fafc;display:grid;gap:10px;margin:12px 0';
-  var fields={};var kind=node('select',undefined,form);fields.kind=kind;
-  node('p','編號：'+(record.partner_code||'儲存後自動產生（客戶 C、供應商 S）'),form);
-  [['supplier','供應商'],['customer','客戶']].forEach(function(p){var o=node('option',p[1],kind);o.value=p[0];});kind.value=record.kind;
-  kind.disabled=!!record.id;
-  [['name','公司名稱'],['contact','聯絡人'],['phone','電話'],['email','Email'],['address','地址'],['tax_id','統一編號'],['note','備註']].forEach(function(p){
-   var label=node('label',p[1]+' ',form),input=node('input',undefined,label);input.value=record[p[0]]||'';input.maxLength=p[0]==='name'?200:2000;input.required=p[0]==='name';if(p[0]==='email')input.type='email';fields[p[0]]=input;
+  partnerStyle();var host=document.getElementById('partner-manager');host.replaceChildren();
+  var card=pmNode('div',undefined,host,'pm-card'),head=pmNode('div',undefined,card,'pm-head');
+  pmNode('span','客戶／供應商列表',head);
+  var actions=pmNode('div',undefined,head,'pm-group');
+  pmButton('重新載入',actions,'',window.openPartnerManager);
+  pmButton('＋ 新增資料',actions,'pm-blue',function(){editPartner({kind:partnerView.kind||'customer',active:true},false);});
+  var body=pmNode('div',undefined,card,'pm-body'),tools=pmNode('div',undefined,body,'pm-tools');
+  var left=pmNode('div',undefined,tools,'pm-group');pmNode('span','顯示',left);
+  var size=pmNode('select',undefined,left);size.setAttribute('aria-label','每頁筆數');
+  [10,25,50,100].forEach(function(n){var o=node('option',String(n),size);o.value=n;});size.value=partnerView.size;pmNode('span','項結果',left);
+  var kind=pmNode('select',undefined,left);kind.setAttribute('aria-label','資料類別');
+  [['','全部類別'],['customer','客戶'],['supplier','供應商']].forEach(function(p){var o=node('option',p[1],kind);o.value=p[0];});kind.value=partnerView.kind;
+  var searchLabel=pmNode('label','搜尋：',tools,'pm-group'),search=node('input',undefined,searchLabel);search.type='search';search.placeholder='編號、名稱、聯絡人、電話';search.value=partnerView.query;
+  var scroll=pmNode('div',undefined,body,'pm-scroll'),table=node('table',undefined,scroll),thead=node('thead',undefined,table),tr=node('tr',undefined,thead);
+  var columns=[['partner_code','編號','12%'],['kind','類別','8%'],['name','公司全稱','27%'],['phone','電話','13%'],['contact','聯絡人','12%'],['active','狀態','8%'],['','操作','20%']];
+  columns.forEach(function(c){var th=node('th',undefined,tr);th.scope='col';th.style.width=c[2];if(!c[0]){th.textContent=c[1];return;}
+   th.setAttribute('aria-sort',partnerView.sort===c[0]?(partnerView.direction===1?'ascending':'descending'):'none');
+   var b=pmButton(c[1],th,'',function(){partnerView.direction=partnerView.sort===c[0]?-partnerView.direction:1;partnerView.sort=c[0];drawManager();});node('span',partnerView.sort===c[0]?(partnerView.direction===1?'▴':'▾'):'↕',b);
   });
-  var label=node('label','啟用（取消勾選後不出現在表單名單） ',form),active=node('input',undefined,label);active.type='checkbox';active.checked=record.active;
-  var save=node('button','儲存',form);save.type='submit';var cancel=node('button','取消',form);cancel.type='button';cancel.onclick=function(){host.replaceChildren();};
-  var status=node('p','',form);
-  form.onsubmit=async function(event){event.preventDefault();save.disabled=true;cancel.disabled=true;
-   var data=Object.assign({},editing);Object.keys(fields).forEach(function(k){data[k]=fields[k].value.trim();});data.active=active.checked;
-   try{await adminCall('save',data);await window.openPartnerManager();}catch(e){status.textContent='儲存失敗：'+e.message;save.disabled=false;cancel.disabled=false;}
-  };
+  var tbody=node('tbody',undefined,table),footer=pmNode('div',undefined,body,'pm-footer');
+  function renderRows(){
+   tbody.replaceChildren();footer.replaceChildren();
+   var filtered=records.filter(function(r){return (!partnerView.kind||r.kind===partnerView.kind)&&[r.partner_code,r.name,r.phone,r.contact,r.email].join(' ').toLowerCase().includes(partnerView.query.toLowerCase());});
+   filtered.sort(function(a,b){return String(a[partnerView.sort]??'').localeCompare(String(b[partnerView.sort]??''),'zh-TW',{numeric:true})*partnerView.direction;});
+   var pages=Math.max(1,Math.ceil(filtered.length/partnerView.size));partnerView.page=Math.min(pages,Math.max(1,partnerView.page));
+   var start=(partnerView.page-1)*partnerView.size;
+   filtered.slice(start,start+partnerView.size).forEach(function(r){var row=node('tr',undefined,tbody);
+    [r.partner_code||'待編號',r.kind==='customer'?'客戶':'供應商',r.name,r.phone||'—',r.contact||'—'].forEach(function(v){node('td',v,row);});
+    var status=node('td',undefined,row);pmNode('span',r.active?'啟用':'停用',status,'pm-badge'+(r.active?'':' pm-off'));
+    var cell=node('td',undefined,row),buttons=pmNode('div',undefined,cell,'pm-actions');
+    pmButton('查看',buttons,'pm-blue',function(){editPartner(r,true);});pmButton('編輯',buttons,'pm-orange',function(){editPartner(r,false);});
+    pmButton('刪除',buttons,'pm-delete',async function(event){
+     if(!confirm('確定刪除 '+(r.partner_code||'')+' '+r.name+'？\n歷史案件名稱會保留；如只是不再使用，可改為停用。'))return;
+     var button=event.currentTarget;button.disabled=true;
+     try{await adminCall('delete',{id:r.id,updated_at:r.updated_at});await window.openPartnerManager();}catch(e){alert('刪除失敗：'+e.message);button.disabled=false;}
+    });
+   });
+   if(!filtered.length){var empty=node('td','沒有符合條件的資料',node('tr',undefined,tbody));empty.colSpan=7;empty.className='pm-empty';}
+   pmNode('span','顯示第 '+(filtered.length?start+1:0)+' 至 '+Math.min(start+partnerView.size,filtered.length)+' 項結果，共 '+filtered.length+' 項',footer);
+   var nav=pmNode('div',undefined,footer,'pm-pages');nav.setAttribute('aria-label','列表分頁');
+   pmButton('上一頁',nav,'',function(){partnerView.page--;renderRows();}).disabled=partnerView.page===1;
+   var last=0;for(var p=1;p<=pages;p++){if(p!==1&&p!==pages&&Math.abs(p-partnerView.page)>2)continue;if(last&&p-last>1)node('span','…',nav);(function(n){var b=pmButton(String(n),nav,n===partnerView.page?'pm-current':'',function(){partnerView.page=n;renderRows();});if(n===partnerView.page)b.setAttribute('aria-current','page');})(p);last=p;}
+   pmButton('下一頁',nav,'',function(){partnerView.page++;renderRows();}).disabled=partnerView.page===pages;
+  }
+  search.oninput=function(){partnerView.query=search.value;partnerView.page=1;renderRows();};
+  kind.onchange=function(){partnerView.kind=kind.value;partnerView.page=1;renderRows();};size.onchange=function(){partnerView.size=Number(size.value);partnerView.page=1;renderRows();};renderRows();
  }
+ function editPartner(record,readOnly){
+  partnerStyle();var host=document.getElementById('partner-manager');host.replaceChildren();
+  var card=pmNode('div',undefined,host,'pm-card'),head=pmNode('div',undefined,card,'pm-head');pmNode('span',readOnly?'詳細資料':record.id?'編輯資料':'新增客戶／供應商',head);
+  if(readOnly)pmButton('編輯',head,'pm-orange',function(){editPartner(record,false);});
+  var body=pmNode('div',undefined,card,'pm-body'),tabs=pmNode('div',undefined,body,'pm-tabs'),form=node('form',undefined,body);var fields={},panels=[],tabButtons=[];
+  ['基本資料','聯絡人資訊','其他資訊'].forEach(function(title,i){
+   tabButtons[i]=pmButton(title,tabs,i===0?'pm-selected':'',function(){selectTab(i);});
+   panels[i]=pmNode('div',undefined,form,'pm-grid');panels[i].hidden=i!==0;panels[i].style.display=i===0?'grid':'none';
+  });
+  function selectTab(i){panels.forEach(function(p,j){p.hidden=i!==j;p.style.display=i===j?'grid':'none';tabButtons[j].className=i===j?'pm-selected':'';});}
+  function field(key,label,panel,type,choices){
+   var wrap=pmNode('label',label,panel,'pm-field'),input=node(choices?'select':type==='textarea'?'textarea':'input',undefined,wrap);
+   if(choices){choices.forEach(function(p){var o=node('option',p[1],input);o.value=p[0];});}else if(type!=='textarea')input.type=type||'text';
+   input.value=record[key]??'';input.disabled=!!readOnly;input.maxLength=key==='name'?200:2000;fields[key]=input;return input;
+  }
+  var code=field('partner_code','編號',panels[0]);code.value=record.partner_code||'儲存後自動產生';code.disabled=true;
+  field('name','公司全稱 *',panels[0]).required=true;
+  var active=field('active','狀態 *',panels[0],'',[['true','啟用'],['false','停用']]);active.value=String(record.active!==false);
+  var kind=field('kind','類別 *',panels[0],'',[['customer','客戶'],['supplier','供應商']]);kind.disabled=!!readOnly||!!record.id;
+  field('tax_id','統一編號',panels[0]);field('phone','公司電話',panels[0],'tel');
+  field('contact','聯絡人',panels[1]);field('email','Email',panels[1],'email');field('address','地址',panels[1]);
+  var note=field('note','備註',panels[2],'textarea');note.rows=5;note.parentNode.style.gridColumn='1 / -1';
+  var status=pmNode('p','',form,'pm-status');status.setAttribute('role','status');
+  var bottom=pmNode('div',undefined,form,'pm-group');var back=pmButton('返回列表',bottom,'pm-dark',function(){if(!readOnly&&dirty()&&!confirm('放棄尚未儲存的修改？'))return;drawManager();});
+  function values(){var data=Object.assign({},record);Object.keys(fields).forEach(function(k){if(k==='partner_code')return;data[k]=k==='active'?fields[k].value==='true':fields[k].value.trim();});return data;}
+  var initial=JSON.stringify(values());function dirty(){return JSON.stringify(values())!==initial;}
+  if(!readOnly){
+   var save=pmButton('儲存資料',bottom,'pm-orange');save.type='submit';
+   form.addEventListener('invalid',function(event){var index=panels.findIndex(function(p){return p.contains(event.target);});if(index>=0)selectTab(index);},true);
+   form.onsubmit=async function(event){event.preventDefault();if(!fields.name.value.trim()){selectTab(0);fields.name.focus();status.textContent='請填寫公司全稱';return;}
+    save.disabled=true;back.disabled=true;status.textContent='儲存中…';
+    try{await adminCall('save',values());await window.openPartnerManager();}catch(e){status.textContent='儲存失敗：'+e.message;save.disabled=false;back.disabled=false;}
+   };
+  }else form.onsubmit=function(e){e.preventDefault();};
+  host.scrollIntoView({behavior:'smooth',block:'start'});
+ }
+
  if(typeof renderAdmin==='function'){
   var original=renderAdmin;
   window.renderAdmin=function(){original();if(!curUser||curUser.role!=='admin')return;
