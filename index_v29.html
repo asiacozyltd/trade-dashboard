@@ -6981,14 +6981,18 @@ function exportKeyinExcel() {
   check.disabled=!input.value.trim()||known;
   if(check.disabled)check.checked=false;
  }
+ var optionsLoading=false;
  async function loadOptions(){
+  if(optionsLoading)return;
+  optionsLoading=true;
   try{options=await rpc('partner_options');
    ['supplier','buyer'].forEach(function(id){
     var kind=id==='supplier'?'supplier':'customer',list=document.getElementById(id+'-partners');list.replaceChildren();
     options.filter(function(p){return p.kind===kind;}).forEach(function(p){var o=node('option',undefined,list);o.value=p.name;});
     document.getElementById(id+'-partner-status').textContent='可輸入名稱搜尋，或直接填寫新名稱。';refreshField(id,kind);
    });
-  }catch(e){['supplier','buyer'].forEach(function(id){document.getElementById(id+'-partner-status').textContent='名單載入失敗，仍可手動填寫。請確認資料表已建立，或按重新載入。';});}
+  }catch(e){['supplier','buyer'].forEach(function(id){document.getElementById(id+'-partner-status').textContent='暫時無法更新名單，仍可手動填寫，系統會自動重試。';});}
+  finally{optionsLoading=false;}
  }
  window.saveSelectedPartners=async function(payload){
   var warnings=[];
@@ -7001,17 +7005,29 @@ function exportKeyinExcel() {
   if(warnings.length)alert('案件已儲存，但以下名稱未能加入名單；請稍後由後台新增，無須重送案件。\n'+warnings.join('\n'));
  };
  if(document.getElementById('supplier')&&document.getElementById('buyer')){
+  var checkboxStyle=node('style',undefined,document.head);
+  checkboxStyle.textContent=`
+   input.partner-save-checkbox{appearance:none;-webkit-appearance:none;display:inline-block;box-sizing:border-box;width:22px!important;height:22px;min-height:22px;padding:0!important;margin:0;flex:0 0 22px;border:2px solid #8298ae;border-radius:5px;background:#fff;cursor:pointer;vertical-align:middle}
+   input.partner-save-checkbox:checked{border-color:#0284c7;background-color:#0284c7;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M4 10l4 4 8-9' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-size:18px 18px;background-position:center;background-repeat:no-repeat}
+   input.partner-save-checkbox:focus-visible{outline:3px solid #7dd3fc;outline-offset:3px}
+   input.partner-save-checkbox:disabled{border-color:#cbd5e1;background-color:#e2e8f0;cursor:not-allowed}
+  `;
   ['supplier','buyer'].forEach(function(id){
    var input=document.getElementById(id),parent=input.parentNode,kind=id==='supplier'?'supplier':'customer';
    input.setAttribute('list',id+'-partners');input.maxLength=200;
    node('datalist',undefined,parent).id=id+'-partners';
    var status=node('small','正在載入名單…',parent);status.id=id+'-partner-status';status.style.display='block';
    var label=node('label',undefined,parent);label.style.cssText='display:flex;align-items:center;gap:8px;font-size:13px;margin-top:8px';
-   var check=node('input',undefined,label);check.type='checkbox';check.id=id+'-save-partner';check.style.width='auto';check.disabled=true;
+   var check=node('input',undefined,label);check.type='checkbox';check.id=id+'-save-partner';check.className='partner-save-checkbox';check.disabled=true;
    node('span','將這個新名稱儲存到'+(kind==='supplier'?'供應商':'客戶')+'名單',label);
    input.addEventListener('input',function(){check.checked=false;refreshField(id,kind);});
-   var retry=node('button','重新載入名單',parent);retry.type='button';retry.onclick=loadOptions;
+   input.addEventListener('focus',loadOptions);
   });loadOptions();
+  window.addEventListener('focus',loadOptions);
+  window.addEventListener('online',loadOptions);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)loadOptions();});
+  // 表單持續開啟時每分鐘同步，隱藏分頁暫停，回到頁面立即更新。
+  window.setInterval(function(){if(!document.hidden)loadOptions();},60000);
  }
  async function adminCall(action,record){
   if(!curUser||curUser.role!=='admin')throw new Error('僅限管理員使用');
